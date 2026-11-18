@@ -4,6 +4,7 @@ import { installAdvice } from './core/install.js';
 import { loadDraft } from './brew-draft.js';
 import { openDb, readAll, getSettings, updateSettings, getUnratedBrew } from './db.js';
 import { APP_VERSION, versionLabel, whatsNew } from './core/version.js';
+import { restockPlan, restockText } from './core/restock.js';
 import { brewLine, tastingSummary } from './core/tastings.js';
 import { backupReminder, lastBackupText, beanRows, alertText, recentBrews } from './core/home.js';
 import { pickPendingSuggestion } from './core/dialin.js';
@@ -182,6 +183,23 @@ $('whatsNewClose').addEventListener('click', () => {
   $('whatsNewCard').hidden = true;
 });
 
+/** 買い足しの目安：注文の目安日が近い（3日以内・過ぎた）ときだけ出す */
+function renderRestock(all, settings) {
+  const plan = restockPlan({
+    beans: all.beans,
+    txs: all.inventoryTx,
+    brews: all.brews,
+    tastings: all.tastings,
+    settings,
+    today: localYmd(),
+  });
+  if (plan.status !== 'now' && plan.status !== 'soon') return;
+  const t = restockText(plan);
+  $('restockTitle').textContent = t.title;
+  $('restockText').textContent = t.text;
+  $('restockCard').hidden = false;
+}
+
 async function init() {
   const [all, settings] = await Promise.all([readAll(db), getSettings(db)]);
   const beanName = (id) => all.beans.find((b) => b.id === id)?.name ?? '';
@@ -189,6 +207,7 @@ async function init() {
   renderToday(all, beanName);
   renderBeans(beanRows({ beans: all.beans, txs: all.inventoryTx, doseG: doseFromSettings(settings), today: localYmd() }));
   renderRecent(all, beanName);
+  renderRestock(all, settings);
   await renderUnrated(beanName);
   await renderWhatsNew(settings, all);
 }

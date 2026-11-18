@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>買い物リスト - Pourfolio</title>
+  <meta name="theme-color" content="#5a371f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Pourfolio">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/base.css">
+</head>
+<body>
+  <main>
+    <p class="crumb"><a href="beans.html">豆と在庫</a></p>
+    <h1>買い物リスト</h1>
+
+    <!-- 買い足しの目安（C5） -->
+    <section class="card" id="planCard">
+      <h2 id="planTitle">読み込み中…</h2>
+      <p id="planText"></p>
+      <dl class="plan-numbers" id="planNumbers"></dl>
+    </section>
+
+    <!-- 候補：これまでに買った豆（評価の高い順） -->
+    <section class="card">
+      <h2>次に買う候補</h2>
+      <p class="muted">これまでに買った豆を、評価の高い順に並べています。注文する豆に印を付けると、下に注文メモができます。</p>
+      <div id="candidates"></div>
+    </section>
+
+    <section class="card">
+      <h2>注文メモ</h2>
+      <p class="muted">店のサイトで注文するときに見るメモです。メモアプリなどに貼っておけます。</p>
+      <textarea id="memo" rows="5" readonly></textarea>
+      <div class="row">
+        <button class="btn" type="button" id="copyMemo">メモをコピー</button>
+      </div>
+      <p id="msg" role="status"></p>
+    </section>
+
+    <section class="card">
+      <h2>お届けの日数</h2>
+      <p class="muted" id="deliveryNote"></p>
+      <form id="deliveryForm" class="inline-form">
+        <label class="field compact">
+          <span class="label">注文から届くまで</span>
+          <span class="with-unit"><input type="text" inputmode="numeric" id="deliveryDays" autocomplete="off"><span>日</span></span>
+        </label>
+        <button class="btn secondary" type="submit">保存</button>
+      </form>
+      <p id="deliveryMsg" role="status"></p>
+    </section>
+
+    <div class="row">
+      <a class="btn secondary" href="beans.html">豆と在庫に戻る</a>
+    </div>
+  </main>
+  <script type="module" src="js/shopping-page.js"></script>
+</body>
+</html>
