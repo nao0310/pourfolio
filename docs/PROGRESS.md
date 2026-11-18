@@ -2,6 +2,12 @@
 
 書き方：日付とステップ番号の見出しの下に「やったこと／確認結果／未解決／次の一手」を書く。
 
+## 2026-11-18 ステップ1-1 データの土台
+- やったこと：作業フォルダをOneDriveの外（`C:\Users\<ユーザー>\dev\pourfolio`）に移動。Dexie 4.4.7 を `vendor/dexie/` に同梱。7つの表（beans・inventoryTx・equipment・recipes・brews・tastings・settings）の定義（`js/db.js`）、記録の共通のきまり（`js/core/records.js`）、書き出し・読み込みの検査・移行・統合（`js/core/backup.js`）、確認用サンプル（`js/core/sample-data.js`）。「データの書き出しと復元」画面（`data.html`）とトップからのリンク。手順書「7. 書き出し・復元」
+- 確認結果：npm test 22件成功（fake-indexeddbで、書き出し→全削除→復元で全部の表が1件も欠けず中身も一致することを含む）。PCのBrowserペインで、サンプル投入→書き出し→全削除→ファイルから復元で全9件が戻ること、別のファイルを選ぶと「Pourfolioの書き出しファイルではありません」と出ること、スマホ幅・ダークモードの表示を確認
+- 未解決：iPhoneのホーム画面アプリで「書き出す」→「"ファイル"に保存」と、ファイルからの復元ができるかは未確認（マージ後に確認）。CSV書き出しは1-7へ。古いOneDriveのフォルダは未削除。Claudeのプレビュー機能（launch.json）が古いフォルダでサーバーを起動したため、今回は新しいフォルダのサーバーを手動で起動して確認した
+- 次の一手：iPhoneで書き出し・復元を確認し、手順書の写真（SHOTS.md の07-*）を撮る。そのあとステップ1-2（豆と在庫）
+
 ## 2026-11-18 ステップ0-1・0-2 開発の土台と公開テスト
 - やったこと：Gitリポジトリ化とGitHubの公開リポジトリ（nao0310/pourfolio）の作成、package.json（npm test／npm run serve／npm run icons）、テストの雛形（js/core/format.js）、仮トップ画面、manifest、最小のservice worker、仮アイコン、IndexedDBの保存テスト画面、GitHub Pages（mainのルート）の有効化、手順書「はじめに」
 - 確認結果：npm test 3件成功。PCのBrowserペインでトップ画面と保存テストを表示し、保存した値が再読み込み後も残ることを確認。manifestとアイコンの配信もOK。公開URLではservice workerが動作（activated）。iPhoneでホーム画面に追加し、アプリを閉じて開き直しても保存テストの値が残ることを確認（開き方：ホーム画面のアプリ、消されにくい保存：有効）
