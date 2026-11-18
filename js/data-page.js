@@ -1,5 +1,8 @@
 // データの書き出しと復元の画面（G1）
-import { openDb, countAlive, exportAll, restoreBackup, clearAll, putAll, updateSettings } from './db.js';
+import { openDb, countAlive, exportAll, restoreBackup, clearAll, putAll, updateSettings, readAll, getSettings } from './db.js';
+import { toCsv, brewRows, beanRowsCsv, csvFileName } from './core/csv.js';
+import { doseFromSettings } from './core/inventory.js';
+import { localYmd } from './core/format.js';
 import { parseBackup, backupFileName, totalRecords, BackupError } from './core/backup.js';
 import { makeSampleData } from './core/sample-data.js';
 import { TABLES, SETTINGS_ID } from './core/records.js';
@@ -13,6 +16,7 @@ const LABELS = {
   recipes: 'レシピ',
   brews: '抽出',
   tastings: '評価',
+  suggestions: '提案',
   settings: '設定',
 };
 
@@ -44,11 +48,11 @@ async function render() {
 }
 
 /** iPhoneなどタッチ端末で、ファイルを共有シートで渡せるか */
-function canShareFile(file) {
+function canShareFile(...files) {
   return (
     window.matchMedia('(pointer: coarse)').matches &&
     typeof navigator.canShare === 'function' &&
-    navigator.canShare({ files: [file] })
+    navigator.canShare({ files })
   );
 }
 
@@ -87,6 +91,44 @@ $('export').addEventListener('click', async () => {
   } catch (err) {
     console.error(err);
     showMessage('書き出しに失敗しました', 'error');
+  }
+});
+
+// 表計算用のCSV（G1）。復元には使えないので、最後に書き出した日時は変えない
+$('exportCsv').addEventListener('click', async () => {
+  try {
+    const now = new Date();
+    const [all, settings] = await Promise.all([readAll(db), getSettings(db)]);
+    const brews = toCsv(
+      brewRows({
+        brews: all.brews,
+        beans: all.beans,
+        recipes: all.recipes,
+        equipment: all.equipment,
+        tastings: all.tastings,
+        suggestions: all.suggestions,
+      }),
+    );
+    const beans = toCsv(beanRowsCsv({ beans: all.beans, txs: all.inventoryTx, doseG: doseFromSettings(settings), today: localYmd(now) }));
+    const type = 'text/csv';
+    const files = [new File([brews], csvFileName('brews', now), { type }), new File([beans], csvFileName('beans', now), { type })];
+    if (canShareFile(...files)) {
+      try {
+        await navigator.share({ files, title: 'Pourfolioの記録（CSV）' });
+      } catch (err) {
+        if (err.name === 'AbortError') {
+          showMessage('書き出しをやめました', 'muted');
+          return;
+        }
+        throw err;
+      }
+    } else {
+      files.forEach((f, i) => setTimeout(() => download(f), i * 300)); // 続けてダウンロードすると止められるブラウザがあるので少し空ける
+    }
+    showMessage(`CSVを書き出しました（${files.map((f) => f.name).join('、')}）`);
+  } catch (err) {
+    console.error(err);
+    showMessage('CSVの書き出しに失敗しました', 'error');
   }
 });
 

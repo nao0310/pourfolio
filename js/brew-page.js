@@ -73,8 +73,9 @@ function planItem(label, value, changed = false) {
   return el(
     'div',
     { class: `plan-item${changed ? ' changed' : ''}` },
-    el('span', { class: 'muted' }, changed ? `${label}（変更）` : label),
+    el('span', { class: 'muted' }, label),
     el('span', { class: 'num plan-value' }, value || '—'),
+    changed ? el('span', { class: 'changed-tag' }, '提案で変更') : '',
   );
 }
 

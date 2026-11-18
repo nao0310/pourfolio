@@ -15,6 +15,7 @@
 </head>
 <body>
   <main>
+    <p class="crumb"><a href="./">トップ</a></p>
     <h1>データの書き出しと復元</h1>
     <p class="muted">記録はこの端末の中だけにあります。ときどき書き出して、ファイルを別の場所にとっておいてください。</p>
 
@@ -29,6 +30,14 @@
       <p class="muted">全部の記録を1つのファイル（JSON）にします。iPhoneでは「ファイルに保存」を選んでください。</p>
       <div class="row">
         <button class="btn" id="export" type="button">書き出す</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>表計算用（CSV）</h2>
+      <p class="muted">抽出の一覧（1杯1行。豆・計画・実績・評価・提案）と、豆の一覧の2つのファイルを作ります。Excelやスプレッドシートで開けます。復元には使えません。</p>
+      <div class="row">
+        <button class="btn secondary" id="exportCsv" type="button">CSVを書き出す</button>
       </div>
     </div>
 
@@ -56,6 +65,14 @@
       <p class="muted">確認用のサンプル記録を全部の表に1組入れます。</p>
       <div class="row">
         <button class="btn secondary" id="sample" type="button">サンプルを入れる</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>保存テスト</h2>
+      <p class="muted">ホーム画面に追加したあと、「アプリを閉じてもデータが残るか」を確かめます。</p>
+      <div class="row">
+        <a class="btn secondary" href="storage-test.html">保存テストを開く</a>
       </div>
     </div>
 
