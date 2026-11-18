@@ -1,5 +1,6 @@
 // 分析のデモデータ（純粋関数）。豆8袋・約80杯・TDS付き約30杯の、つながった記録を作る。
 // 分析の画面の「デモで見る」（端末のデータには書かない、D-117）と、データの画面の「デモデータを入れる」（開発用）で使う。
+// 器具は「いつも使う」にしない（入れても自分の器具の初期値を変えない）。
 // 値は説明用の作り話。乱数は種を固定し、同じ日に作れば同じ中身になる（IDだけは毎回変わる）。
 
 import { createRecord } from './records.js';
@@ -53,19 +54,19 @@ export function makeDemoData(now = new Date()) {
   const first = at(95, 9, 0);
 
   // 器具と水（D1・D2・D3）
-  const dripper = createRecord({ kind: 'dripper', name: 'デモ V60 02', attrs: { shape: 'cone', holes: 1, material: '樹脂' }, isDefault: true, memo: '' }, first);
-  const filter = createRecord({ kind: 'filter', name: 'デモ V60用 無漂白', attrs: { material: 'paper', bleach: 'unbleached' }, isDefault: true, memo: '' }, first);
+  const dripper = createRecord({ kind: 'dripper', name: 'デモ V60 02', attrs: { shape: 'cone', holes: 1, material: '樹脂' }, isDefault: false, memo: '' }, first);
+  const filter = createRecord({ kind: 'filter', name: 'デモ V60用 無漂白', attrs: { material: 'paper', bleach: 'unbleached' }, isDefault: false, memo: '' }, first);
   const grinder = createRecord(
-    { kind: 'grinder', name: 'デモ 手挽きミル', attrs: { burr: 'conical', step: 1, zeroPoint: '0', scale: [{ setting: 15, um: 450 }, { setting: 25, um: 750 }, { setting: 35, um: 1050 }] }, isDefault: true, memo: '' },
+    { kind: 'grinder', name: 'デモ 手挽きミル', attrs: { burr: 'conical', step: 1, zeroPoint: '0', scale: [{ setting: 15, um: 450 }, { setting: 25, um: 750 }, { setting: 35, um: 1050 }] }, isDefault: false, memo: '' },
     first,
   );
   const grinder2 = createRecord(
     { kind: 'grinder', name: 'デモ 電動ミル', attrs: { burr: 'flat', step: 0.5, zeroPoint: '', scale: [{ setting: 2, um: 400 }, { setting: 6, um: 1200 }] }, isDefault: false, memo: '' },
     first,
   );
-  const kettle = createRecord({ kind: 'kettle', name: 'デモ 細口ケトル', attrs: {}, isDefault: true, memo: '' }, first);
+  const kettle = createRecord({ kind: 'kettle', name: 'デモ 細口ケトル', attrs: {}, isDefault: false, memo: '' }, first);
   const water = createRecord(
-    { kind: 'water', name: 'デモ 水道水＋浄水器', attrs: { tdsMgL: 90, hardnessMgL: 55, alkalinityMgL: 35, ph: 7.3, sodiumMgL: 9 }, isDefault: true, memo: '' },
+    { kind: 'water', name: 'デモ 水道水＋浄水器', attrs: { tdsMgL: 90, hardnessMgL: 55, alkalinityMgL: 35, ph: 7.3, sodiumMgL: 9 }, isDefault: false, memo: '' },
     first,
   );
   const equipment = [dripper, filter, grinder, grinder2, kettle, water];
@@ -209,7 +210,7 @@ export function makeDemoData(now = new Date()) {
             waterG,
             tempC,
             grind: { grinderId: grinder.id, setting: String(g) },
-            pours: recipe.pours.map((p) => ({ ...p, doneSec: p.atSec + Math.round(rnd() * 4) })),
+            pours: recipe.pours.map((p) => ({ ...p, doneSec: p.atSec + 8 + Math.round(rnd() * 6) })),
             totalSec: Math.round(180 + (bag.opt - g) * 8 + (rnd() - 0.5) * 20),
             beverageG: measured ? bev : null,
             tdsPct: tds,

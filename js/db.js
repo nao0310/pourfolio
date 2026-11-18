@@ -562,6 +562,11 @@ export async function getLastBrew(db) {
 
 // ---- 味の評価（B1〜B5） ----
 
+/** 削除の印が付いていない評価の一覧 */
+export async function listTastings(db) {
+  return (await db.table('tastings').toArray()).filter(alive);
+}
+
 /** その抽出の「自分」の評価（温度帯を省くと主な評価＝温かいうち）。なければ null */
 export async function getTastingForBrew(db, brewId, stage = DEFAULT_STAGE) {
   return pickTasting(await db.table('tastings').where('brewId').equals(brewId).toArray(), brewId, stage);

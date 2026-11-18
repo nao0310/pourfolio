@@ -16,6 +16,8 @@ import {
   listAliveTx,
   getExperiment,
   attachBrewToExperiment,
+  listBrews,
+  listTastings,
 } from './db.js';
 import { frozenChoice, portionsOf, portionText } from './core/frozen.js';
 import { remainingG } from './core/inventory.js';
@@ -36,6 +38,7 @@ import {
   PRECHECK_ITEMS,
 } from './core/brews.js';
 import { loadDraft, saveDraft, clearDraft } from './brew-draft.js';
+import { pickGhost, ghostLine } from './core/ghost.js';
 import * as cue from './cue.js';
 import { createWakeLock } from './wake-lock.js';
 import { $, el, queryParam, showMessage, stepperField } from './ui.js';
@@ -243,6 +246,14 @@ function renderPrecheck(plan) {
   );
 }
 
+/** ゴーストを選ぶための抽出と評価（計画の画面を開いたときに読んでおく。スタートを押した瞬間に音を使えるよう、押したあとは待たない） */
+let ghostSource = { brews: [], tastings: [] };
+
+/** 同じレシピで★がいちばん高かった杯（なければ null） */
+function findGhost(recipeId, beanId) {
+  return pickGhost({ ...ghostSource, recipeId, beanId });
+}
+
 /** 新しく始める。途中の抽出があれば、捨ててよいか確かめる */
 function beginNew(withTimer) {
   if (!loadedPlan) return;
@@ -254,6 +265,8 @@ function beginNew(withTimer) {
     compareId: compare?.id ?? null,
     compareBeanId: compare ? queryParam('bean') : null,
   };
+  // 前回のベストのペース（ゴースト、D-041）。下書きに入れておき、開き直しても同じ杯と比べる
+  if (withTimer) draft.ghost = findGhost(loadedPlan.plan.recipeId, draft.beanId);
   saveDraft(draft);
   $('content').hidden = true;
   if (withTimer) {
@@ -326,6 +339,7 @@ function tick() {
 
 function renderTimer(v, sec) {
   $('tElapsed').textContent = formatSec(Math.floor(sec));
+  $('tGhost').textContent = ghostLine(draft.ghost ?? null, draft.laps, v, pourName);
   const count = $('tCount');
   count.classList.remove('soon');
   const screen = $('timerView');
@@ -621,6 +635,12 @@ async function init() {
   }
   const last = await getLastBrew(db);
   await showPlan(loadedPlan, last?.beanId);
+  try {
+    const [brews, tastings] = await Promise.all([listBrews(db), listTastings(db)]);
+    ghostSource = { brews, tastings };
+  } catch (err) {
+    console.error(err); // ゴーストが出ないだけで、淹れるのには困らない
+  }
   if (saved) {
     $('resumeCard').hidden = false;
     $('resumeText').textContent = `${saved.plan.name || '前回と同じ'}（${saved.stage === 'timer' ? 'タイマーの途中' : '実績の確認の途中'}）`;
