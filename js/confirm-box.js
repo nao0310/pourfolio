@@ -1,6 +1,9 @@
 // アプリの中の確認の箱（2-8の33番）。iPhone の標準の確認（上にサイトの名前が出る）の代わりに使う。
 // <dialog> が使えないブラウザでは、今までどおり標準の確認を出す。
 
+/** 開いてからタップを受け付けるまでの時間（ms） */
+export const OPEN_GUARD_MS = 400;
+
 /**
  * 確認の箱を出し、「はい」側を押したら true
  * @param {string} message 確認の文（「〜しますか？」）
@@ -29,11 +32,14 @@ export function askConfirm(message, { ok = 'はい', cancel = 'いいえ', dange
     row.className = 'confirm-actions';
     row.append(no, yes);
     box.append(text, row);
-    no.addEventListener('click', () => box.close('no'));
-    yes.addEventListener('click', () => box.close('yes'));
+    // 開いてすぐ（2度押しの2回目）のタップは受け付けない。箱の外に当たって「いいえ」になり、何も起きないように見えるため（総仕上げの67番）
+    let openedAt = Infinity;
+    const settled = () => performance.now() - openedAt >= OPEN_GUARD_MS;
+    no.addEventListener('click', () => settled() && box.close('no'));
+    yes.addEventListener('click', () => settled() && box.close('yes'));
     // 箱の外（暗い所）を押したら「いいえ」
     box.addEventListener('click', (e) => {
-      if (e.target === box) box.close('no');
+      if (e.target === box && settled()) box.close('no');
     });
     box.addEventListener(
       'close',
@@ -45,6 +51,7 @@ export function askConfirm(message, { ok = 'はい', cancel = 'いいえ', dange
     );
     document.body.append(box);
     box.showModal();
+    openedAt = performance.now();
     no.focus(); // 間違えて Enter を押しても進まないよう、「いいえ」を選んでおく
   });
 }

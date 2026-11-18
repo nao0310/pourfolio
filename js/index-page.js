@@ -12,7 +12,8 @@ import { brewLine, tastingSummary } from './core/tastings.js';
 import { backupReminder, lastBackupText, beanRows, alertText, recentBrews, recordText, icedHref, hotText } from './core/home.js';
 import { pickPendingSuggestion } from './core/dialin.js';
 import { doseFromSettings } from './core/inventory.js';
-import { localYmd, formatG } from './core/format.js';
+import { localYmd, formatG, formatDateTimeJa } from './core/format.js';
+import { agoText } from './core/brews.js';
 import { STAGES } from './core/freshness.js';
 import { openExperiments, experimentStatus, STATUS_LABELS, KIND_LABELS, kindOf } from './core/compare.js';
 import { todayPicks, pickHref } from './core/today.js';
@@ -49,6 +50,8 @@ $('mode').textContent = {
 const draft = loadDraft();
 if (draft) {
   showCard($('resumeCard'), 'resume', `${draft.startedAtMs ?? ''}${draft.returnSearch ?? ''}`);
+  // いつ始めたかを出す（放っておいた下書きだと分かるように、総仕上げの60番）
+  if (draft.startedAtMs != null) $('resumeWhen').textContent = `${formatDateTimeJa(new Date(draft.startedAtMs))}に始めました（${agoText(draft.startedAtMs, Date.now())}）`;
   $('resumeLink').href = `brew.html${draft.returnSearch ?? ''}`;
 }
 

@@ -51,10 +51,11 @@ const signedSec = (n) => (n === 0 ? '±0秒' : `${n > 0 ? '+' : '−'}${Math.abs
  * @param {(number|null)[]} laps 今回押した時刻
  * @param {{phase:string, index:number}} view timerView の結果
  * @param {(i:number)=>string} pourName 「2投目」
+ * @param {{compact?:boolean}} [opts] compact：背の低い画面（iPhone SE）では1行に収まるよう「ベスト」だけにする（総仕上げの62番）
  */
-export function ghostLine(ghost, laps, view, pourName) {
+export function ghostLine(ghost, laps, view, pourName, { compact = false } = {}) {
   if (!ghost) return '';
-  const who = `ベスト（★${ghost.stars}・${formatYmdJa(ghost.ymd)}）`;
+  const who = compact ? 'ベスト' : `ベスト（★${ghost.stars}・${formatYmdJa(ghost.ymd)}）`;
   if (view.phase === 'drawdown') {
     return ghost.totalSec != null ? `${who}の総時間は ${formatSec(ghost.totalSec)}` : '';
   }

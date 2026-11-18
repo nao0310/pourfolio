@@ -90,6 +90,30 @@ export function finishDraft(draft, nowMs) {
   return { ...draft, laps, finishedSec: sec, stage: 'result', input: null };
 }
 
+/** タイマーのまま放っておいた下書きとみなす時間（スタートから） */
+export const STALE_DRAFT_MS = 60 * 60 * 1000;
+
+/**
+ * 放っておいた下書き（スタートから1時間を過ぎてもタイマーのまま）を、タイマーに戻さずに実績の確認にする。
+ * 総時間は分からないので空にする（総仕上げの60番）。そうでなければそのまま返す
+ */
+export function settleStaleDraft(draft, nowMs) {
+  if (!draft || draft.stage !== 'timer' || draft.startedAtMs == null) return draft;
+  if (nowMs - draft.startedAtMs < STALE_DRAFT_MS) return draft;
+  const laps = [...(draft.laps ?? [])];
+  while (laps.length < (draft.plan?.pours ?? []).length) laps.push(null);
+  return { ...draft, laps, finishedSec: null, stage: 'result', input: null, stale: true };
+}
+
+/** 「3時間前」「40分前」（下書きを始めた時刻からの経過） */
+export function agoText(fromMs, nowMs) {
+  const min = Math.max(0, Math.floor((nowMs - fromMs) / 60000));
+  if (min < 60) return `${min}分前`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `${h}時間前`;
+  return `${Math.floor(h / 24)}日前`;
+}
+
 /** 実績の注湯：計画の時刻と累計gに、注湯完了を押した秒（押していなければ null）を添える */
 export function actualPours(plan, laps) {
   return (plan.pours ?? []).map((p, i) => ({ atSec: p.atSec, toG: p.toG, doneSec: laps[i] ?? null }));

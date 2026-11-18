@@ -509,6 +509,8 @@ p > a:not(.btn):only-child { display: inline-block; padding: 11px 0; }
   .timer-count { font-size: 1.3rem; }
   .timer-next { font-size: 0.9rem; }
   .timer-tap { flex-basis: 38%; font-size: 1.9rem; }
+  /* ベストとの比べと、画面を消さない設定の注意は1行に収める（重なって切れないように、総仕上げの62番） */
+  .timer-ghost, .timer-wake { font-size: 0.8rem; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 0; }
 }
 /* 狭い画面（iPhone SE・13）では、選ぶボタンの文字が途中で折れないように3列にする */
 @media (max-width: 400px) {

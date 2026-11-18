@@ -58,3 +58,8 @@ test('アイスや杯数を変えた杯はゴーストに選ばない', () => {
   const tastings = [t('hot', 3), t('ice', 5), t('two', 5), t('mood', 4)];
   assert.equal(pickGhost({ brews, tastings, recipeId: 'r1', beanId: 'A' }).brewId, 'mood');
 });
+
+test('背の低い画面では「ベスト」だけにして1行に収める（総仕上げの62番）', () => {
+  const g = { stars: 5, ymd: '2026-11-12', laps: [10, 50], totalSec: 200 };
+  assert.equal(ghostLine(g, [], { phase: 'pour', index: 0 }, (i) => `${i + 1}投目`, { compact: true }), 'ベストは 1投目を 0:10 に注ぎ終え');
+});

@@ -43,6 +43,8 @@ import {
   diffLines,
   buildBrew,
   PRECHECK_ITEMS,
+  settleStaleDraft,
+  agoText,
 } from './core/brews.js';
 import { loadDraft, saveDraft, clearDraft } from './brew-draft.js';
 import { pickGhost, ghostLine } from './core/ghost.js';
@@ -452,10 +454,12 @@ function renderWake(state) {
   const text = {
     on: '',
     off: '',
-    unsupported: 'この端末では画面を消さない設定が使えません。iPhoneの「設定」→「画面表示と明るさ」→「自動ロック」を長くしてください',
-    failed: '画面を消さない設定を使えませんでした。画面のどこかを押すともう一度試します',
+    // 背の低い画面では1行に収めるので短く（総仕上げの62番）。詳しい手順は title に
+    unsupported: '設定の「自動ロック」を長くすると画面が消えません',
+    failed: '画面を消さない設定が使えません（押すと再び試します）',
   }[state];
   $('tWake').textContent = text ?? '';
+  $('tWake').title = state === 'unsupported' ? 'iPhoneの「設定」→「画面表示と明るさ」→「自動ロック」' : '';
 }
 
 function renderSpeechToggle() {
@@ -504,7 +508,7 @@ function tick() {
 
 function renderTimer(v, sec) {
   $('tElapsed').textContent = formatSec(Math.floor(sec));
-  $('tGhost').textContent = ghostLine(draft.ghost ?? null, draft.laps, v, pourName);
+  $('tGhost').textContent = ghostLine(draft.ghost ?? null, draft.laps, v, pourName, { compact: window.matchMedia('(max-height: 700px)').matches });
   const count = $('tCount');
   count.classList.remove('soon');
   const screen = $('timerView');
@@ -807,10 +811,12 @@ async function init() {
   const sameAsSaved = saved && (location.search === '' || location.search === saved.returnSearch);
 
   if (saved && sameAsSaved) {
-    // 途中の抽出の続き
-    draft = saved;
+    // 途中の抽出の続き。放っておいた下書きはタイマーに戻さず、実績の確認で開く（総仕上げの60番）
+    draft = settleStaleDraft(saved, Date.now());
+    if (draft !== saved) saveDraft(draft);
     if (draft.stage === 'timer') startTimer();
     else showResult();
+    if (draft.stale) showMessage(`${agoText(draft.startedAtMs, Date.now())}に始めた1杯です。総時間を入れて保存するか、「記録せずにやめる」を押してください`, 'error', 'rMsg');
     return;
   }
 
