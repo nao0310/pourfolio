@@ -33,6 +33,7 @@
 
 ## よく使うコマンド
 - テスト：`npm test`
+- オフライン用の一覧：`npm run sw`（アプリのファイルを変えたらコミット前に実行。忘れると `npm test` が失敗する）
 - プレビュー：`npm run serve`（http://localhost:8080 をBrowserペインで開く）
 - 公開：mainにマージするとGitHub Pagesに反映される（URLは `README.md`）
 
