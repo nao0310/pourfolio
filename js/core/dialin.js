@@ -436,3 +436,22 @@ export function linkSuggestions(suggestions, brew) {
     )
     .map((s) => ({ id: s.id, adopted: s.id === brew.suggestionId, nextBrewId: brew.id }));
 }
+
+/** 代わりの案で上げる湯温（℃）。CELLS の 'ok/under' の alt と同じ */
+export const ALT_TEMP_STEP = 2;
+
+/**
+ * 代わりの案を入れて淹れるボタン（2-8 の22番）。挽き目が数字で記録されていなくて提案（挽き目を細かく）を
+ * 計画に入れられないとき、代わりの「湯温を2℃上げる」を数字で入れて淹れられるようにする
+ * @param {object} suggestion 提案の記録
+ * @param {object} brew 提案を出した抽出
+ * @returns {{label:string, href:string}|null}
+ */
+export function altBrewLink(suggestion, brew) {
+  const cellKey = `${suggestion?.cell?.strength}/${suggestion?.cell?.extraction}`;
+  if (cellKey !== 'ok/under' || suggestion?.action?.to != null || !brew?.id) return null;
+  const t = Number(brew.actual?.tempC ?? brew.planned?.tempC);
+  if (!Number.isFinite(t) || t + ALT_TEMP_STEP > 100) return null;
+  const to = Math.round(t) + ALT_TEMP_STEP;
+  return { label: `湯温を${ALT_TEMP_STEP}℃上げて淹れる（${Math.round(t)}℃ → ${to}℃）`, href: `brew.html?brew=${encodeURIComponent(brew.id)}&temp=${to}` };
+}

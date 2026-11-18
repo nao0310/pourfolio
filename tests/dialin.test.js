@@ -325,3 +325,13 @@ test('抽出を保存したら、使った提案は採用、同じ豆の残り�
   // 豆を選ばずに提案なしで淹れたら何もつながない
   assert.deepEqual(linkSuggestions(list, { id: 'b2', beanId: null, suggestionId: null }), []);
 });
+
+test('代わりの案で淹れる：挽き目が数字でなく「細かく」を入れられないとき、湯温を2℃上げて淹れられる（2-8 の22番）', async () => {
+  const { altBrewLink } = await import('../js/core/dialin.js');
+  const s = { cell: { strength: 'ok', extraction: 'under' }, action: { kind: 'finer', to: null } };
+  const brew = { id: 'b1', actual: { tempC: 92 } };
+  assert.deepEqual(altBrewLink(s, brew), { label: '湯温を2℃上げて淹れる（92℃ → 94℃）', href: 'brew.html?brew=b1&temp=94' });
+  assert.equal(altBrewLink({ ...s, action: { kind: 'finer', to: '23' } }, brew), null); // 目盛りが数字なら提案どおりで淹れられる
+  assert.equal(altBrewLink({ ...s, cell: { strength: 'ok', extraction: 'over' } }, brew), null);
+  assert.equal(altBrewLink(s, { id: 'b1', actual: {} }), null);
+});
