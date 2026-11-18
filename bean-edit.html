@@ -18,7 +18,19 @@
     <p class="crumb"><a href="beans.html" id="back">豆と在庫</a></p>
     <h1 id="title">豆の登録</h1>
 
+    <!-- 商品ページの文章から入れる（X28） -->
+    <details class="card paste-card" id="pasteBox">
+      <summary>珈琲問屋の商品ページから入れる</summary>
+      <p class="muted">Safariで商品ページを開き、文章を長押し →「すべてを選択」→「コピー」して、ここに貼り付けます。</p>
+      <textarea id="pasteText" rows="5" aria-label="商品ページの文章"></textarea>
+      <div class="row">
+        <button class="btn secondary" type="button" id="pasteRead">読み取って入れる</button>
+      </div>
+      <p id="pasteMsg" role="status"></p>
+    </details>
+
     <form id="form" novalidate>
+      <input type="hidden" name="productCode">
       <div class="card">
         <label class="field">
           <span class="label">銘柄 <span class="req">必須</span></span>
@@ -123,7 +135,8 @@
         </label>
         <fieldset class="field">
           <legend class="label">状態</legend>
-          <div class="chips three">
+          <div class="chips two">
+            <label class="chip"><input type="radio" name="status" value="ordered"><span>入荷待ち</span></label>
             <label class="chip"><input type="radio" name="status" value="unopened" checked><span>未開封</span></label>
             <label class="chip"><input type="radio" name="status" value="open"><span>開封済み</span></label>
             <label class="chip"><input type="radio" name="status" value="finished"><span>飲み切り</span></label>

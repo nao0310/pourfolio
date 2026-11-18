@@ -9,6 +9,7 @@ export const VARIETY_OPTIONS = Object.freeze(['ティピカ', 'ブルボン', '�
 
 /** 豆の状態 */
 export const BEAN_STATUS = Object.freeze({
+  ordered: '入荷待ち',
   unopened: '未開封',
   open: '開封済み',
   finished: '飲み切り',
@@ -104,6 +105,7 @@ export function normalizeBeanInput(raw) {
       name,
       shop: text('shop'),
       productUrl,
+      productCode: text('productCode'),
       origin: { country: text('country'), region: text('region'), farm: text('farm') },
       variety: pick('variety'),
       process: pick('process'),
@@ -135,6 +137,7 @@ export function beanToFormValues(bean) {
     name: str(bean.name),
     shop: str(bean.shop),
     productUrl: str(bean.productUrl),
+    productCode: str(bean.productCode),
     country: str(bean.origin?.country),
     region: str(bean.origin?.region),
     farm: str(bean.origin?.farm),

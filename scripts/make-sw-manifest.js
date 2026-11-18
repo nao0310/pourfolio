@@ -5,6 +5,7 @@ import { readFile, writeFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isAppFile, buildManifest, replaceManifestBlock, readManifestBlock } from '../js/core/offline.js';
+import { APP_VERSION } from '../js/core/version.js';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -24,7 +25,7 @@ async function walk(dir, prefix = '') {
 export async function currentManifest(root = ROOT) {
   const paths = (await walk(root)).filter(isAppFile);
   const files = await Promise.all(paths.map(async (p) => ({ path: p, bytes: await readFile(path.join(root, p)) })));
-  return buildManifest(files);
+  return { label: APP_VERSION, ...(await buildManifest(files)) };
 }
 
 async function main() {
@@ -32,12 +33,12 @@ async function main() {
   const src = await readFile(swPath, 'utf8');
   const manifest = await currentManifest();
   const before = readManifestBlock(src);
-  if (before?.version === manifest.version) {
-    console.log(`sw.js の一覧は最新です（版 ${manifest.version}、${Object.keys(manifest.files).length}ファイル）`);
+  if (before?.version === manifest.version && before?.label === manifest.label) {
+    console.log(`sw.js の一覧は最新です（Ver ${manifest.label}、版 ${manifest.version}、${Object.keys(manifest.files).length}ファイル）`);
     return;
   }
   await writeFile(swPath, replaceManifestBlock(src, manifest));
-  console.log(`sw.js の一覧を書き直しました（版 ${before?.version ?? 'なし'} → ${manifest.version}、${Object.keys(manifest.files).length}ファイル）`);
+  console.log(`sw.js の一覧を書き直しました（Ver ${manifest.label}、版 ${before?.version ?? 'なし'} → ${manifest.version}、${Object.keys(manifest.files).length}ファイル）`);
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

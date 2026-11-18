@@ -22,6 +22,16 @@
       <h1>Pourfolio</h1>
     </header>
 
+    <!-- 更新のあとに一度だけ出す「Ver ○ になりました」 -->
+    <div class="card whatsnew-card" id="whatsNewCard" hidden>
+      <p><strong id="whatsNewTitle"></strong></p>
+      <ul id="whatsNewList"></ul>
+      <div class="row">
+        <button class="btn secondary" type="button" id="whatsNewClose">閉じる</button>
+        <a class="link-more" href="data.html">更新履歴</a>
+      </div>
+    </div>
+
     <!-- ホーム画面に追加していないときの警告（iPhone・iPad のブラウザ。spec 10.2） -->
     <div class="card install-card" id="installCard" hidden>
       <p><strong>ホーム画面に追加して使ってください</strong></p>
@@ -71,6 +81,15 @@
       <ul class="plain-list" id="alerts"></ul>
     </section>
 
+    <!-- 買い足しの目安（C5）：注文の目安日が近いときだけ -->
+    <section class="card alert-card" id="restockCard" hidden>
+      <h2 id="restockTitle"></h2>
+      <p class="muted" id="restockText"></p>
+      <div class="row">
+        <a class="btn secondary" href="shopping.html">買い物リスト</a>
+      </div>
+    </section>
+
     <!-- 豆ごとの飲み頃 -->
     <section class="card">
       <div class="sec-head">
@@ -95,6 +114,7 @@
 
     <p class="muted" id="lastBackup"></p>
     <p class="muted" id="mode"></p>
+    <p class="muted" id="appVersion"></p>
   </main>
   <script type="module" src="js/index-page.js"></script>
 </body>

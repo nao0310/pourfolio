@@ -12,8 +12,23 @@ export function makeSampleData(now = new Date()) {
   const daysAgo = (d) => new Date(base.getTime() - d * 86400000);
   const ymd = (d) => daysAgo(d).toISOString().slice(0, 10);
 
+  // 珈琲問屋への注文（サンプルの豆はこの注文で届いた）
+  const order = createRecord(
+    {
+      shop: '珈琲問屋',
+      orderNo: 'SAMPLE-0001',
+      orderDate: ymd(14),
+      shippingJpy: 500,
+      items: [{ name: 'サンプル エチオピア', roastLevel: 'シティ', labelWeightG: 200, qty: 1, priceJpy: 1200 }],
+    },
+    daysAgo(14),
+  );
+
   const bean = createRecord(
     {
+      orderId: order.id,
+      orderDate: ymd(14),
+      arrivalDate: ymd(9),
       name: 'サンプル エチオピア',
       shop: '珈琲問屋',
       productUrl: '',
@@ -145,6 +160,7 @@ export function makeSampleData(now = new Date()) {
     brews: [brew],
     tastings: [tasting],
     suggestions: [suggestion],
+    orders: [order],
     settings: [settings],
   };
 }

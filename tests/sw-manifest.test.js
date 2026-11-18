@@ -15,6 +15,7 @@ test('sw.js の一覧が今のファイルと合っている（合わなけれ�
   const changed = Object.keys({ ...now.files, ...inSw.files }).filter((p) => now.files[p] !== inSw.files[p]);
   assert.deepEqual(changed, [], `一覧と違うファイル：${changed.join('、')} → npm run sw を実行してください`);
   assert.equal(inSw.version, now.version, 'npm run sw を実行してください');
+  assert.equal(inSw.label, now.label, '番号（APP_VERSION）が変わっています。npm run sw を実行してください');
 });
 
 test('全画面が読み込むファイルと、その import 先がすべて一覧に入っている', async () => {
