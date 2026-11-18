@@ -656,3 +656,15 @@ p > a:not(.btn):only-child { display: inline-block; padding: 11px 0; }
 /* TDS（A8）：評価の画面であとから入れる */
 .tds-row input { max-width: 8em; font-size: 1.25rem; }
 .tds-row .btn { flex: 0 0 auto; margin-left: auto; }
+
+/* グラインダーの目盛り表（D2） */
+.scale-row { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.scale-row input { width: 4.5em; min-width: 0; flex: 1 1 4em; font-variant-numeric: tabular-nums; }
+.scale-row select { flex: 1 1 6em; min-width: 0; }
+.scale-row .icon-btn { flex: 0 0 44px; }
+/* 水の基準との差（D3）。色だけに頼らず文でも書く */
+.water-check { list-style: none; padding: 0; margin: 8px 0; }
+.water-check li { padding: 8px 0 8px 12px; border-left: 4px solid var(--line); margin-bottom: 6px; }
+.water-check li.water-ok { border-left-color: var(--ok); }
+.water-check li.water-low, .water-check li.water-high { border-left-color: var(--stage-past); }
+.block { display: block; }

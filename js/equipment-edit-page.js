@@ -11,6 +11,8 @@ import {
   normalizeEquipmentInput,
   equipmentToFormValues,
 } from './core/equipment.js';
+import { GRIND_SIZES, sizeWord } from './core/grinder-scale.js';
+import { WATER_ITEMS, normalizeWaterInput, waterCheck } from './core/water.js';
 import { $, el, queryParam, showMessage } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
 
@@ -46,6 +48,94 @@ $('modelChips').replaceChildren(
   ),
 );
 
+// ---- グラインダーの目盛り表（D2） ----
+
+/** 目盛り表の1行（目盛り・粒度µm・言葉の選択） */
+function scaleRow(row = { setting: '', um: '' }) {
+  const setting = el('input', { type: 'text', inputmode: 'decimal', autocomplete: 'off', class: 'scale-setting', 'aria-label': '目盛り', placeholder: '目盛り', value: row.setting });
+  const um = el('input', { type: 'text', inputmode: 'numeric', autocomplete: 'off', class: 'scale-um', 'aria-label': '粒度（µm）', placeholder: 'µm', value: row.um });
+  const word = el(
+    'select',
+    { class: 'scale-word', 'aria-label': '粒度の言葉' },
+    el('option', { value: '' }, '言葉'),
+    ...GRIND_SIZES.map((g) => el('option', { value: String(g.um) }, `${g.label}（${g.um}）`)),
+  );
+  const syncWord = () => {
+    const n = Number(um.value.normalize('NFKC'));
+    word.title = n > 0 ? sizeWord(n) : '';
+  };
+  word.addEventListener('change', () => {
+    if (word.value) um.value = word.value;
+    word.value = '';
+    syncWord();
+  });
+  um.addEventListener('input', syncWord);
+  const node = el(
+    'div',
+    { class: 'scale-row' },
+    setting,
+    el('span', { class: 'muted' }, '→'),
+    um,
+    el('span', { class: 'muted' }, 'µm'),
+    word,
+    el('button', { type: 'button', class: 'icon-btn', 'aria-label': 'この行を消す', onclick: () => node.remove() }, '×'),
+  );
+  syncWord();
+  return node;
+}
+
+function setScaleRows(rows) {
+  const list = rows?.length ? rows : [{ setting: '', um: '' }, { setting: '', um: '' }];
+  $('scaleRows').replaceChildren(...list.map(scaleRow));
+}
+
+function readScaleRows() {
+  return [...$('scaleRows').querySelectorAll('.scale-row')].map((r) => ({
+    setting: r.querySelector('.scale-setting').value,
+    um: r.querySelector('.scale-um').value,
+  }));
+}
+
+$('addScaleRow').addEventListener('click', () => {
+  $('scaleRows').append(scaleRow());
+  $('scaleRows').lastElementChild.querySelector('input').focus();
+});
+
+// ---- 水の成分（D3） ----
+
+$('waterFields').replaceChildren(
+  ...WATER_ITEMS.map((it) =>
+    el(
+      'label',
+      { class: 'field' },
+      el('span', { class: 'label' }, it.label),
+      el(
+        'span',
+        { class: 'with-unit' },
+        el('input', { type: 'text', inputmode: 'decimal', name: it.key, autocomplete: 'off' }),
+        it.unit ? el('span', {}, it.unit) : '',
+      ),
+      el('span', { class: 'field-error', data: { for: it.key } }),
+    ),
+  ),
+);
+
+function renderWaterCheck() {
+  const { value } = normalizeWaterInput(readForm());
+  $('waterCheck').replaceChildren(
+    ...waterCheck(value).map((c) =>
+      el(
+        'li',
+        { class: `water-${c.status}` },
+        el('strong', {}, c.label),
+        ' ',
+        el('span', {}, c.status === 'none' ? '未入力' : `${c.value}${c.unit ? ` ${c.unit}` : ''}：${c.text}`),
+        el('span', { class: 'muted small block' }, c.rangeText),
+      ),
+    ),
+  );
+}
+
 /** 種類に合わせて、詳細の欄と名前の例を切り替える */
 function syncKind() {
   const kind = form.elements.kind.value;
@@ -53,16 +143,20 @@ function syncKind() {
   $('modelChips').hidden = kind !== 'dripper';
   form.elements.name.placeholder = NAME_PLACEHOLDERS[kind] ?? '名前';
   $('bleachField').hidden = form.elements.filterMaterial.value !== 'paper';
+  if (kind === 'water') renderWaterCheck();
 }
 
 function readForm() {
   const raw = {};
   for (const [k, v] of new FormData(form)) raw[k] = String(v);
+  raw.scale = readScaleRows();
   return raw;
 }
 
 function writeForm(values) {
+  setScaleRows(values.scale);
   for (const [k, v] of Object.entries(values)) {
+    if (k === 'scale') continue;
     const field = form.elements[k];
     if (!field) continue;
     if (field instanceof RadioNodeList) {
@@ -81,12 +175,15 @@ function showErrors(errors) {
   const first = Object.keys(errors)[0];
   if (!first) return;
   const target = form.elements[first];
-  const node = target instanceof RadioNodeList ? target[0] : target;
+  const node = (target instanceof RadioNodeList ? target[0] : target) ?? form.querySelector('.field-error:not(:empty)');
   node?.focus?.({ preventScroll: true });
   node?.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
 }
 
 form.addEventListener('change', syncKind);
+form.addEventListener('input', (e) => {
+  if (WATER_ITEMS.some((it) => it.key === e.target.name)) renderWaterCheck();
+});
 
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
@@ -109,7 +206,7 @@ form.addEventListener('submit', async (event) => {
 });
 
 $('delete').addEventListener('click', async () => {
-  if (!confirm('この器具を削除しますか？（レシピに入っている器具の名前は表示されなくなります）')) return;
+  if (!confirm('この器具（水）を削除しますか？（レシピに入っている器具の名前は表示されなくなります）')) return;
   await deleteEquipment(db, editId);
   location.replace('equipment.html');
 });
@@ -118,7 +215,7 @@ async function init() {
   if (editId) {
     const eq = await getEquipment(db, editId);
     if (!eq) {
-      $('title').textContent = '器具が見つかりません';
+      $('title').textContent = '見つかりません';
       form.hidden = true;
       return;
     }

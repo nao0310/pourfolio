@@ -15,7 +15,7 @@
 </head>
 <body>
   <main class="with-bottom-bar">
-    <p class="crumb"><a href="equipment.html">器具</a></p>
+    <p class="crumb"><a href="equipment.html">器具と水</a></p>
     <h1 id="title">器具の登録</h1>
 
     <form id="form" novalidate>
@@ -83,6 +83,20 @@
           <input type="text" name="zeroPoint" autocomplete="off" placeholder="例：0">
           <span class="hint">刃が触れる位置の目盛り。清掃や分解のあとにずれを直すのに使います</span>
         </label>
+        <h3 class="section-title">目盛り表（粒度の目安）</h3>
+        <p class="hint">目盛りと、そのときの粉の大きさの目安（µm）を2行以上入れると、別のグラインダーの目盛りに換算できます。メーカーの表や粒度の見本と比べた値を入れます。言葉を選ぶと目安の値が入ります</p>
+        <div id="scaleRows"></div>
+        <button class="btn secondary small" type="button" id="addScaleRow">＋ 行を足す</button>
+        <span class="field-error" data-for="scale"></span>
+      </div>
+
+      <div class="card" data-kind="water" hidden>
+        <h2>水の成分</h2>
+        <p class="hint">ボトルのラベルや、浄水器・水道局の資料の値を入れます。分からない項目は空のままで大丈夫です</p>
+        <div id="waterFields"></div>
+        <h3 class="section-title">SCAの基準との差</h3>
+        <ul class="water-check" id="waterCheck"></ul>
+        <p class="hint">基準はSCAA（2009年）の水の基準です。硬度の基準はカルシウム硬度なので、ラベルの「硬度」（総硬度）と比べるのは目安です</p>
       </div>
 
       <div class="card">
