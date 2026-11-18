@@ -8,6 +8,7 @@ import {
   addInventoryTx,
   deleteInventoryTx,
   setBeanStatus,
+  unfinishBean,
   deleteBean,
   listBeans,
   markArrived,
@@ -465,9 +466,10 @@ $('outForm').addEventListener('submit', guarded(async (event) => {
 }));
 
 $('toggleFinished').addEventListener('click', async (event) => {
-  const next = event.target.dataset.status === 'finished' ? 'open' : 'finished';
-  await setBeanStatus(db, beanId, next);
-  showMessage(next === 'finished' ? '飲み切りにしました' : '飲み切りを取り消しました');
+  const finishing = event.target.dataset.status !== 'finished';
+  if (finishing) await setBeanStatus(db, beanId, 'finished');
+  else await unfinishBean(db, beanId);
+  showMessage(finishing ? '飲み切りにしました' : '飲み切りを取り消しました');
   await render();
 });
 

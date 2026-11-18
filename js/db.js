@@ -5,7 +5,7 @@ import Dexie from '../vendor/dexie/dexie.mjs';
 import { TABLES, SETTINGS_ID, createRecord, updateRecord, markDeleted } from './core/records.js';
 import { beansFromOrder } from './core/orders.js';
 import { initialStockG } from './core/roast.js';
-import { remainingG, adjustDelta } from './core/inventory.js';
+import { remainingG, adjustDelta, stockFieldsChanged, statusAfterUnfinish } from './core/inventory.js';
 import { makeBackup, mergeRecords } from './core/backup.js';
 import { buildTasting, pickTasting, pickUnratedBrew, tastingsByStage, pickCoolPrompt, normalizeTastingInput, DEFAULT_STAGE } from './core/tastings.js';
 import { suggestNext, basePlanForNext, buildSuggestion, pickSuggestionForBrew, linkSuggestions } from './core/dialin.js';
@@ -251,7 +251,8 @@ export async function updateBean(db, beanId, changes, now = new Date()) {
     if (!cur || !alive(cur)) throw new Error('豆が見つかりません');
     next = updateRecord(cur, changes, now);
     await db.table('beans').put(next);
-    await syncInboundTx(db, next, now);
+    // メモや名前だけ直したときは入庫の量を変えない（目減り率を学び直していても、2-8の38番）
+    if (stockFieldsChanged(cur, next)) await syncInboundTx(db, next, now);
   });
   return next;
 }
@@ -295,6 +296,12 @@ export async function setBeanStatus(db, beanId, status, now = new Date()) {
   const next = updateRecord(cur, { status }, now);
   await db.table('beans').put(next);
   return next;
+}
+
+/** 飲み切りを取り消す：前の状態（未開封・開封済み）に戻す（2-8の42番） */
+export async function unfinishBean(db, beanId, now = new Date()) {
+  const txs = (await db.table('inventoryTx').where('beanId').equals(beanId).toArray()).filter(alive);
+  return setBeanStatus(db, beanId, statusAfterUnfinish(txs), now);
 }
 
 /** 豆を削除する（豆と在庫履歴・冷凍の袋に削除の印を付ける） */

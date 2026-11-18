@@ -15,6 +15,23 @@ export const TX_KINDS = Object.freeze({
   thaw: '冷凍から取り出し',
 });
 
+/** 入庫の量に関わる豆の項目。これが変わったときだけ入庫の履歴を直す（2-8の38番） */
+export const STOCK_FIELDS = Object.freeze(['actualWeightG', 'labelWeightG', 'labelWeightBasis', 'roastLevel', 'status', 'arrivalDate']);
+
+/** 編集で入庫の量に関わる項目が変わったか */
+export function stockFieldsChanged(cur, next) {
+  return STOCK_FIELDS.some((k) => (cur?.[k] ?? null) !== (next?.[k] ?? null));
+}
+
+/**
+ * 「飲み切りを取り消す」で戻す状態（2-8の42番）。
+ * 入庫のほかに履歴（抽出・量り直し・冷凍など）があれば開封済み、入庫だけなら未開封
+ * @param {object[]} txs その豆の在庫履歴（削除の印が付いたものは除く）
+ */
+export function statusAfterUnfinish(txs) {
+  return (txs ?? []).some((t) => t.deletedAt == null && t.kind !== 'in') ? 'open' : 'unopened';
+}
+
 /** 残り杯数の計算に使う1杯の粉の量の初期値（設定 defaultDoseG で変えられる） */
 export const DEFAULT_DOSE_G = 15;
 

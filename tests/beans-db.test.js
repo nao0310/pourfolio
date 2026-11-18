@@ -13,6 +13,7 @@ import {
   measureBean,
   deleteInventoryTx,
   setBeanStatus,
+  unfinishBean,
   exportAll,
   clearAll,
   restoreBackup,
@@ -139,5 +140,30 @@ test('豆と在庫履歴は書き出し→全削除→復元で戻り、残量�
   const { bean: restored, txs } = await getBeanWithTx(db, bean.id);
   assert.equal(restored.name, 'エチオピア');
   assert.equal(remainingG(txs), 140);
+  db.close();
+});
+
+test('2-8の42番：未開封の豆を飲み切り→取り消すと未開封に戻る。淹れた豆は開封済み', async () => {
+  const db = freshDb();
+  const a = await addBean(db, input({ status: 'unopened' }), NOW);
+  await setBeanStatus(db, a.id, 'finished', later(1));
+  assert.equal((await unfinishBean(db, a.id, later(2))).status, 'unopened');
+  await recordCupUsage(db, a.id, 15, later(3));
+  await setBeanStatus(db, a.id, 'finished', later(4));
+  assert.equal((await unfinishBean(db, a.id, later(5))).status, 'open');
+  db.close();
+});
+
+test('2-8の38番：目減り率を学び直したあとでも、メモだけ直したら入庫の量は変わらない', async () => {
+  const db = freshDb();
+  const a = await addBean(db, input(), NOW); // 18%で見積もり 164g
+  await addBean(db, input({ actualWeightG: '170' }), later(1)); // ここで目減り率が15%に変わる
+  await updateBean(db, a.id, { memo: 'メモだけ' }, later(2));
+  let { txs } = await getBeanWithTx(db, a.id);
+  assert.equal(remainingG(txs), 164);
+  // 重さの項目を直したときは、学んだ率で見積もり直す
+  await updateBean(db, a.id, { labelWeightG: 100 }, later(3));
+  ({ txs } = await getBeanWithTx(db, a.id));
+  assert.equal(remainingG(txs), 85);
   db.close();
 });
