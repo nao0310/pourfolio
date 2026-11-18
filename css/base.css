@@ -863,3 +863,13 @@ textarea#link { width: 100%; box-sizing: border-box; font-size: 0.85rem; }
 .steps li { margin: 4px 0; }
 .seg5.seg2 { grid-template-columns: repeat(2, 1fr); margin-bottom: 8px; }
 .seg5.seg2 .seg { font-size: 0.95rem; }
+
+/* お知らせのカードの「×」（2-8 の2番）。右上の44px角。文字が×の下にもぐらないように右に余白 */
+.card.closable { position: relative; padding-right: 52px; }
+.card-close {
+  position: absolute; top: 4px; right: 4px;
+  width: 44px; height: 44px; border: 0; border-radius: 10px;
+  background: transparent; color: var(--muted); font-size: 1.5rem; line-height: 1; cursor: pointer;
+}
+.card-close:hover, .card-close:focus-visible { background: var(--line); color: var(--fg); }
+.dismiss-note { margin: 8px 0; }

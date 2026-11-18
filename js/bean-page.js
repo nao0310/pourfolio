@@ -35,6 +35,7 @@ import { localYmd, formatYmdJa, formatG, formatDateTimeJa } from './core/format.
 import { roastPreferences, preferenceForBean, preferenceText } from './core/compare.js';
 import { $, el, queryParam, showMessage, freshnessPill, frozenPill, stepperField, svgElement } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
+import { showCard } from './dismiss-card.js';
 
 const db = openDb();
 const beanId = queryParam('id');
@@ -183,8 +184,8 @@ function renderInfo(bean, allBeans) {
 async function renderInitial(bean, allBeans) {
   const [brews, tastings, recipes, equipment, settings] = await Promise.all([listBrews(db), listTastings(db), listRecipes(db), listEquipment(db), getSettings(db)]);
   const show = bean.status !== 'ordered' && bean.status !== 'finished' && !brews.some((b) => b.beanId === bean.id);
-  $('initCard').hidden = !show;
-  if (!show) return;
+  $('initCard').hidden = true;
+  if (!show || !showCard($('initCard'), 'init', bean.id)) return;
   const recipe = baseRecipe(recipes, brews);
   const grinderId = recipe?.grind?.grinderId ?? defaultEquipmentIds(equipment).grinderId;
   const init = initialRecipe({ bean, beans: allBeans, brews, tastings, grinders: equipment.filter((e) => e.kind === 'grinder'), grinderId, defaultDoseG: doseFromSettings(settings) });
