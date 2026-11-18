@@ -38,6 +38,7 @@ import { $, el, queryParam, showMessage, freshnessPill, frozenPill, stepperField
 import { registerServiceWorker } from './pwa.js';
 import { showCard } from './dismiss-card.js';
 import { singleFlight } from './core/once.js';
+import { askConfirm } from './confirm-box.js';
 
 /**
  * 送信の処理を、終わるまで2回目を受け付けない形にする（2-8 の13番：冷凍する・1杯淹れたなどの2度押しで2件できないように）。
@@ -165,7 +166,7 @@ function renderTxList(txs) {
               type: 'button',
               onclick: async () => {
                 const extra = { freeze: '（作った袋も消えます）', thaw: '（袋は冷凍庫に戻ります）' }[t.kind] ?? '';
-                if (!confirm(`「${TX_KINDS[t.kind] ?? t.kind} ${formatG(t.deltaG)}」を取り消しますか？${extra}`)) return;
+                if (!(await askConfirm(`「${TX_KINDS[t.kind] ?? t.kind} ${formatG(t.deltaG)}」を取り消しますか？${extra}`, { ok: '取り消す' }))) return;
                 try {
                   await deleteInventoryTx(db, t.id);
                 } catch (err) {
@@ -480,7 +481,7 @@ $('toggleFinished').addEventListener('click', async (event) => {
 });
 
 $('delete').addEventListener('click', async () => {
-  if (!confirm('この豆と在庫の履歴を削除しますか？')) return;
+  if (!(await askConfirm('この豆と在庫の履歴を削除しますか？元に戻せません', { ok: '削除する', danger: true }))) return;
   await deleteBean(db, beanId);
   location.replace('beans.html');
 });

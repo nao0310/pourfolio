@@ -900,5 +900,12 @@ textarea#link { width: 100%; box-sizing: border-box; font-size: 0.85rem; }
 .intensity-line input[type="range"].unset::-webkit-slider-thumb { opacity: 0; }
 .intensity-line input[type="range"].unset::-moz-range-thumb { opacity: 0; }
 
+/* アプリの中の確認の箱（2-8の33番、js/confirm-box.js） */
+.confirm-box { width: min(92vw, 420px); padding: 20px 16px 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--card); color: var(--fg); }
+.confirm-box::backdrop { background: rgba(0, 0, 0, 0.5); }
+.confirm-text { margin: 0 0 16px; font-size: 1.05rem; line-height: 1.6; white-space: pre-line; }
+.confirm-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.confirm-actions .btn { margin: 0; padding: 12px 8px; }
+
 /* 印刷では新しい版のお知らせを出さない（2-8の48番） */
 @media print { .update-bar { display: none !important; } }

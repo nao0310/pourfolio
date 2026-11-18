@@ -51,6 +51,7 @@ import { autosaveAfterChange } from './autosave-file.js';
 import { $, el, queryParam, showMessage, stepperField, showPageLoadError } from './ui.js';
 import { singleFlight } from './core/once.js';
 import { registerServiceWorker, blockUpdatePrompt, recheckUpdatePrompt } from './pwa.js';
+import { askConfirm } from './confirm-box.js';
 
 const db = openDb();
 let draft = null;
@@ -387,9 +388,9 @@ function findGhost(recipeId, beanId) {
 }
 
 /** 新しく始める。途中の抽出があれば、捨ててよいか確かめる */
-function beginNew(withTimer) {
+async function beginNew(withTimer) {
   if (!loadedPlan) return;
-  if (loadDraft() && !confirm('途中の抽出を捨てて、新しく始めますか？')) return;
+  if (loadDraft() && !(await askConfirm('途中の抽出を捨てて、新しく始めますか？', { ok: '新しく始める', danger: true }))) return;
   draft = {
     ...newDraft(loadedPlan.plan, $('bean').value || null, withTimer ? Date.now() : null, precheck),
     returnSearch: location.search,
@@ -556,8 +557,8 @@ function onTap() {
   tick();
 }
 
-function cancelBrew() {
-  if (!confirm('この抽出をやめますか？記録は残りません')) return;
+async function cancelBrew() {
+  if (!(await askConfirm('この抽出をやめますか？記録は残りません', { ok: 'やめる', danger: true }))) return;
   stopTimer();
   const back = draft?.returnSearch ?? '';
   clearDraft();
@@ -746,8 +747,8 @@ const onSave = singleFlight(async (e) => {
   }
 });
 
-function discard() {
-  if (!confirm('記録せずにやめますか？入れた内容は消えます')) return;
+async function discard() {
+  if (!(await askConfirm('記録せずにやめますか？入れた内容は消えます', { ok: 'やめる', danger: true }))) return;
   const back = draft?.returnSearch ?? '';
   clearDraft();
   draft = null;
@@ -834,12 +835,14 @@ $('resultView').addEventListener('submit', (e) => {
   onSave(e);
 });
 $('discard').addEventListener('click', discard);
-$('crumb').addEventListener('click', (e) => {
-  if (draft && !confirm('記録せずに戻りますか？途中の内容は消えます')) {
-    e.preventDefault();
-    return;
-  }
-  if (draft) clearDraft();
+$('crumb').addEventListener('click', async (e) => {
+  if (!draft) return;
+  // 確かめてから移る（確認の箱は待つので、いったん移るのを止める）
+  e.preventDefault();
+  const href = e.currentTarget.href;
+  if (!(await askConfirm('記録せずに戻りますか？途中の内容は消えます', { ok: '戻る', danger: true }))) return;
+  clearDraft();
+  location.href = href;
 });
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') cue.resume();

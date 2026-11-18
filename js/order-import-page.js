@@ -6,6 +6,7 @@ import { ROAST_LEVELS } from './core/roast.js';
 import { formatG, formatYmdJa, formatDateJa, localYmd } from './core/format.js';
 import { $, el, showMessage } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
+import { askConfirm } from './confirm-box.js';
 
 const db = openDb();
 let parsed = null;
@@ -126,7 +127,7 @@ $('save').addEventListener('click', async () => {
     items.push(value);
   }
   if (!items.length) return;
-  if (!$('dupNote').hidden && !confirm('この注文は登録済みです。もう一度登録しますか？')) return;
+  if (!$('dupNote').hidden && !(await askConfirm('この注文は登録済みです。もう一度登録しますか？', { ok: 'もう一度登録する' }))) return;
   $('save').disabled = true;
   try {
     const orderDate = parsed.orderDate ?? localYmd();

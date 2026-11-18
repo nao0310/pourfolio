@@ -15,6 +15,7 @@ import { GRIND_SIZES, sizeWord } from './core/grinder-scale.js';
 import { WATER_ITEMS, normalizeWaterInput, waterCheck } from './core/water.js';
 import { $, el, queryParam, showMessage } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
+import { askConfirm } from './confirm-box.js';
 
 const db = openDb();
 const form = $('form');
@@ -206,7 +207,7 @@ form.addEventListener('submit', async (event) => {
 });
 
 $('delete').addEventListener('click', async () => {
-  if (!confirm('この器具（水）を削除しますか？（レシピに入っている器具の名前は表示されなくなります）')) return;
+  if (!(await askConfirm('この器具（水）を削除しますか？元に戻せません（レシピに入っている器具の名前は表示されなくなります）', { ok: '削除する', danger: true }))) return;
   await deleteEquipment(db, editId);
   location.replace('equipment.html');
 });

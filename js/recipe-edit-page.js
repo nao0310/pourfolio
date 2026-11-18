@@ -25,6 +25,7 @@ import { parseNumber } from './core/beans.js';
 import { doseFromSettings } from './core/inventory.js';
 import { $, el, queryParam, showMessage, stepperField } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
+import { askConfirm } from './confirm-box.js';
 
 const db = openDb();
 const form = $('form');
@@ -421,7 +422,7 @@ form.addEventListener('submit', async (event) => {
 });
 
 $('delete').addEventListener('click', async () => {
-  if (!confirm('このレシピを削除しますか？（これまでの抽出の記録は消えません）')) return;
+  if (!(await askConfirm('このレシピを削除しますか？元に戻せません（これまでの抽出の記録は消えません）', { ok: '削除する', danger: true }))) return;
   await deleteRecipe(db, editId);
   location.replace('recipes.html');
 });
