@@ -545,6 +545,7 @@ p > a:not(.btn):only-child { display: inline-block; padding: 11px 0; }
 .pill.frozen { background: transparent; color: var(--stage-resting); border: 2px solid var(--stage-resting); }
 .portion-list .tx-main { align-items: center; }
 .portion-list .tx-kind { font-weight: 600; min-width: 0; }
+.portion-list .btn { flex: 0 0 auto; white-space: nowrap; }
 
 /* コスト（2-3） */
 .month-bars { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }

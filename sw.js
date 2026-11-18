@@ -9,14 +9,14 @@
 // <manifest> npm run sw が書き込む（手で直さない）
 const MANIFEST = {
   "label": "2.2",
-  "version": "80fbfc2d850b",
+  "version": "e29675367d41",
   "files": {
     "bean-edit.html": "b4ab5c1cb88b2a27",
     "bean.html": "899271677fe3e0ca",
     "beans.html": "1436a81b24b74c0b",
     "brew.html": "b206566861e5fbcc",
     "cost.html": "7efaa229edbe76c3",
-    "css/base.css": "a9b0592df1995027",
+    "css/base.css": "f8217e00bb48edef",
     "data.html": "23d354a1d5b2e33f",
     "equipment-edit.html": "42de8951a09272a3",
     "equipment.html": "ad84ca1c98692907",
