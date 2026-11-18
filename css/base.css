@@ -566,3 +566,8 @@ p > a:not(.btn):only-child { display: inline-block; padding: 11px 0; }
 .shop-card.favorite { border: 2px solid var(--accent); }
 .shop-card h2 { margin: 0; word-break: break-word; }
 .fav-btn { flex: 0 0 auto; min-width: 48px; min-height: 48px; border: 0; background: transparent; color: var(--accent); font-size: 1.8rem; line-height: 1; cursor: pointer; }
+
+/* 抽出前チェック（A5） */
+.precheck { display: grid; grid-template-columns: 1fr; gap: 2px; }
+.precheck-item > span { display: flex; flex-direction: column; }
+.precheck-hint { line-height: 1.3; }

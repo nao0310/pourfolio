@@ -31,6 +31,7 @@ import {
   brewDiff,
   diffLines,
   buildBrew,
+  PRECHECK_ITEMS,
 } from './core/brews.js';
 import { loadDraft, saveDraft, clearDraft } from './brew-draft.js';
 import * as cue from './cue.js';
@@ -46,6 +47,8 @@ let loadedPlan = null;
 let suggestions = [];
 let portions = [];
 let txs = [];
+/** 抽出前チェック（A5）で押した項目 */
+let precheck = {};
 
 // ---- 計画（スタート前） ----
 
@@ -203,6 +206,7 @@ async function showPlan(loaded, lastBeanId) {
       );
     }),
   );
+  renderPrecheck(plan);
   $('target').textContent = [
     plan.bloom?.stir ? '蒸らしで攪拌する' : '',
     plan.targetTotalSec ? `落ち切りの目標 ${formatSec(plan.targetTotalSec)}` : '',
@@ -211,11 +215,35 @@ async function showPlan(loaded, lastBeanId) {
     .join('　');
 }
 
+/** 抽出前チェック（A5）の4つのボタン。湯温には計画の温度を添える */
+function renderPrecheck(plan) {
+  $('precheck').replaceChildren(
+    ...PRECHECK_ITEMS.map((item) => {
+      const label = item.key === 'temp' && plan.tempC != null ? `${item.label} ${plan.tempC}℃` : item.label;
+      return el(
+        'label',
+        { class: 'check-row precheck-item' },
+        el('input', {
+          type: 'checkbox',
+          checked: precheck[item.key] === true,
+          onchange: (e) => {
+            precheck = { ...precheck, [item.key]: e.target.checked };
+          },
+        }),
+        el('span', {}, el('strong', {}, label), el('span', { class: 'muted small precheck-hint' }, item.hint)),
+      );
+    }),
+  );
+}
+
 /** 新しく始める。途中の抽出があれば、捨ててよいか確かめる */
 function beginNew(withTimer) {
   if (!loadedPlan) return;
   if (loadDraft() && !confirm('途中の抽出を捨てて、新しく始めますか？')) return;
-  draft = { ...newDraft(loadedPlan.plan, $('bean').value || null, withTimer ? Date.now() : null), returnSearch: location.search };
+  draft = {
+    ...newDraft(loadedPlan.plan, $('bean').value || null, withTimer ? Date.now() : null, precheck),
+    returnSearch: location.search,
+  };
   saveDraft(draft);
   $('content').hidden = true;
   if (withTimer) {
