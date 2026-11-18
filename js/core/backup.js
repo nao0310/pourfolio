@@ -53,6 +53,11 @@ export function countRecords(tables) {
   return counts;
 }
 
+/** 全部の表を合わせた件数 */
+export function totalRecords(tables) {
+  return Object.values(countRecords(tables)).reduce((a, b) => a + b, 0);
+}
+
 const isPlainObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 
 /**

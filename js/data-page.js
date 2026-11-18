@@ -1,6 +1,6 @@
 // データの書き出しと復元の画面（G1）
 import { openDb, countAlive, exportAll, restoreBackup, clearAll, putAll, updateSettings } from './db.js';
-import { parseBackup, backupFileName, BackupError } from './core/backup.js';
+import { parseBackup, backupFileName, totalRecords, BackupError } from './core/backup.js';
 import { makeSampleData } from './core/sample-data.js';
 import { TABLES, SETTINGS_ID } from './core/records.js';
 import { formatDateTimeJa } from './core/format.js';
@@ -97,7 +97,11 @@ $('file').addEventListener('change', async (event) => {
   if (!file) return;
   try {
     const backup = parseBackup(await file.text());
-    const total = TABLES.reduce((n, name) => n + backup.tables[name].length, 0);
+    const total = totalRecords(backup.tables);
+    if (total === 0) {
+      showMessage('このファイルには記録が入っていませんでした。何も変わっていません', 'muted');
+      return;
+    }
     const when = formatDateTimeJa(backup.exportedAt) || '不明';
     if (!confirm(`${when} に書き出したファイル（${total} 件）を復元します。よろしいですか？`)) return;
     const result = await restoreBackup(db, backup);

@@ -6,6 +6,7 @@ import {
   mergeRecords,
   backupFileName,
   countRecords,
+  totalRecords,
   BackupError,
   FORMAT_VERSION,
 } from '../js/core/backup.js';
@@ -33,6 +34,12 @@ test('書き出し→JSON→読み込みで中身が変わらない', () => {
 test('サンプルデータは全部の表に記録がある', () => {
   const counts = countRecords(makeSampleData(NOW));
   for (const name of TABLES) assert.ok(counts[name] > 0, name);
+});
+
+test('全部の表を合わせた件数。空のファイルは0件', () => {
+  assert.equal(totalRecords(makeSampleData(NOW)), 9);
+  const empty = parseBackup(JSON.stringify(makeBackup({}, NOW)));
+  assert.equal(totalRecords(empty.tables), 0);
 });
 
 test('ファイル名は日時入り', () => {
