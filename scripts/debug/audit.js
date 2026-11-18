@@ -22,6 +22,7 @@ const PAGES = [
   'compare.html', 'optimize.html', 'ai.html', 'report.html', 'share.html', 'scan.html', 'recipe-card.html', 'more.html', 'data.html',
   'storage-test.html', 'tasting.html', 'weather.html', 'life.html', 'life.html?demo=1',
   'repro.html', 'repro.html?demo=1', 'aging.html', 'aging.html?demo=1', 'aging.html?bean=no-such-id', 'glossary.html', 'glossary.html#t-tds', 'gift.html',
+  'wrapped.html', 'wrapped.html?demo=1', 'wrapped.html?year=2025',
 ];
 
 /** 記録があれば、IDの要る画面も足す（いちばん新しい豆・レシピ・抽出・器具・飲み比べ） */

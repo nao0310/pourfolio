@@ -3,10 +3,19 @@
 // ステップを仕上げるときに APP_VERSION と CHANGELOG の先頭を足す。上げ忘れは tests/version.test.js が見つける。
 // sw.js の一覧（npm run sw）にも番号が入り、更新の知らせに新しい番号を出す。
 
-export const APP_VERSION = '3.5';
+export const APP_VERSION = '3.6';
 
 /** 更新履歴（新しい順）。items は利用者向けの短い文で、2〜3個まで */
 export const CHANGELOG = Object.freeze([
+  {
+    version: '3.6',
+    date: '2026-11-18',
+    items: [
+      '分析に「年間まとめ」：1年の杯数・飲んだ産地の地図・ベスト・好み・成長・提案の効果などを、カードをめくって振り返れます',
+      'まとめの最後のカードから、1年の数字を1枚の画像にして保存・共有できます',
+      '12月と1月は、ホームに「年のまとめができました」が出ます',
+    ],
+  },
   {
     version: '3.5',
     date: '2026-11-18',

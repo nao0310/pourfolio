@@ -8,8 +8,8 @@
 
 // <manifest> npm run sw が書き込む（手で直さない）
 const MANIFEST = {
-  "label": "3.5",
-  "version": "29bd575cd508",
+  "label": "3.6",
+  "version": "60c9e088c82a",
   "files": {
     "aging.html": "e375c2c6820a60f3",
     "ai.html": "34607ec38ddc5690",
@@ -22,7 +22,7 @@ const MANIFEST = {
     "calendar.html": "add01bf22879b657",
     "compare.html": "63315ff50a7788c8",
     "cost.html": "2c834b6cf3df809b",
-    "css/base.css": "cc160c0cdd793c0f",
+    "css/base.css": "9a82874f84c2d555",
     "css/print.css": "8c007c2e176a70f2",
     "data.html": "db703c97881020e1",
     "dialin-history.html": "0d8a41cb504c8b0d",
@@ -117,7 +117,7 @@ const MANIFEST = {
     "js/core/today.js": "1814a6c90e899543",
     "js/core/tonya.js": "faac59308d2b0ca5",
     "js/core/usual.js": "306c68f4420764a8",
-    "js/core/version.js": "8df12eaa4d2dedaa",
+    "js/core/version.js": "ff41b5441e9ee8ed",
     "js/core/water.js": "26dace0c46b908b4",
     "js/core/weather.js": "c179c2e62f69cb9e",
     "js/core/wishlist.js": "6bf3695085913224",
@@ -161,7 +161,7 @@ const MANIFEST = {
     "js/weather-sync.js": "2554aae27880a823",
     "js/wishlist-page.js": "a76f89120d2d3446",
     "js/wrapped-image.js": "ccd61e683d4c38fb",
-    "js/wrapped-page.js": "d526630fbb98cb6f",
+    "js/wrapped-page.js": "065d53f32bed4c98",
     "life.html": "142745f2678a3b4d",
     "manifest.webmanifest": "6ba74664b83078e8",
     "more.html": "306dc9f0ce8761fa",

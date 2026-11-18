@@ -10,6 +10,7 @@ import { plot, svg } from './chart.js';
 import { drawWrappedImage } from './wrapped-image.js';
 import { canvasToFile } from './brew-image.js';
 import { $, el, queryParam, showMessage } from './ui.js';
+import { clip } from './core/card-text.js';
 import { registerServiceWorker } from './pwa.js';
 
 let data = null;
@@ -81,9 +82,9 @@ const SLIDES = {
   ],
   best: (s) => [
     head('ベスト'),
-    s.favorite ? el('div', { class: 'wr-fav' }, el('span', { class: 'wr-kv-label' }, 'いちばん好きだった豆'), el('span', { class: 'wr-fav-name' }, s.favorite.name), el('span', { class: 'muted' }, `平均★${s.favorite.avg}・${s.favorite.n}杯${s.favorite.roastLevel ? `・${s.favorite.roastLevel}` : ''}`)) : '',
+    s.favorite ? el('div', { class: 'wr-fav' }, el('span', { class: 'wr-kv-label' }, 'いちばん好きだった豆'), el('span', { class: 'wr-fav-name' }, clip(s.favorite.name, 36)), el('span', { class: 'muted' }, `平均★${s.favorite.avg}・${s.favorite.n}杯${s.favorite.roastLevel ? `・${s.favorite.roastLevel}` : ''}`)) : '',
     el('h3', { class: 'wr-h3' }, '★の高い3杯'),
-    el('ol', { class: 'wr-best' }, ...s.top.map((b) => el('li', {}, el(isDemo() ? 'span' : 'a', isDemo() ? { class: 'wr-best-row' } : { class: 'wr-best-row', href: `tasting.html?brew=${encodeURIComponent(b.brewId)}` }, el('span', { class: 'num wr-star' }, `★${b.stars}`), el('span', { class: 'wr-best-name' }, `${b.beanName}${b.roastLevel ? `（${b.roastLevel}）` : ''}`), el('span', { class: 'muted num' }, `${formatYmdJa(b.ymd)}${b.ratio ? `・1:${b.ratio}` : ''}`))))),
+    el('ol', { class: 'wr-best' }, ...s.top.map((b) => el('li', {}, el(isDemo() ? 'span' : 'a', isDemo() ? { class: 'wr-best-row' } : { class: 'wr-best-row', href: `tasting.html?brew=${encodeURIComponent(b.brewId)}` }, el('span', { class: 'num wr-star' }, `★${b.stars}`), el('span', { class: 'wr-best-name' }, `${clip(b.beanName, 36)}${b.roastLevel ? `（${b.roastLevel}）` : ''}`), el('span', { class: 'muted num' }, `${formatYmdJa(b.ymd)}${b.ratio ? `・1:${b.ratio}` : ''}`))))),
   ],
   taste: (s) => [head('好みの傾向'), ...s.items.map((t) => kv(`いちばん★が高かった${t.label}`, t.value, `平均★${t.mean}・${t.n}杯`)), el('p', { class: 'muted small' }, '★の平均を杯数で全体の平均に寄せた嗜好スコアで比べています（3杯以上の区分だけ）')],
   growth: (s) => [
@@ -107,18 +108,20 @@ const SLIDES = {
     ...s.lines.map((t) => el('p', { class: 'wr-line' }, t)),
     !s.ready ? el('p', { class: 'muted small' }, '★のある杯が30杯たまると、時間帯や気温と★の関係も出します') : el('p', { class: 'muted small' }, '一緒に動いているだけで、原因とは限りません'),
   ],
-  aging: (s) => [head('飲み頃'), sub('焙煎後'), big(`${s.days}日ごろ`), sub(`飲み頃の山が出た${s.beans}つの豆の平均です`), kv('山がいちばん高かった豆', s.best.name, `${s.best.label}・平均★${s.best.mean}`)],
+  aging: (s) => [head('飲み頃'), sub('焙煎後'), big(`${s.days}日ごろ`), sub(`飲み頃の山が出た${s.beans}つの豆の平均です`), kv('山がいちばん高かった豆', clip(s.best.name, 36), `${s.best.label}・平均★${s.best.mean}`)],
   money: (s) => [
     head('お金とカフェイン'),
     kv('買った豆', yen(s.boughtJpy), `${s.bags}袋・送料込み${s.unpricedBags ? `（価格なし${s.unpricedBags}袋）` : ''}`),
-    kv('飲んだ豆の原価', yen(s.drankJpy), s.perCupJpy != null ? `1杯 約${yen(s.perCupJpy)}${s.uncostedCups ? `（原価のない${s.uncostedCups}杯を除く）` : ''}` : ''),
+    s.perCupJpy != null
+      ? kv('飲んだ豆の原価', yen(s.drankJpy), `1杯 約${yen(s.perCupJpy)}${s.uncostedCups ? `（原価のない${s.uncostedCups}杯を除く）` : ''}`)
+      : kv('飲んだ豆の原価', '—', '豆の価格と重さを入れると出します'),
     kv('使った豆', `${s.gramsUsed.toLocaleString('ja-JP')}g`),
     kv('カフェイン', `約${(s.caffeineMg / 1000).toFixed(1)}g`, 'カフェインレスを除く目安'),
   ],
   summary: (s) => [
     head(`${s.year}年のまとめ`),
     el('div', { class: 'wr-grid' }, kv('杯数', `${s.cups}杯`), kv('飲んだ日', `${s.days}日`), kv('豆', `${s.beans}種類`), kv('産地', `${s.countries}か国`), kv('平均の★', s.avgStars != null ? `★${s.avgStars}` : '—'), kv('使った豆', `${s.gramsUsed.toLocaleString('ja-JP')}g`)),
-    s.favorite ? kv('いちばん好きだった豆', s.favorite.name, `平均★${s.favorite.avg}`) : '',
+    s.favorite ? kv('いちばん好きだった豆', clip(s.favorite.name, 36), `平均★${s.favorite.avg}`) : '',
     s.effect ? kv('提案の効果', `★${s.effect.beforeAvg} → ★${s.effect.afterAvg}`, `${s.effect.n}回`) : '',
     el(
       'div',
@@ -189,7 +192,7 @@ function render(year) {
   current = wrappedSlides(data, year, localYmd());
   document.title = `${year}年のまとめ - Pourfolio`;
   const deck = $('deck');
-  deck.replaceChildren(...current.slides.map((s, i) => el('section', { class: `wr-slide wr-${s.key}`, 'aria-label': `${i + 1}枚目` }, ...SLIDES[s.key](s, current))));
+  deck.replaceChildren(...current.slides.map((s, i) => el('section', { class: `wr-slide wr-s-${s.key}`, 'aria-label': `${i + 1}枚目` }, ...SLIDES[s.key](s, current))));
   deck.scrollLeft = 0;
   $('imageMake')?.addEventListener('click', makeImage);
   updateCount();

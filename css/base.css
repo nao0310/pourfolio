@@ -991,7 +991,10 @@ h2 .term-help, h1 .term-help { margin-top: -10px; margin-bottom: -10px; }
   min-width: 0;
   scroll-snap-align: start;
   scroll-snap-stop: always;
-  min-height: max(400px, calc(100svh - 310px));
+  /* 画面の高さに合わせ、「前へ」「次へ」と下のタブが1画面に入るようにする。長いカードは中でスクロールする */
+  height: max(380px, calc(100svh - 280px));
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
   padding: 22px 18px;
   background: var(--card);
   background-clip: padding-box;
@@ -1004,8 +1007,8 @@ h2 .term-help, h1 .term-help { margin-top: -10px; margin-bottom: -10px; }
   overflow-wrap: anywhere;
 }
 .wr-slide > * { margin: 0; }
-.wr-cover { justify-content: center; background: var(--accent); color: var(--accent-fg); border-color: transparent; }
-.wr-cover .wr-sub, .wr-cover .wr-kicker { color: var(--accent-fg); opacity: 0.85; }
+.wr-s-cover { justify-content: center; background: var(--accent); color: var(--accent-fg); border-color: transparent; }
+.wr-s-cover .wr-sub, .wr-s-cover .wr-kicker { color: var(--accent-fg); opacity: 0.85; }
 .wr-kicker { font-weight: 700; letter-spacing: 0.04em; }
 .wr-cover-title { font-size: 2.6rem; line-height: 1.2; margin: 8px 0 12px; }
 .wr-title { font-size: 1.3rem; color: var(--accent); margin-bottom: 6px; }
