@@ -3,7 +3,7 @@ import { openDb, addOrder, listOrders } from './db.js';
 import { parseOrderEmail } from './core/tonya.js';
 import { normalizeOrderItem, orderFields } from './core/orders.js';
 import { ROAST_LEVELS } from './core/roast.js';
-import { formatG, formatYmdJa, localYmd } from './core/format.js';
+import { formatG, formatYmdJa, formatDateJa, localYmd } from './core/format.js';
 import { $, el, showMessage } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
 
@@ -87,7 +87,7 @@ async function render() {
   ];
   $('orderInfo').replaceChildren(...info.flatMap(([k, v]) => [el('dt', {}, k), el('dd', {}, v)]));
   $('dupNote').hidden = !dup;
-  $('dupNote').textContent = dup ? `この注文（${dup.orderNo}）は${formatYmdJa(dup.createdAt.slice(0, 10))}に登録済みです。もう一度登録すると、同じ豆が増えます。` : '';
+  $('dupNote').textContent = dup ? `この注文（${dup.orderNo}）は${formatDateJa(dup.createdAt)}に登録済みです。もう一度登録すると、同じ豆が増えます。` : '';
   $('items').replaceChildren(...rows.map(itemCard));
   $('others').textContent = o.others.length ? `豆以外の品物（登録しません）：${o.others.map((x) => x.name).join('、')}` : '';
   $('result').hidden = false;

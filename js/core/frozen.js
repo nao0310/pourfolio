@@ -6,7 +6,7 @@
 // - 冷凍中は焙煎後の日数を数えない（袋には冷凍した時点の焙煎後日数を残す）
 
 import { daysBetween } from './freshness.js';
-import { parseNumber } from './beans.js';
+import { parseNumber, isValidYmd } from './beans.js';
 import { formatG, formatYmdJa } from './format.js';
 
 /** 1回に作れる袋の数の上限 */
@@ -16,7 +16,6 @@ export const MAX_PORTION_G = 1000;
 
 const alive = (r) => r && r.deletedAt == null;
 const round1 = (n) => Math.round(n * 10) / 10;
-const YMD = /^\d{4}-\d{2}-\d{2}$/;
 const clean = (v) => String(v ?? '').normalize('NFKC').trim();
 
 /** 冷凍庫にある（取り出していない・削除していない）袋か */
@@ -35,7 +34,7 @@ export function normalizeFreezeInput(raw = {}, { availableG = 0 } = {}) {
   const n = parseNumber(raw.count);
   if (n == null || !Number.isInteger(n) || n < 1 || n > MAX_PORTIONS) errors.count = `袋の数は1〜${MAX_PORTIONS}で入れてください`;
   const frozenDate = clean(raw.frozenDate);
-  if (!YMD.test(frozenDate) || daysBetween(frozenDate, frozenDate) !== 0) errors.frozenDate = '冷凍した日を入れてください';
+  if (!isValidYmd(frozenDate)) errors.frozenDate = '冷凍した日を入れてください';
   if (Object.keys(errors).length) return { value: null, errors };
   const gramsPerPortion = round1(g);
   const totalG = round1(gramsPerPortion * n);

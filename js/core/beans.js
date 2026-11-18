@@ -39,7 +39,8 @@ export function parseNumber(v) {
   return Number.isFinite(n) ? n : NaN;
 }
 
-const isValidYmd = (s) => {
+/** 「2026-02-31」のようなない日を通さない日付の確かめ（冷凍した日でも使う、2-8の52番） */
+export const isValidYmd = (s) => {
   if (!YMD.test(s)) return false;
   const d = new Date(`${s}T00:00:00Z`);
   return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s;

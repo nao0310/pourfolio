@@ -132,3 +132,9 @@ test('袋の説明', () => {
   assert.equal(portionText(p({ labelNo: 3, roastDaysAtFreeze: 8 })), '#3　15g・11/10に冷凍（焙煎後8日）');
   assert.equal(portionText(p({ labelNo: 3, roastDaysAtFreeze: null })), '#3　15g・11/10に冷凍');
 });
+
+test('2-8の52番：「2026-02-31」のようなない日は冷凍した日として通さない', () => {
+  assert.ok(normalizeFreezeInput({ gramsPerPortion: '15', count: '2', frozenDate: '2026-02-31' }, { availableG: 100 }).errors.frozenDate);
+  assert.ok(normalizeFreezeInput({ gramsPerPortion: '15', count: '2', frozenDate: '2026-13-01' }, { availableG: 100 }).errors.frozenDate);
+  assert.equal(normalizeFreezeInput({ gramsPerPortion: '15', count: '2', frozenDate: '2028-02-29' }, { availableG: 100 }).errors.frozenDate, undefined);
+});

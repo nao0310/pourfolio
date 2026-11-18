@@ -32,7 +32,7 @@ import { gramPrice, yen, yenPerGText } from './core/cost.js';
 import { remainingG, cupsLeft, consumptionPace, emptyForecast, doseFromSettings, sortTxNewestFirst, TX_KINDS } from './core/inventory.js';
 import { freshness, FRESHNESS_WINDOWS, FALLBACK_GROUP, STAGES } from './core/freshness.js';
 import { roastGroup, ROAST_GROUPS } from './core/roast.js';
-import { localYmd, formatYmdJa, formatG, formatDateTimeJa } from './core/format.js';
+import { localYmd, formatYmdJa, formatG, formatDateTimeJa, formatDateJa } from './core/format.js';
 import { roastPreferences, preferenceForBean, preferenceText } from './core/compare.js';
 import { $, el, queryParam, showMessage, freshnessPill, frozenPill, stepperField, svgElement } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
@@ -123,7 +123,7 @@ function renderStock(bean, txs, parts) {
   if (rest <= 0) {
     $('forecast').textContent = bean.status === 'finished' ? '' : '残りがなくなりました。飲み切りにしておくと一覧がすっきりします。';
   } else if (fc) {
-    $('forecast').textContent = `この2週間のペース（1日${formatG(pace.gPerDay)}）だと、あと${fc.days}日（${formatDateTimeJa(fc.date).slice(5, 10)}ごろ）でなくなります`;
+    $('forecast').textContent = `この2週間のペース（1日${formatG(pace.gPerDay)}）だと、あと${fc.days}日（${formatDateJa(fc.date)}ごろ）でなくなります`;
   } else {
     $('forecast').textContent = 'なくなる日の目安は、2週間で2杯以上淹れると表示します';
   }
