@@ -9,7 +9,7 @@
 // <manifest> npm run sw が書き込む（手で直さない）
 const MANIFEST = {
   "label": "3.4",
-  "version": "eab4a8041a01",
+  "version": "60d9749f51b8",
   "files": {
     "aging.html": "e375c2c6820a60f3",
     "ai.html": "34607ec38ddc5690",
@@ -18,7 +18,7 @@ const MANIFEST = {
     "bean.html": "7f1d98082d5fcc7c",
     "beans.html": "29fc759bf18d4854",
     "brew-chart.html": "5e33be4e3915833d",
-    "brew.html": "b40d183826c8528a",
+    "brew.html": "9c35a37972b4ed7f",
     "calendar.html": "add01bf22879b657",
     "compare.html": "63315ff50a7788c8",
     "cost.html": "2c834b6cf3df809b",
@@ -46,7 +46,7 @@ const MANIFEST = {
     "js/brew-chart-page.js": "15e4c428c1fd9d8b",
     "js/brew-draft.js": "d7586b9a8f874516",
     "js/brew-image.js": "7271711ef411af36",
-    "js/brew-page.js": "9b9779d84b0a3eb8",
+    "js/brew-page.js": "a7b8d4c0ec66b46d",
     "js/calendar-page.js": "498481f8d95cf1e8",
     "js/chart.js": "bfe7bcfbcfd6aa36",
     "js/compare-page.js": "f4c2917daf4da186",

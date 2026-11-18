@@ -58,6 +58,17 @@
         <ul class="reason-list" id="initReasons"></ul>
       </div>
 
+      <!-- 前回の申し送り（X32）：この袋でまだ淹れていない豆を選んだとき -->
+      <div class="card suggest-card" id="hoCard" hidden>
+        <p><strong>前回の申し送り</strong></p>
+        <p class="muted small" id="hoFrom"></p>
+        <div id="hoNotes"></div>
+        <p class="num" id="hoBest"></p>
+        <div class="row" id="hoRow" hidden>
+          <a class="btn small" id="hoUse">前回のベストで淹れる</a>
+        </div>
+      </div>
+
       <div class="card">
         <label class="field">
           <span class="label">豆</span>
