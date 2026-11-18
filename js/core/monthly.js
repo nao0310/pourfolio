@@ -5,6 +5,7 @@ import { analysisRows } from './analysis.js';
 import { monthlySpending, addMonths } from './cost.js';
 import { localYmd } from './format.js';
 import { mean } from './chart-scale.js';
+import { myCaffeineMg } from './caffeine.js';
 
 /** 好みの変化に使う、1つの焙煎度あたりの最少の杯 */
 export const PREF_MIN_CUPS = 2;
@@ -62,7 +63,7 @@ export function monthlyReport({ brews = [], beans = [], tastings = [], orders = 
   // 支出は月の最後の日を「今日」として、その月の行だけを使う
   const spend = monthlySpending({ beans, orders, brews, today: `${month}-28`, months: 1 })[0];
 
-  const caf = rows.reduce((a, r) => a + (r.bean?.decaf ? 0 : (r.metrics.caffeineMg ?? 0)), 0);
+  const caf = rows.reduce((a, r) => a + (myCaffeineMg(r) ?? 0), 0);
   const days = new Set(rows.map((r) => r.ymd)).size;
   const avg = rated.length ? r1(mean(rated.map((r) => r.stars))) : null;
   const prevAvg = prevRated.length ? r1(mean(prevRated.map((r) => r.stars))) : null;

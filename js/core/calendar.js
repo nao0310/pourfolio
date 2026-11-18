@@ -1,5 +1,8 @@
 // カレンダーとカフェイン（E8）：毎日の杯数と、カフェインの目安の推移（純粋関数）
-// 日付は端末の時刻（localYmd）で区切る。カフェインは extraction.js の目安。
+// 日付は端末の時刻（localYmd）で区切る。カフェインは extraction.js の目安で、数え方はホームと同じ（myCaffeineMg：
+// カフェインレスは数えない〔2-8の36番〕、来客の杯は杯数で割る〔40番〕）。
+
+import { myCaffeineMg } from './caffeine.js';
 
 const pad = (n) => String(n).padStart(2, '0');
 const ymdOf = (y, m, d) => `${y}-${pad(m)}-${pad(d)}`;
@@ -21,7 +24,8 @@ export function dailyStats(rows) {
   for (const r of rows) {
     const s = out.get(r.ymd) ?? { cups: 0, caffeineMg: 0, unknown: 0 };
     s.cups += 1;
-    if (r.metrics.caffeineMg != null) s.caffeineMg += r.metrics.caffeineMg;
+    const my = myCaffeineMg(r);
+    if (my != null) s.caffeineMg += my;
     else s.unknown += 1;
     out.set(r.ymd, s);
   }

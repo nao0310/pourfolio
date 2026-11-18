@@ -2,7 +2,8 @@
 // 「今日」は朝5時から次の朝5時まで（夜中の杯は前の日に数える。today.js の caffeineState と同じ区切り）。
 // 1杯の量は extraction.js の目安（analysisRows の metrics.caffeineMg）。カフェインレスの豆の杯は数えない（D-142）。
 
-import { minutesOf, DAILY_CAFFEINE_MG } from './today.js';
+import { cutoffStatus, DAILY_CAFFEINE_MG } from './today.js';
+import { cupsOf } from './plan-adjust.js';
 
 /** 1日の区切り（時） */
 export const DAY_START_HOUR = 5;
@@ -13,6 +14,19 @@ export function coffeeDayStart(now) {
   if (d.getHours() < DAY_START_HOUR) d.setDate(d.getDate() - 1);
   d.setHours(DAY_START_HOUR, 0, 0, 0);
   return d;
+}
+
+/**
+ * 1杯のうち自分が飲んだカフェイン（mg）。カフェインレスの豆は0、量を出せなければ null。
+ * 来客などで2〜4杯まとめて淹れた杯は杯数で割る（2-8の40番。「少なめ」は1人分なので割らない）
+ * @param {object} r analysisRows の行
+ */
+export function myCaffeineMg(r) {
+  if (r?.bean?.decaf) return 0;
+  const mg = r?.metrics?.caffeineMg;
+  if (mg == null) return null;
+  const cups = cupsOf(r.brew);
+  return cups > 1 ? Math.round(mg / cups) : mg;
 }
 
 /**
@@ -30,8 +44,8 @@ export function todayCaffeine(rows, now) {
     const t = new Date(r.brew?.at ?? r.at).getTime();
     if (!(t >= from && t <= to)) continue;
     cups += 1;
-    if (r.bean?.decaf) continue;
-    if (r.metrics?.caffeineMg != null) mg += r.metrics.caffeineMg;
+    const my = myCaffeineMg(r);
+    if (my != null) mg += my;
     else unknown += 1;
   }
   return { mg, cups, unknown };
@@ -50,11 +64,7 @@ export function durationText(min) {
  * @returns {{mg:number, limitMg:number, pct:number, minutesLeft:number|null, late:boolean, over:boolean, main:string, sub:string}}
  */
 export function caffeineKeeper({ now, cutoff = null, mg = 0, limitMg = DAILY_CAFFEINE_MG }) {
-  const d = new Date(now);
-  const c = minutesOf(cutoff);
-  const cur = d.getHours() * 60 + d.getMinutes();
-  const pastCutoff = c != null && (cur >= c || d.getHours() < DAY_START_HOUR);
-  const minutesLeft = c != null && !pastCutoff ? c - cur : null;
+  const { past: pastCutoff, minutesLeft } = cutoffStatus(now, cutoff);
   const over = mg >= limitMg;
   const main = `今日のカフェイン 約${mg}mg／目安${limitMg}mg`;
   let sub;
