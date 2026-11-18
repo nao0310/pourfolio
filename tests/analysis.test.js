@@ -235,3 +235,13 @@ test('デモデータ：同じ日なら同じ中身。全画面の計算が中�
   assert.ok(NOW.getTime() - oldest <= 100 * 86400000);
   assert.ok(a.brews.every((x) => Date.parse(x.at) < NOW.getTime()));
 });
+
+test('アイスの杯は、抽出チャートと条件と評価から外す（★の好みには入れる）', () => {
+  const hot = brew({ actual: { doseG: 15, waterG: 240, tdsPct: 1.4 } });
+  const ice = brew({ actual: { doseG: 15, waterG: 144, tdsPct: 1.4 }, context: { iceG: 96 } });
+  const rows = analysisRows({ brews: [hot, ice], tastings: [tasting(hot.id, 4), tasting(ice.id, 5)] });
+  assert.deepEqual(chartPoints(rows).map((p) => p.brewId), [hot.id]);
+  const fa = factorAnalysis(rows);
+  assert.ok(fa.factors.every((f) => f.points.every((p) => p.brewId !== ice.id)));
+  assert.equal(ratedRows(rows).length, 2);
+});

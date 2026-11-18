@@ -14,7 +14,13 @@ import {
   freezeBean,
   takeOutPortion,
   listExperiments,
+  listBrews,
+  listTastings,
+  listRecipes,
+  listEquipment,
 } from './db.js';
+import { initialRecipe, baseRecipe, initialText, INITIAL_SOURCES } from './core/initial-recipe.js';
+import { defaultEquipmentIds } from './core/equipment.js';
 import { normalizeFreezeInput, portionsOf, stockParts, stockPartsText, portionText, labelRange, MAX_PORTIONS } from './core/frozen.js';
 import { arrivalChanges } from './core/orders.js';
 import { initialStockG } from './core/roast.js';
@@ -159,6 +165,7 @@ function renderInfo(bean, allBeans) {
     ['注文日', formatYmdJa(bean.orderDate, { withYear: true })],
     ['到着日', formatYmdJa(bean.arrivalDate, { withYear: true })],
     ['状態', BEAN_STATUS[bean.status]],
+    ['カフェイン', bean.decaf ? 'カフェインレス' : ''],
     ['店の風味説明', bean.flavorNotes],
     ['メモ', bean.memo],
   ].filter(([, v]) => v);
@@ -166,6 +173,24 @@ function renderInfo(bean, allBeans) {
   const url = bean.productUrl;
   $('orderRow').hidden = !/^https?:\/\//i.test(url ?? '');
   if (!$('orderRow').hidden) $('orderLink').href = url;
+}
+
+/**
+ * 新しい豆の初期レシピ（F2）：まだ淹れていない豆（手元にあるもの）だけに出す
+ */
+async function renderInitial(bean, allBeans) {
+  const [brews, tastings, recipes, equipment, settings] = await Promise.all([listBrews(db), listTastings(db), listRecipes(db), listEquipment(db), getSettings(db)]);
+  const show = bean.status !== 'ordered' && bean.status !== 'finished' && !brews.some((b) => b.beanId === bean.id);
+  $('initCard').hidden = !show;
+  if (!show) return;
+  const recipe = baseRecipe(recipes, brews);
+  const grinderId = recipe?.grind?.grinderId ?? defaultEquipmentIds(equipment).grinderId;
+  const init = initialRecipe({ bean, beans: allBeans, brews, tastings, grinders: equipment.filter((e) => e.kind === 'grinder'), grinderId, defaultDoseG: doseFromSettings(settings) });
+  $('initSource').textContent = INITIAL_SOURCES[init.source];
+  $('initText').textContent = initialText(init);
+  $('initReasons').replaceChildren(...init.reasons.map((t) => el('li', {}, t)));
+  const id = encodeURIComponent(bean.id);
+  $('initBrew').href = `brew.html?initial=${id}&bean=${id}`;
 }
 
 /** 焙煎度比較（X27）でわかった、この豆の産地の好きな焙煎度 */
@@ -211,6 +236,7 @@ async function render() {
   }
   const allBeans = await listBeans(db);
   renderInfo(bean, allBeans);
+  await renderInitial(bean, allBeans);
   await renderRoastPref(bean, allBeans);
   $('content').hidden = false;
 }

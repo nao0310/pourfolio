@@ -52,6 +52,16 @@
         <p id="arrivalMsg" role="status"></p>
       </div>
 
+      <!-- 新しい豆の初期レシピ（F2）：まだ淹れていない豆だけ -->
+      <div class="card suggest-card" id="initCard" hidden>
+        <div class="bean-card-top"><h2>この豆の最初のレシピ</h2><span class="pill tag" id="initSource"></span></div>
+        <p class="suggest-action num" id="initText"></p>
+        <ul class="reason-list" id="initReasons"></ul>
+        <div class="row">
+          <a class="btn" id="initBrew">この計画で淹れる</a>
+        </div>
+      </div>
+
       <div class="card" id="freshCard">
         <div class="bean-card-top"><h2>飲み頃</h2><span id="pill"></span></div>
         <p id="freshText"></p>

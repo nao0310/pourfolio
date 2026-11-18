@@ -48,6 +48,8 @@ function writeForm(values) {
     if (!field) continue;
     if (field instanceof RadioNodeList) {
       for (const r of field) r.checked = r.value === v;
+    } else if (field.type === 'checkbox') {
+      field.checked = v === 'on';
     } else {
       field.value = v;
     }

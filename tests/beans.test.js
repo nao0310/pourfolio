@@ -99,3 +99,10 @@ test('産地を1行にまとめる', () => {
   assert.equal(originText({ origin: { country: 'エチオピア', region: 'イルガチェフェ', farm: '' } }), 'エチオピア・イルガチェフェ');
   assert.equal(originText({}), '');
 });
+
+test('カフェインレスの印：チェックが on のときだけ true、編集の初期値に戻せる', () => {
+  assert.equal(normalizeBeanInput({ name: 'デカフェ', actualWeightG: '200', decaf: 'on' }).value.decaf, true);
+  assert.equal(normalizeBeanInput({ name: 'ふつう', actualWeightG: '200' }).value.decaf, false);
+  assert.equal(beanToFormValues({ name: 'x', decaf: true }).decaf, 'on');
+  assert.equal(beanToFormValues({ name: 'x' }).decaf, '');
+});

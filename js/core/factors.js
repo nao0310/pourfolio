@@ -1,6 +1,7 @@
 // 条件と評価（E4）：挽き目・湯温・比率・焙煎後日数と★の関係、焙煎度ごとの飲み頃カーブ（純粋関数）
 // 相関は「一緒に動いている」だけで原因とは限らない（spec 5.3）。画面でも必ずそう添える。
 
+import { isIced } from './plan-adjust.js';
 import { THRESHOLDS, readiness, ratedRows } from './analysis.js';
 import { linearFit, correlationWord, mean } from './chart-scale.js';
 import { ROAST_LEVELS } from './roast.js';
@@ -54,7 +55,7 @@ export function factorValue(row, key, grinderId = null) {
  * @param {object[]} rows analysisRows の結果
  */
 export function factorAnalysis(rows) {
-  const rated = ratedRows(rows);
+  const rated = ratedRows(rows).filter((r) => !isIced(r.brew)); // アイスは比率（お湯だけ）が比べられない
   const ready = readiness(rated.length, THRESHOLDS.factors);
   const grinderId = mainGrinderId(rated);
   const factors = FACTORS.map((f) => {

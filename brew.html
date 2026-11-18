@@ -49,6 +49,12 @@
         </div>
       </div>
 
+      <!-- 新しい豆の初期レシピ（F2）：どこから決めたか -->
+      <div class="card suggest-card" id="initCard" hidden>
+        <p><strong>この豆の最初のレシピ</strong></p>
+        <ul class="reason-list" id="initReasons"></ul>
+      </div>
+
       <div class="card">
         <label class="field">
           <span class="label">豆</span>
@@ -57,9 +63,24 @@
         </label>
       </div>
 
+      <!-- 量・アイス（A6）と気分（F4） -->
+      <div class="card" id="adjustCard" hidden>
+        <h2>量と気分</h2>
+        <p class="label">量</p>
+        <div class="seg5" id="cupsSeg" role="group" aria-label="量"></div>
+        <label class="check-row adjust-ice">
+          <input type="checkbox" id="iced">
+          <span><strong>アイス（急冷）</strong><span class="muted small precheck-hint">湯量の4割を氷にして、サーバーに入れておきます</span></span>
+        </label>
+        <p class="label">気分</p>
+        <div class="seg5" id="moodSeg" role="group" aria-label="気分"></div>
+        <p class="hint" id="moodAim"></p>
+      </div>
+
       <div class="card">
         <h2>計画</h2>
         <div class="plan-grid" id="plan"></div>
+        <ul class="reason-list" id="adjustNotes" hidden></ul>
         <dl id="equip"></dl>
       </div>
 

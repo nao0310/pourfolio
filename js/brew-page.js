@@ -18,11 +18,16 @@ import {
   attachBrewToExperiment,
   listBrews,
   listTastings,
+  listRecipes,
 } from './db.js';
+import { adjustPlan, adjustNotes, parseAdjustParams, adjustQuery, hotPlanOf, carryIce, isIced, MOODS, CUP_OPTIONS, cupsLabel } from './core/plan-adjust.js';
+import { initialRecipe, initialPlan, baseRecipe } from './core/initial-recipe.js';
+import { defaultEquipmentIds } from './core/equipment.js';
+import { doseFromSettings } from './core/inventory.js';
 import { frozenChoice, portionsOf, portionText } from './core/frozen.js';
 import { remainingG } from './core/inventory.js';
 import { basePlanForNext, applyAction, pickPendingSuggestion } from './core/dialin.js';
-import { planFromRecipe, planFromBrew, formatSec, POUR_STYLES } from './core/recipes.js';
+import { planFromRecipe, planFromBrew, formatSec, POUR_STYLES, ratioOf } from './core/recipes.js';
 import { sortBeansForList } from './core/beans.js';
 import { formatG } from './core/format.js';
 import { timerView, cuesBetween, addLap, autoAdvance, pourName, pourEndSec } from './core/timer.js';
@@ -62,7 +67,15 @@ let compare = null;
 
 // ---- 計画（スタート前） ----
 
-/** URL（?recipe=ID、?from=last、?suggestion=ID）から計画を作る。見つからなければ null */
+/** アイスで淹れた杯を土台にするときは、元の湯量に戻し、アイスを初めから選んでおく */
+function fromBrewPlan(plan, src) {
+  return isIced(src) ? { plan: hotPlanOf(plan, src.context.iceG), icedDefault: true } : { plan, icedDefault: false };
+}
+
+/**
+ * URL（?recipe=ID、?from=last、?suggestion=ID、?brew=ID、?initial=豆ID）から土台の計画を作る。見つからなければ null。
+ * 気分・杯数・アイス・数値の上書き（?mood= ?cups= ?iced= ?dose= など）は、あとで土台に当てはめる（applyAdjust）
+ */
 async function loadPlan() {
   const suggestionId = queryParam('suggestion');
   if (suggestionId) {
@@ -71,21 +84,82 @@ async function loadPlan() {
     const src = suggestion ? await getBrew(db, suggestion.brewId) : null;
     if (!src) return null;
     const recipe = src.recipeId ? await getRecipe(db, src.recipeId) : null;
-    const plan = { ...applyAction(basePlanForNext(src, recipe), suggestion.action), source: 'suggestion', suggestionId: suggestion.id };
-    return { plan, recipe, suggestion };
+    // 提案はお湯の量で計算してあるので、アイスの杯なら氷の量だけ引き継ぐ（気分・杯数は選べない）
+    const plan = carryIce({ ...applyAction(basePlanForNext(src, recipe), suggestion.action), source: 'suggestion', suggestionId: suggestion.id }, src.context?.iceG);
+    return { plan, base: plan, recipe, suggestion, fixed: true };
   }
   const recipeId = queryParam('recipe');
   if (recipeId) {
     const recipe = await getRecipe(db, recipeId);
-    return recipe ? { plan: planFromRecipe(recipe), recipe } : null;
+    return recipe ? { base: planFromRecipe(recipe), recipe } : null;
+  }
+  const brewId = queryParam('brew');
+  if (brewId) {
+    // 今日の一杯（F3）：その豆で★がいちばん高かった杯の淹れ方（挽き目は実際に挽いた目盛り）
+    const src = await getBrew(db, brewId);
+    if (!src) return null;
+    const recipe = src.recipeId ? await getRecipe(db, src.recipeId) : null;
+    const { plan, icedDefault } = fromBrewPlan({ ...basePlanForNext(src, recipe), source: 'bestBrew' }, src);
+    return { base: plan, recipe, icedDefault };
+  }
+  const initialBeanId = queryParam('initial');
+  if (initialBeanId) {
+    // 新しい豆の初期レシピ（F2）
+    const bean = beans.find((b) => b.id === initialBeanId);
+    if (!bean) return null;
+    const [brews, tastings, recipes, settings] = await Promise.all([listBrews(db), listTastings(db), listRecipes(db), getSettings(db)]);
+    const recipe = baseRecipe(recipes, brews);
+    const grinderId = recipe?.grind?.grinderId ?? defaultEquipmentIds(equipmentList).grinderId;
+    const init = initialRecipe({ bean, beans, brews, tastings, grinders: equipmentList.filter((e) => e.kind === 'grinder'), grinderId, defaultDoseG: doseFromSettings(settings) });
+    return { base: initialPlan(init, recipe, bean), recipe, init };
   }
   if (queryParam('from') === 'last') {
     const last = await getLastBrew(db);
     if (!last) return null;
     const recipe = last.recipeId ? await getRecipe(db, last.recipeId) : null;
-    return { plan: planFromBrew(last, recipe), recipe };
+    const { plan, icedDefault } = fromBrewPlan(planFromBrew(last, recipe), last);
+    return { base: plan, recipe, icedDefault };
   }
   return null;
+}
+
+/** 量・アイス・気分の今の選択（URL から読み、画面で変える） */
+let adj = { mood: null, cups: 1, iced: false, overrides: {} };
+
+/** 土台の計画に今の選択を当てはめる */
+function applyAdjust() {
+  if (loadedPlan.fixed) return;
+  loadedPlan.plan = adjustPlan(loadedPlan.base, adj);
+}
+
+/** 量・アイス・気分の欄（提案を入れた計画・飲み比べでは出さない） */
+function renderAdjust() {
+  const show = !loadedPlan.fixed && !compare;
+  $('adjustCard').hidden = !show;
+  if (!show) return;
+  const seg = (label, pressed, onClick) => el('button', { type: 'button', class: 'seg', 'aria-pressed': String(pressed), onclick: onClick }, label);
+  $('cupsSeg').replaceChildren(...CUP_OPTIONS.map((c) => seg(cupsLabel(c), adj.cups === c, () => setAdjust({ cups: c }))));
+  $('moodSeg').replaceChildren(
+    seg('なし', !adj.mood, () => setAdjust({ mood: null })),
+    ...Object.entries(MOODS).map(([k, m]) => seg(m.label, adj.mood === k, () => setAdjust({ mood: k, ...(k === 'guest' && adj.cups === 1 ? { cups: MOODS.guest.cups } : {}) }))),
+  );
+  $('iced').checked = adj.iced;
+  const m = MOODS[adj.mood];
+  $('moodAim').textContent = m ? `狙い：${m.aim}` : '';
+}
+
+/** 選択を変えたら計画を作り直し、URL にも残す（開き直しても同じ計画になるように） */
+function setAdjust(change) {
+  adj = { ...adj, ...change };
+  applyAdjust();
+  const q = new URLSearchParams(location.search);
+  for (const k of ['mood', 'cups', 'iced']) q.delete(k);
+  const extra = new URLSearchParams(adjustQuery({ mood: adj.mood, cups: adj.cups, iced: adj.iced }, loadedPlan.icedDefault));
+  for (const [k, v] of extra) q.set(k, v);
+  const search = q.toString() ? `?${q.toString()}` : '';
+  history.replaceState(null, '', `${location.pathname}${search}`);
+  renderAdjust();
+  renderPlanBody();
 }
 
 function planItem(label, value, changed = false) {
@@ -133,7 +207,7 @@ function fillBeanSelect(select, selectedId) {
 function renderBeanNote(preferred = null) {
   const id = $('bean').value;
   const notes = [];
-  if (preferred && id === preferred) notes.push(queryParam('bean') === id ? '飲み比べの袋を選んでいます' : '前回の豆を選んでいます');
+  if (preferred && id === preferred) notes.push(compare ? '飲み比べの袋を選んでいます' : queryParam('bean') === id ? '選んだ豆です' : '前回の豆を選んでいます');
   const n = id ? portionsOf(portions, id).length : 0;
   if (n) notes.push(`冷凍${n}袋あり（記録するときに「冷凍の袋を使う」を選べます）`);
   $('beanNote').textContent = notes.join('。');
@@ -157,19 +231,27 @@ function renderFrozenChoice(keepChecked) {
 
 async function showPlan(loaded, lastBeanId) {
   const { plan, recipe } = loaded;
-  const equipment = await listEquipment(db);
-  const eqName = (id) => equipment.find((e) => e.id === id)?.name ?? '';
 
   $('content').hidden = false;
   const names = {
     lastBrew: [`前回と同じ：${recipe?.name ?? plan.name}`, '前回の抽出の計画を写しました'],
     suggestion: [`提案を入れた計画：${recipe?.name ?? plan.name}`, '評価した抽出の計画に、提案の1つだけを入れました'],
+    bestBrew: [`★がいちばん高かった杯：${recipe?.name ?? plan.name}`, 'この豆でいちばん★が高かった杯の計画を写しました（挽き目は実際に挽いた目盛り）'],
+    initial: [plan.name, recipe ? `いつものレシピ「${recipe.name}」の注ぎ方に、この豆向けの数字を入れました` : '4:6メソッドの注ぎ方に、この豆向けの数字を入れました'],
   }[plan.source] ?? [plan.name, `レシピ 版${plan.recipeVersion}`];
   $('name').textContent = names[0];
   document.title = `${$('name').textContent} - Pourfolio`;
   $('sub').textContent = names[1];
+  // AI相談（F5）の答えから来たとき
+  if (queryParam('via') === 'ai') {
+    $('name').textContent = `AIの提案：${recipe?.name ?? plan.name}`;
+    $('sub').textContent = 'AIの答えから読み取った数字（粉量・湯量・湯温・挽き目）を、この注ぎ方に入れました';
+  }
   if (plan.recipeId && recipe) $('editLink').href = `recipe-edit.html?id=${encodeURIComponent(plan.recipeId)}`;
   else $('editLink').hidden = true;
+  // 初期レシピ（F2）は、どこから決めたかを出す
+  $('initCard').hidden = !loaded.init;
+  if (loaded.init) $('initReasons').replaceChildren(...loaded.init.reasons.map((t) => el('li', {}, t)));
 
   // 豆：初期値は ?bean= の豆（焙煎度比較）、前回の豆、一覧の先頭の順
   const preferred = queryParam('bean') ?? plan.beanId ?? lastBeanId ?? null;
@@ -177,12 +259,23 @@ async function showPlan(loaded, lastBeanId) {
   if (!$('bean').value && usable[0]) $('bean').value = usable[0].id;
   renderBeanNote(preferred);
   renderSuggestCard();
+  renderAdjust();
+  renderPlanBody();
+}
 
+/** 計画の数字・器具・注湯の予定（量・アイス・気分を変えたら描き直す） */
+function renderPlanBody() {
+  const loaded = loadedPlan;
+  const { plan } = loaded;
+  const eqName = (id) => equipmentList.find((e) => e.id === id)?.name ?? '';
   const changed = plan.source === 'suggestion' && loaded.suggestion?.action?.to != null ? loaded.suggestion.action.variable : null;
   $('plan').replaceChildren(
     planItem('粉量', formatG(plan.doseG), changed === 'doseG'),
-    planItem('湯量', formatG(plan.waterG), changed === 'waterG'),
-    planItem('比率', plan.ratio ? `1:${plan.ratio}` : '', changed === 'doseG' || changed === 'waterG'),
+    planItem(plan.adjust?.iceG ? 'お湯' : '湯量', formatG(plan.waterG), changed === 'waterG'),
+    plan.adjust?.iceG ? planItem('氷', formatG(plan.adjust.iceG)) : '',
+    plan.adjust?.iceG
+      ? planItem('比率（氷込み）', `1:${ratioOf(plan.doseG, plan.waterG + plan.adjust.iceG)}`)
+      : planItem('比率', plan.ratio ? `1:${plan.ratio}` : '', changed === 'doseG' || changed === 'waterG'),
     planItem('湯温', plan.tempC != null ? `${plan.tempC}℃` : ''),
     planItem('挽き目', plan.grind?.setting ?? '', changed === 'grind'),
     planItem('目標時間', formatSec(plan.targetTotalSec)),
@@ -194,6 +287,9 @@ async function showPlan(loaded, lastBeanId) {
     ['ケトル', eqName(plan.equipment?.kettleId)],
   ].filter(([, v]) => v);
   $('equip').replaceChildren(...equipRows.flatMap(([k, v]) => [el('dt', {}, k), el('dd', {}, v)]));
+  const notes = adjustNotes(plan);
+  $('adjustNotes').hidden = !notes.length;
+  $('adjustNotes').replaceChildren(...notes.map((t) => el('li', {}, t)));
 
   let prev = 0;
   $('pourBody').replaceChildren(
@@ -266,7 +362,9 @@ function beginNew(withTimer) {
     compareBeanId: compare ? queryParam('bean') : null,
   };
   // 前回のベストのペース（ゴースト、D-041）。下書きに入れておき、開き直しても同じ杯と比べる
-  if (withTimer) draft.ghost = findGhost(loadedPlan.plan.recipeId, draft.beanId);
+  // 量やアイスを変えた計画は、ペースが違うので比べない
+  const scaled = loadedPlan.plan.adjust && (loadedPlan.plan.adjust.cups !== 1 || loadedPlan.plan.adjust.iceG != null);
+  if (withTimer && !scaled) draft.ghost = findGhost(loadedPlan.plan.recipeId, draft.beanId);
   saveDraft(draft);
   $('content').hidden = true;
   if (withTimer) {
@@ -625,8 +723,16 @@ async function init() {
     $('compareNote').hidden = false;
   }
   loadedPlan = await loadPlan();
+  if (loadedPlan) {
+    const p = parseAdjustParams(queryParam);
+    adj = { mood: p.mood, cups: p.cups, iced: p.iced ?? Boolean(loadedPlan.icedDefault), overrides: p.overrides };
+    applyAdjust();
+  }
   if (!loadedPlan) {
-    if (queryParam('suggestion')) {
+    if (queryParam('initial') || queryParam('brew')) {
+      $('notFound').querySelector('h1').textContent = '豆か記録が見つかりません';
+      $('notFound').querySelector('p').textContent = '豆か抽出の記録が削除されています。トップに戻って選び直してください。';
+    } else if (queryParam('suggestion')) {
       $('notFound').querySelector('h1').textContent = '提案が見つかりません';
       $('notFound').querySelector('p').textContent = '提案を出した抽出が削除されています。「淹れる」の一覧から選び直してください。';
     }
@@ -653,6 +759,7 @@ $('bean').addEventListener('change', () => {
   renderBeanNote();
 });
 $('noTimer').addEventListener('click', () => beginNew(false));
+$('iced').addEventListener('change', (e) => setAdjust({ iced: e.target.checked }));
 $('resume').addEventListener('click', () => {
   const saved = loadDraft();
   location.href = saved?.returnSearch ? `brew.html${saved.returnSearch}` : 'brew.html';

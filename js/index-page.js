@@ -12,6 +12,10 @@ import { doseFromSettings } from './core/inventory.js';
 import { localYmd, formatG } from './core/format.js';
 import { STAGES } from './core/freshness.js';
 import { openExperiments, experimentStatus, STATUS_LABELS } from './core/compare.js';
+import { todayPicks, pickHref } from './core/today.js';
+import { MOODS, moodForHour } from './core/plan-adjust.js';
+import { analysisRows } from './core/analysis.js';
+import { dailyStats } from './core/calendar.js';
 import { $, el, freshnessPill, frozenPill } from './ui.js';
 
 registerServiceWorker();
@@ -74,12 +78,30 @@ async function renderCool(beanName) {
   $('coolCard').hidden = false;
 }
 
-/** 今日の1杯：前回と同じで淹れる（＋その豆のまだ使っていない提案） */
-function renderToday(all, beanName) {
+/**
+ * 今日の1杯：おすすめの1位（F3、理由つき）・まだ使っていない提案・前回と同じ。
+ * 提案があれば「提案を入れて淹れる」を先に出し（D-059）、なければおすすめを先に出す（D-130）
+ */
+function renderToday(all, beanName, settings) {
+  const now = new Date();
   const brews = all.brews.filter(alive).sort((a, b) => String(b.at).localeCompare(String(a.at)));
   const last = brews[0];
   const actions = [];
   const link = (href, text, cls = 'btn block') => el('a', { class: cls, href }, text);
+
+  const mood = moodForHour(now.getHours());
+  const rows = beanRows({ beans: all.beans, txs: all.inventoryTx, portions: all.frozenPortions, doseG: doseFromSettings(settings), today: localYmd(now) });
+  const caf = dailyStats(analysisRows(all)).get(localYmd(now))?.caffeineMg ?? 0;
+  const pick = todayPicks({ rows, brews: all.brews, tastings: all.tastings, beans: all.beans, now, mood, cutoff: settings.caffeineCutoff ?? null, todayCaffeineMg: caf, n: 1 })[0];
+  const pending = last ? pickPendingSuggestion(all.suggestions, last.beanId) : null;
+
+  $('todayPick').hidden = !pick;
+  if (pick) {
+    $('pickName').textContent = `おすすめ：${pick.bean.name}`;
+    $('pickReasons').replaceChildren(...pick.reasons.slice(0, 3).map((t) => el('li', {}, t)));
+    $('pickMood').textContent = MOODS[mood] ? `今の時間なので気分「${MOODS[mood].label}」で選びました` : '';
+  }
+
   if (last) {
     const recipe = all.recipes.find((r) => r.id === last.recipeId && alive(r));
     const p = last.planned ?? {};
@@ -87,26 +109,25 @@ function renderToday(all, beanName) {
       '前回：',
       [beanName(last.beanId), recipe?.name ?? p.name, p.doseG != null && p.waterG != null ? `${p.doseG}g・${p.waterG}g` : ''].filter(Boolean).join('　'),
     ].join('');
-    const pending = pickPendingSuggestion(all.suggestions, last.beanId);
     if (pending) {
       $('todaySuggest').textContent = `提案：${pending.action.short ?? pending.action.text}`;
       $('todaySuggest').hidden = false;
       actions.push(link(`brew.html?suggestion=${enc(pending.id)}`, '提案を入れて淹れる'));
-      actions.push(link('brew.html?from=last', '前回と同じで淹れる', 'btn secondary block'));
-    } else {
-      actions.push(link('brew.html?from=last', '前回と同じで淹れる'));
     }
+    if (pick) actions.push(link(pickHref(pick), 'おすすめで淹れる', pending ? 'btn secondary block' : 'btn block'));
+    actions.push(link('brew.html?from=last', '前回と同じで淹れる', pending || pick ? 'btn secondary block' : 'btn block'));
     actions.push(link('recipes.html', 'レシピを選んで淹れる', 'btn secondary block'));
   } else if (!all.beans.some(alive)) {
     $('todayText').textContent = 'まず、届いた豆を登録しましょう。';
     actions.push(link('bean-edit.html', '豆を登録する'));
-  } else if (!all.recipes.some(alive)) {
-    $('todayText').textContent = '次に、レシピを作りましょう。4:6メソッドの雛形があります。';
-    actions.push(link('recipe-edit.html', 'レシピを作る'));
   } else {
-    $('todayText').textContent = 'レシピを選んで、最初の1杯を淹れましょう。';
-    actions.push(link('recipes.html', 'レシピを選んで淹れる'));
+    $('todayText').textContent = all.recipes.some(alive)
+      ? 'レシピを選んで、最初の1杯を淹れましょう。'
+      : 'おすすめの豆を、似た豆や焙煎度から決めた最初のレシピ（4:6メソッド）で淹れられます。';
+    if (pick) actions.push(link(pickHref(pick), 'おすすめで淹れる'));
+    actions.push(link(all.recipes.some(alive) ? 'recipes.html' : 'recipe-edit.html', all.recipes.some(alive) ? 'レシピを選んで淹れる' : 'レシピを作る', pick ? 'btn secondary block' : 'btn block'));
   }
+  if (pick) actions.push(el('a', { class: 'link-more', href: 'today.html' }, 'ほかの候補・気分を変える'));
   $('todayActions').replaceChildren(...actions);
 }
 
@@ -225,7 +246,7 @@ async function init() {
   const [all, settings] = await Promise.all([readAll(db), getSettings(db)]);
   const beanName = (id) => all.beans.find((b) => b.id === id)?.name ?? '';
   renderBackup(settings, all);
-  renderToday(all, beanName);
+  renderToday(all, beanName, settings);
   renderBeans(beanRows({ beans: all.beans, txs: all.inventoryTx, portions: all.frozenPortions, doseG: doseFromSettings(settings), today: localYmd() }));
   renderRecent(all, beanName);
   renderRestock(all, settings);
