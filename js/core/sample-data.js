@@ -186,6 +186,27 @@ export function makeSampleData(now = new Date()) {
     daysAgo(1),
   );
 
+  // 気になる豆（F6）：まだ買っていない候補1つ
+  const wish = createRecord(
+    {
+      name: 'ケニア ニエリ AA',
+      productUrl: '',
+      productCode: '',
+      origin: { country: 'ケニア', region: 'ニエリ', farm: '' },
+      variety: '',
+      process: 'ウォッシュト',
+      roastLevel: 'シティ',
+      labelWeightG: 100,
+      labelWeightBasis: 'green',
+      priceJpy: 900,
+      priceTable: [],
+      flavorNotes: '',
+      memo: '',
+      boughtBeanId: null,
+    },
+    daysAgo(2),
+  );
+
   const settings = createRecord({ id: SETTINGS_ID, lastBackupAt: null }, daysAgo(9));
 
   return {
@@ -200,6 +221,7 @@ export function makeSampleData(now = new Date()) {
     frozenPortions,
     photos: [photo],
     experiments: [experiment],
+    wishlist: [wish],
     settings: [settings],
   };
 }

@@ -16,6 +16,7 @@ export const TABLES = Object.freeze([
   'frozenPortions', // FrozenPortion 冷凍庫の小分けの袋1つ（DBの版4で追加）
   'photos', // Photo 抽出の写真1枚（DBの版5で追加、A7）
   'experiments', // Experiment 焙煎度比較などの飲み比べ1回（DBの版5で追加、X27）
+  'wishlist', // Wishlist 気になる豆（買う候補）1つ（DBの版6で追加、F6）
   'settings', // Settings アプリ全体の設定（1件）
 ]);
 

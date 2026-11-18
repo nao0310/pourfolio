@@ -26,6 +26,7 @@ const LABELS = {
   frozenPortions: '冷凍の袋',
   photos: '写真',
   experiments: '飲み比べ',
+  wishlist: '気になる豆',
   settings: '設定',
 };
 
@@ -199,7 +200,7 @@ if (isDev) {
     await render();
   });
   $('demoData').addEventListener('click', async () => {
-    if (!(await askConfirm('分析のデモデータ（豆8袋・80杯）をこの端末のデータに入れますか？あとで1件ずつ消すのは大変です', { ok: '入れる' }))) return;
+    if (!(await askConfirm('分析のデモデータ（豆8袋・80杯・気になる豆3つ）をこの端末のデータに入れますか？あとで1件ずつ消すのは大変です', { ok: '入れる' }))) return;
     await putAll(db, makeDemoData());
     showMessage('デモデータを入れました');
     await render();

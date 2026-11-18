@@ -1,12 +1,12 @@
 // 買い物リスト（C5）：注文の目安日、次に買う候補、注文メモ、お届けの日数
 import { openDb, readAll, getSettings, updateSettings } from './db.js';
-import { restockPlan, restockText, shoppingCandidates, orderMemo, bulkBuyPlan, bulkBuyText, normalizeShippingInput } from './core/restock.js';
+import { restockPlan, restockText, bulkBuyPlan, bulkBuyText, normalizeShippingInput } from './core/restock.js';
+import { nextBeanCandidates, orderGrams, nextBeanMemo } from './core/next-bean.js';
 import { doseFromSettings } from './core/inventory.js';
 import { freezerCount } from './core/frozen.js';
 import { yen } from './core/cost.js';
 import { deliveryDays, DEFAULT_DELIVERY_DAYS } from './core/orders.js';
 import { localYmd, formatG, formatYmdJa } from './core/format.js';
-import { roastPreferences, preferenceForBean, preferenceText } from './core/compare.js';
 import { $, el, showMessage } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
 
@@ -16,8 +16,6 @@ let candidates = [];
 const picked = new Set();
 let data = null;
 let settings = {};
-/** 焙煎度比較（X27）でわかった産地ごとの好み */
-let prefs = [];
 
 function renderPlan() {
   const t = restockText(plan);
@@ -34,17 +32,16 @@ function renderPlan() {
   $('planNumbers').replaceChildren(...rows.flatMap(([k, v]) => [el('dt', {}, k), el('dd', {}, v)]));
 }
 
+const BADGES = { explore: '開拓', steady: '定番' };
+
 function candidateRow(c) {
   const facts = [
-    c.avgStars != null ? `★${c.avgStars}（${c.rated}杯）` : 'まだ評価なし',
-    `${c.bags}袋買った`,
-    c.priceJpy != null ? `${c.priceJpy.toLocaleString('ja-JP')}円` : '',
+    `予想★${c.predicted}`,
+    c.source === 'wish' ? '気になる豆' : `${c.bags}袋買った`,
+    c.priceJpy != null ? `${c.priceJpy.toLocaleString('ja-JP')}円${c.labelWeightG ? `/${c.labelWeightG}g` : ''}` : '',
     c.inStock ? '在庫あり' : '',
   ].filter(Boolean);
-  // 焙煎度比較でわかった好み（同じ銘柄の袋の産地から）。違う焙煎度が好きなら知らせる
-  const bean = data.beans.find((b) => b.name === c.name && b.roastLevel === c.roastLevel) ?? data.beans.find((b) => b.name === c.name);
-  const pref = bean ? preferenceForBean(prefs, bean) : null;
-  const prefNote = pref?.best ? `${preferenceText(pref)}${pref.best !== c.roastLevel ? `。次は「${pref.best}」で` : ''}` : '';
+  const roast = c.roastLevel ? `焙煎度は${c.roastLevel}${c.roastWhy ? `（${c.roastWhy}）` : ''}` : '';
   return el(
     'div',
     { class: 'shop-row' },
@@ -63,9 +60,10 @@ function candidateRow(c) {
       el(
         'span',
         { class: 'shop-main' },
-        el('span', { class: 'shop-name' }, [c.name, c.roastLevel].filter(Boolean).join('　')),
+        el('span', { class: 'shop-name' }, c.name, c.badge && el('span', { class: `pill ${c.badge}` }, BADGES[c.badge])),
         el('span', { class: 'muted' }, facts.join('・')),
-        prefNote && el('span', { class: 'pref-note' }, prefNote),
+        ...c.reasons.map((r) => el('span', { class: 'next-reason' }, r)),
+        roast && el('span', { class: 'pref-note' }, roast),
       ),
     ),
     c.productUrl && el('a', { class: 'link-more', href: c.productUrl, target: '_blank', rel: 'noopener noreferrer' }, '店のページ'),
@@ -74,13 +72,15 @@ function candidateRow(c) {
 
 function renderCandidates() {
   $('candidates').replaceChildren(
-    ...(candidates.length ? candidates.map(candidateRow) : [el('p', { class: 'muted' }, '豆を登録すると、ここに候補が出ます。')]),
+    ...(candidates.length ? candidates.map(candidateRow) : [el('p', { class: 'muted' }, '豆を登録するか、気になる豆を足すと、ここに候補が出ます。')]),
   );
 }
 
 function renderMemo() {
   const chosen = candidates.filter((c) => picked.has(c.key));
-  $('memo').value = chosen.length ? orderMemo(chosen, plan) : '';
+  const slots = Number.isInteger(settings.freezerSlots) ? Math.max(0, settings.freezerSlots - freezerCount(data?.portions ?? [])) : null;
+  const amounts = orderGrams({ picked: chosen, plan, beans: data?.beans ?? [], freeSlots: slots, doseG: doseFromSettings(settings) });
+  $('memo').value = chosen.length ? nextBeanMemo(chosen, plan, amounts) : '';
   $('memo').placeholder = '上の候補に印を付けると、ここにメモができます';
   $('copyMemo').disabled = chosen.length === 0;
   renderBulk();
@@ -153,9 +153,10 @@ async function render() {
     brews: all.brews,
     tastings: all.tastings,
   };
-  prefs = roastPreferences(all.experiments, data.beans);
   plan = restockPlan({ ...data, settings, today: localYmd() });
-  candidates = shoppingCandidates(data);
+  candidates = nextBeanCandidates({ beans: data.beans, brews: all.brews, tastings: all.tastings, experiments: all.experiments, wishlist: all.wishlist });
+  // 消えた候補の印は外す（気になる豆を消したときなど）
+  for (const k of [...picked]) if (!candidates.some((c) => c.key === k)) picked.delete(k);
   renderPlan();
   renderCandidates();
   renderMemo();

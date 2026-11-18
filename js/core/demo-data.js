@@ -42,6 +42,13 @@ const r2 = (n) => Math.round(n * 100) / 100;
  * @param {Date|string|number} [now]
  * @returns {Record<string, object[]>} 全部の表（使わない表は空）
  */
+/** デモの気になる豆 */
+const DEMO_WISHES = Object.freeze([
+  { name: 'デモ パナマ ボケテ', country: 'パナマ', process: 'ウォッシュト', roastLevel: 'ハイ', priceJpy: 1100, priceTable: [{ g: 100, priceJpy: 1100 }, { g: 200, priceJpy: 2000 }, { g: 300, priceJpy: 2850 }] },
+  { name: 'デモ ケニア マサイ', country: 'ケニア', process: 'ウォッシュト', roastLevel: 'シティ', priceJpy: 880, priceTable: [] },
+  { name: 'デモ ブラジル アナエロビック', country: 'ブラジル', process: 'アナエロビック', roastLevel: 'ミディアム', priceJpy: 760, priceTable: [] },
+]);
+
 export function makeDemoData(now = new Date()) {
   const base = now instanceof Date ? now : new Date(now);
   const rnd = seededRandom(Number(localYmd(base).replaceAll('-', '')));
@@ -293,6 +300,24 @@ export function makeDemoData(now = new Date()) {
     frozenPortions: [],
     photos: [],
     experiments: [],
+    // 気になる豆（F6）：まだ飲んだことのない産地・よく飲む産地・精製だけ新しい豆
+    wishlist: DEMO_WISHES.map((w) =>
+      createRecord(
+        {
+          productUrl: '',
+          productCode: '',
+          variety: '',
+          labelWeightG: 100,
+          labelWeightBasis: 'green',
+          flavorNotes: '',
+          memo: '',
+          boughtBeanId: null,
+          ...w,
+          origin: { country: w.country, region: '', farm: '' },
+        },
+        at(3, 21, 0),
+      ),
+    ).map(({ country, ...rest }) => rest),
     settings: [], // 設定は入れない（データの画面から入れても、自分の設定を上書きしない）
   };
 }

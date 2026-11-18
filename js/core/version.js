@@ -3,10 +3,19 @@
 // ステップを仕上げるときに APP_VERSION と CHANGELOG の先頭を足す。上げ忘れは tests/version.test.js が見つける。
 // sw.js の一覧（npm run sw）にも番号が入り、更新の知らせに新しい番号を出す。
 
-export const APP_VERSION = '3.1.1';
+export const APP_VERSION = '3.2';
 
 /** 更新履歴（新しい順）。items は利用者向けの短い文で、2〜3個まで */
 export const CHANGELOG = Object.freeze([
+  {
+    version: '3.2',
+    date: '2026-11-18',
+    items: [
+      '「気になる豆」：珈琲問屋の商品ページを貼るか手で入れて、次に買うかもしれない豆を貯めておけます',
+      '買い物リストの「次に買う候補」が、好みの予想と、あまり飲んでいない産地・精製の「開拓」の点で並ぶようになりました',
+      '候補ごとにおすすめの焙煎度が出て、注文メモには飲むペースから決めた量（生豆時のg）と値段が入ります',
+    ],
+  },
   {
     version: '3.1.1',
     date: '2026-11-18',
