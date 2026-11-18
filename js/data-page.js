@@ -111,7 +111,7 @@ $('exportCsv').addEventListener('click', async () => {
         suggestions: all.suggestions,
       }),
     );
-    const beans = toCsv(beanRowsCsv({ beans: all.beans, txs: all.inventoryTx, doseG: doseFromSettings(settings), today: localYmd(now) }));
+    const beans = toCsv(beanRowsCsv({ beans: all.beans, txs: all.inventoryTx, portions: all.frozenPortions, doseG: doseFromSettings(settings), today: localYmd(now) }));
     const type = 'text/csv';
     const files = [new File([brews], csvFileName('brews', now), { type }), new File([beans], csvFileName('beans', now), { type })];
     if (canShareFile(...files)) {

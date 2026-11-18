@@ -540,3 +540,29 @@ p > a:not(.btn):only-child { display: inline-block; padding: 11px 0; }
 .top-links { margin: 0 0 8px; }
 .paste-card summary { cursor: pointer; color: var(--accent); font-weight: 700; padding: 6px 0; min-height: 44px; display: flex; align-items: center; }
 .paste-card textarea, #mail { width: 100%; box-sizing: border-box; font: inherit; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--fg); }
+
+/* ---- 2-3 冷凍・コスト・台帳 ---- */
+.pill.frozen { background: transparent; color: var(--stage-resting); border: 2px solid var(--stage-resting); }
+.portion-list .tx-main { align-items: center; }
+.portion-list .tx-kind { font-weight: 600; min-width: 0; }
+.portion-list .btn { flex: 0 0 auto; white-space: nowrap; }
+
+/* コスト（2-3） */
+.month-bars { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.month-row { display: grid; grid-template-columns: 4.2em 1fr auto; align-items: center; gap: 8px; min-height: 36px; }
+.month-label { font-weight: 600; white-space: nowrap; }
+.month-bar-box { position: relative; display: block; height: 30px; border-radius: 6px; background: var(--bg); overflow: hidden; }
+.month-bar { position: absolute; inset: 0 auto 0 0; background: var(--accent); opacity: 0.35; border-radius: 6px; }
+.month-bar-text { position: relative; display: flex; align-items: center; height: 100%; padding-left: 8px; font-size: 0.95rem; }
+.month-drank { font-size: 0.9rem; color: var(--muted); white-space: nowrap; min-width: 5.5em; text-align: right; }
+.table-wrap { overflow-x: auto; margin-top: 12px; }
+.cost-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+.cost-table th, .cost-table td { padding: 8px 4px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+.cost-table thead th { color: var(--muted); font-weight: 600; font-size: 0.8rem; }
+.cost-table th[scope="row"], .cost-table thead th:first-child { text-align: left; white-space: normal; word-break: break-word; }
+.cost-table tr:last-child td, .cost-table tr:last-child th { border-bottom: 0; }
+
+/* 店の台帳（2-3） */
+.shop-card.favorite { border: 2px solid var(--accent); }
+.shop-card h2 { margin: 0; word-break: break-word; }
+.fav-btn { flex: 0 0 auto; min-width: 48px; min-height: 48px; border: 0; background: transparent; color: var(--accent); font-size: 1.8rem; line-height: 1; cursor: pointer; }

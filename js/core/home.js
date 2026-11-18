@@ -6,6 +6,7 @@ import { remainingG, cupsLeft, groupTxByBean } from './inventory.js';
 import { sortBeansForList } from './beans.js';
 import { pickTasting } from './tastings.js';
 import { localYmd } from './format.js';
+import { groupPortionsByBean, stockParts } from './frozen.js';
 
 /** 前回の書き出しからこの日数が過ぎたら書き出しを促す */
 export const BACKUP_REMIND_DAYS = 7;
@@ -79,19 +80,35 @@ export function freshnessBand(f) {
 
 /**
  * ホームに出す豆の行（飲み切り・入荷待ち・削除済みは出さない）。並びは豆の一覧と同じ。
- * @param {{beans:object[], txs:object[], doseG:number, today:string}} p
- * @returns {{bean:object, remainingG:number, cups:number, freshness:object|null, band:object|null, alerts:string[]}[]}
+ * 残量と残り杯数は常温＋冷凍の合計。常温が0で冷凍だけ残っている豆（frozenOnly）は、
+ * 冷凍中は日数を数えないので「早めに消費」を出さない。
+ * @param {{beans:object[], txs:object[], portions?:object[], doseG:number, today:string}} p
+ * @returns {{bean:object, remainingG:number, roomG:number, frozenG:number, frozenCount:number, frozenOnly:boolean,
+ *   cups:number, freshness:object|null, band:object|null, alerts:string[]}[]}
  */
-export function beanRows({ beans = [], txs = [], doseG, today }) {
+export function beanRows({ beans = [], txs = [], portions = [], doseG, today }) {
   const byBean = groupTxByBean((txs ?? []).filter(alive));
+  const portionsByBean = groupPortionsByBean(portions);
   return sortBeansForList((beans ?? []).filter((b) => alive(b) && b.status !== 'finished' && b.status !== 'ordered')).map((bean) => {
-    const rest = remainingG(byBean[bean.id] ?? []);
-    const cups = cupsLeft(rest, doseG);
+    const parts = stockParts(remainingG(byBean[bean.id] ?? []), portionsByBean[bean.id]);
+    const cups = cupsLeft(parts.totalG, doseG);
+    const frozenOnly = parts.roomG <= 0 && parts.frozenCount > 0;
     const f = freshness(bean.roastDate, bean.roastLevel, today);
     const alerts = [];
     if (cups <= LOW_STOCK_CUPS) alerts.push(cups === 0 ? 'empty' : 'low');
-    if (f?.stage === 'useSoon') alerts.push('useSoon');
-    return { bean, remainingG: rest, cups, freshness: f, band: freshnessBand(f), alerts };
+    if (f?.stage === 'useSoon' && !frozenOnly) alerts.push('useSoon');
+    return {
+      bean,
+      remainingG: parts.totalG,
+      roomG: parts.roomG,
+      frozenG: parts.frozenG,
+      frozenCount: parts.frozenCount,
+      frozenOnly,
+      cups,
+      freshness: f,
+      band: freshnessBand(f),
+      alerts,
+    };
   });
 }
 

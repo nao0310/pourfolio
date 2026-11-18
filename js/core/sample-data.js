@@ -149,6 +149,18 @@ export function makeSampleData(now = new Date()) {
     createRecord({ beanId: bean.id, at: daysAgo(9).toISOString(), deltaG: 166.5, kind: 'in', brewId: null, memo: '' }, daysAgo(9)),
     createRecord({ beanId: bean.id, at: brew.at, deltaG: -20.1, kind: 'brew', brewId: brew.id, memo: '' }, daysAgo(1)),
   ];
+  // 冷凍の小分け（C4）：2袋を冷凍した
+  const freezeTx = createRecord(
+    { beanId: bean.id, at: daysAgo(5).toISOString(), deltaG: -30, kind: 'freeze', brewId: null, memo: '#1・#2（15g×2袋）' },
+    daysAgo(5),
+  );
+  inventoryTx.push(freezeTx);
+  const frozenPortions = [1, 2].map((labelNo) =>
+    createRecord(
+      { beanId: bean.id, labelNo, grams: 15, frozenDate: ymd(5), roastDaysAtFreeze: 5, freezeTxId: freezeTx.id, takenOutAt: null, takenOutBrewId: null },
+      daysAgo(5),
+    ),
+  );
 
   const settings = createRecord({ id: SETTINGS_ID, lastBackupAt: null }, daysAgo(9));
 
@@ -161,6 +173,7 @@ export function makeSampleData(now = new Date()) {
     tastings: [tasting],
     suggestions: [suggestion],
     orders: [order],
+    frozenPortions,
     settings: [settings],
   };
 }

@@ -65,8 +65,32 @@
           <span class="num" id="remain"></span>
           <span id="cups"></span>
         </div>
+        <p id="stockParts"></p>
         <p class="muted" id="forecast"></p>
         <p class="muted" id="estimateNote"></p>
+      </div>
+
+      <!-- 冷凍ストック（C4） -->
+      <div class="card" id="frozenCard">
+        <h2>冷凍ストック</h2>
+        <p class="muted" id="frozenSummary"></p>
+        <ul class="tx-list portion-list" id="portionList"></ul>
+        <details class="sub-action" id="freezeDetails">
+          <summary>小分けにして冷凍する</summary>
+          <p class="muted">常温の豆を袋に分けて冷凍します。袋には番号を書いておくと、取り出すときに分かりやすくなります。冷凍中は焙煎からの日数を数えません。</p>
+          <form id="freezeForm" novalidate>
+            <div class="field" id="fzGramsBox"></div>
+            <div class="field" id="fzCountBox"></div>
+            <label class="field">
+              <span class="label">冷凍した日</span>
+              <input type="date" id="fzDate">
+              <span class="field-error" data-for="frozenDate"></span>
+            </label>
+            <p class="num" id="fzTotal"></p>
+            <button class="btn block" type="submit">冷凍する</button>
+          </form>
+        </details>
+        <p id="fzMsg" role="status"></p>
       </div>
 
       <div class="card" id="actions">
@@ -81,7 +105,7 @@
 
         <details class="sub-action">
           <summary>量り直す</summary>
-          <p class="muted">袋から出した豆の重さを量って入れると、残量をその値に合わせます。</p>
+          <p class="muted">袋から出した豆の重さを量って入れると、常温の残量をその値に合わせます（冷凍の袋は含めません）。</p>
           <form id="measureForm" class="inline-form">
             <label class="field compact">
               <span class="label">今の重さ</span>

@@ -11,15 +11,19 @@ import {
   deleteBean,
   listBeans,
   markArrived,
+  freezeBean,
+  takeOutPortion,
 } from './db.js';
+import { normalizeFreezeInput, portionsOf, stockParts, stockPartsText, portionText, labelRange, MAX_PORTIONS } from './core/frozen.js';
 import { arrivalChanges } from './core/orders.js';
 import { initialStockG } from './core/roast.js';
 import { originText, BEAN_STATUS, WEIGHT_BASIS, parseNumber } from './core/beans.js';
+import { gramPrice, yen, yenPerGText } from './core/cost.js';
 import { remainingG, cupsLeft, consumptionPace, emptyForecast, doseFromSettings, sortTxNewestFirst, TX_KINDS } from './core/inventory.js';
 import { freshness, FRESHNESS_WINDOWS, FALLBACK_GROUP, STAGES } from './core/freshness.js';
 import { roastGroup, ROAST_GROUPS } from './core/roast.js';
 import { localYmd, formatYmdJa, formatG, formatDateTimeJa } from './core/format.js';
-import { $, el, queryParam, showMessage, freshnessPill } from './ui.js';
+import { $, el, queryParam, showMessage, freshnessPill, frozenPill, stepperField } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
 
 const db = openDb();
@@ -52,11 +56,15 @@ function renderBand(f, group) {
   $('band').replaceChildren(...children);
 }
 
-function renderFreshness(bean) {
+function renderFreshness(bean, parts) {
   const f = freshness(bean.roastDate, bean.roastLevel, localYmd());
   const group = roastGroup(bean.roastLevel) ?? FALLBACK_GROUP;
-  $('pill').replaceChildren(freshnessPill(f));
-  if (!f) {
+  // 常温が0で冷凍だけ残っている豆は、冷凍中は日数を数えないので「冷凍中」と出す
+  const frozenOnly = parts.roomG <= 0 && parts.frozenCount > 0;
+  $('pill').replaceChildren(frozenOnly ? frozenPill() : freshnessPill(f));
+  if (frozenOnly) {
+    $('freshText').textContent = '常温の豆はなく、冷凍の袋だけ残っています。冷凍中は焙煎からの日数を数えません。';
+  } else if (!f) {
     $('freshText').textContent = '焙煎日を入れると、飲み頃を表示します。';
   } else {
     const head = f.days >= 0 ? `焙煎から${f.days}日` : `焙煎まであと${-f.days}日`;
@@ -68,10 +76,11 @@ function renderFreshness(bean) {
   renderBand(f, group);
 }
 
-function renderStock(bean, txs) {
-  const rest = remainingG(txs);
+function renderStock(bean, txs, parts) {
+  const rest = parts.totalG;
   $('remain').textContent = formatG(Math.max(rest, 0));
   $('cups').textContent = `あと${cupsLeft(rest, doseG)}杯（1杯${formatG(doseG)}）`;
+  $('stockParts').textContent = parts.frozenCount ? stockPartsText(parts) : '';
   const pace = consumptionPace(txs);
   const fc = emptyForecast(rest, pace);
   if (rest <= 0) {
@@ -111,8 +120,14 @@ function renderTxList(txs) {
               class: 'link-btn',
               type: 'button',
               onclick: async () => {
-                if (!confirm(`「${TX_KINDS[t.kind] ?? t.kind} ${formatG(t.deltaG)}」を取り消しますか？`)) return;
-                await deleteInventoryTx(db, t.id);
+                const extra = { freeze: '（作った袋も消えます）', thaw: '（袋は冷凍庫に戻ります）' }[t.kind] ?? '';
+                if (!confirm(`「${TX_KINDS[t.kind] ?? t.kind} ${formatG(t.deltaG)}」を取り消しますか？${extra}`)) return;
+                try {
+                  await deleteInventoryTx(db, t.id);
+                } catch (err) {
+                  showMessage(err.message, 'error');
+                  return;
+                }
                 showMessage('取り消しました');
                 await render();
               },
@@ -124,13 +139,17 @@ function renderTxList(txs) {
   );
 }
 
-function renderInfo(bean) {
+function renderInfo(bean, allBeans) {
+  // コスト（C6）：1gあたりの値段と1杯の原価
+  const gp = gramPrice(bean, allBeans);
   const rows = [
     ['焙煎度', bean.roastLevel],
     ['焙煎日', formatYmdJa(bean.roastDate, { withYear: true })],
     ['表記重量', bean.labelWeightG ? `${formatG(bean.labelWeightG)}（${WEIGHT_BASIS[bean.labelWeightBasis] ?? ''}）` : ''],
     ['実重量', bean.actualWeightG ? formatG(bean.actualWeightG) : ''],
     ['価格', bean.priceJpy != null ? `${bean.priceJpy.toLocaleString('ja-JP')}円` : ''],
+    ['1gあたり', yenPerGText(gp)],
+    ['1杯の原価', gp ? `約${yen(gp.yenPerG * doseG)}（1杯${formatG(doseG)}）` : ''],
     ['購入先', bean.shop],
     ['産地', originText(bean)],
     ['品種', bean.variety],
@@ -154,9 +173,11 @@ async function render() {
     $('notFound').hidden = false;
     return;
   }
-  const { bean, txs } = found;
+  const { bean, txs, portions } = found;
   doseG = doseFromSettings(await getSettings(db));
   if (!$('cupDose').value) $('cupDose').value = String(doseG);
+  const inFreezer = portionsOf(portions, bean.id);
+  const parts = stockParts(remainingG(txs), inFreezer);
 
   document.title = `${bean.name} - Pourfolio`;
   $('name').textContent = bean.name;
@@ -166,18 +187,107 @@ async function render() {
   $('toggleFinished').dataset.status = bean.status;
   // 入荷待ちの豆は、届くまで飲み頃・残量・在庫の操作を出さず「届いた」の入力だけにする
   const ordered = bean.status === 'ordered';
-  for (const id of ['freshCard', 'stockCard', 'actions', 'txCard', 'toggleFinished']) $(id).hidden = ordered;
+  for (const id of ['freshCard', 'stockCard', 'frozenCard', 'actions', 'txCard', 'toggleFinished']) $(id).hidden = ordered;
   $('arrivalCard').hidden = !ordered;
   if (ordered) {
     await renderArrival(bean);
   } else {
-    renderFreshness(bean);
-    renderStock(bean, txs);
+    renderFreshness(bean, parts);
+    renderStock(bean, txs, parts);
+    renderFrozen(inFreezer, parts);
     renderTxList(txs);
   }
-  renderInfo(bean);
+  renderInfo(bean, await listBeans(db));
   $('content').hidden = false;
 }
+
+// ---- 冷凍ストック（C4） ----
+
+const fz = {};
+let roomG = 0;
+
+/** 冷凍の入力欄（±ボタン付き）を一度だけ作る */
+function buildFreezeForm() {
+  if (fz.grams) return;
+  const make = (box, opts) => {
+    const f = stepperField({ ...opts, onValue: renderFreezeTotal });
+    $(box).replaceChildren(f.node);
+    return f;
+  };
+  fz.grams = make('fzGramsBox', { id: 'fzGrams', label: '1袋の量', unit: 'g', step: 1, decimals: 1, min: 1, max: 1000, errorFor: 'gramsPerPortion' });
+  fz.count = make('fzCountBox', { id: 'fzCount', label: '袋の数', unit: '袋', step: 1, decimals: 0, min: 1, max: MAX_PORTIONS, errorFor: 'count' });
+}
+
+function readFreezeForm() {
+  return { gramsPerPortion: fz.grams.input.value, count: fz.count.input.value, frozenDate: $('fzDate').value };
+}
+
+function renderFreezeTotal() {
+  const g = parseNumber(fz.grams.input.value);
+  const n = parseNumber(fz.count.input.value);
+  const total = g > 0 && n > 0 ? Math.round(g * n * 10) / 10 : null;
+  $('fzTotal').textContent = total != null ? `合計 ${formatG(total)}（常温の残り ${formatG(roomG)}）` : `常温の残り ${formatG(roomG)}`;
+}
+
+function renderFrozen(inFreezer, parts) {
+  roomG = parts.roomG;
+  buildFreezeForm();
+  $('frozenSummary').textContent = inFreezer.length
+    ? `冷凍庫に${inFreezer.length}袋（${formatG(parts.frozenG)}）あります。古い袋から使いましょう。`
+    : '冷凍している袋はありません。';
+  $('portionList').replaceChildren(
+    ...inFreezer.map((p) =>
+      el(
+        'li',
+        {},
+        el(
+          'div',
+          { class: 'tx-main' },
+          el('span', { class: 'tx-kind' }, portionText(p)),
+          el(
+            'button',
+            {
+              class: 'btn secondary small',
+              type: 'button',
+              onclick: async () => {
+                await takeOutPortion(db, p.id);
+                showMessage(`#${p.labelNo}（${formatG(p.grams)}）を取り出し、常温に戻しました`, 'ok', 'fzMsg');
+                await render();
+              },
+            },
+            '取り出す',
+          ),
+        ),
+      ),
+    ),
+  );
+  // 初期値：1袋＝1杯分、袋の数＝常温の残りで作れるだけ（最大10袋）
+  if (!fz.grams.input.value) fz.grams.set(doseG);
+  if (!fz.count.input.value || document.activeElement !== fz.count.input) {
+    const g = parseNumber(fz.grams.input.value) || doseG;
+    fz.count.set(Math.max(1, Math.min(10, Math.floor(roomG / g + 1e-9))));
+  }
+  if (!$('fzDate').value) $('fzDate').value = localYmd();
+  $('freezeDetails').hidden = roomG <= 0;
+  renderFreezeTotal();
+}
+
+$('freezeForm').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const { value, errors } = normalizeFreezeInput(readFreezeForm(), { availableG: roomG });
+  for (const span of event.target.querySelectorAll('.field-error')) span.textContent = errors[span.dataset.for] ?? '';
+  if (!value) return;
+  try {
+    const { portions } = await freezeBean(db, beanId, value);
+    showMessage(`${value.count}袋（${formatG(value.totalG)}）を冷凍しました。袋に ${labelRange(portions.map((p) => p.labelNo))} と書いておきましょう`, 'ok', 'fzMsg');
+  } catch (err) {
+    showMessage(err.message, 'error', 'fzMsg');
+    return;
+  }
+  $('freezeDetails').open = false;
+  fz.count.input.value = '';
+  await render();
+});
 
 /** 入荷待ち：注文日と、届く重さの目安 */
 async function renderArrival(bean) {

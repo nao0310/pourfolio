@@ -1,6 +1,9 @@
 // 買い物リスト（C5）：注文の目安日、次に買う候補、注文メモ、お届けの日数
 import { openDb, readAll, getSettings, updateSettings } from './db.js';
-import { restockPlan, restockText, shoppingCandidates, orderMemo } from './core/restock.js';
+import { restockPlan, restockText, shoppingCandidates, orderMemo, bulkBuyPlan, bulkBuyText, normalizeShippingInput } from './core/restock.js';
+import { doseFromSettings } from './core/inventory.js';
+import { freezerCount } from './core/frozen.js';
+import { yen } from './core/cost.js';
 import { deliveryDays, DEFAULT_DELIVERY_DAYS } from './core/orders.js';
 import { localYmd, formatG, formatYmdJa } from './core/format.js';
 import { $, el, showMessage } from './ui.js';
@@ -10,6 +13,8 @@ const db = openDb();
 let plan = null;
 let candidates = [];
 const picked = new Set();
+let data = null;
+let settings = {};
 
 function renderPlan() {
   const t = restockText(plan);
@@ -70,6 +75,55 @@ function renderMemo() {
   $('memo').value = chosen.length ? orderMemo(chosen, plan) : '';
   $('memo').placeholder = '上の候補に印を付けると、ここにメモができます';
   $('copyMemo').disabled = chosen.length === 0;
+  renderBulk();
+}
+
+/** 送料無料ラインのまとめ買い案 */
+function renderBulk() {
+  if (!data) return;
+  const chosen = candidates.filter((c) => picked.has(c.key));
+  const b = bulkBuyPlan({ picked: chosen, candidates, settings, portions: data.portions, beans: data.beans, doseG: doseFromSettings(settings) });
+  $('bulkText').textContent = bulkBuyText(b);
+  const list = b.status === 'short' ? b.suggestions : [];
+  $('bulkList').replaceChildren(
+    ...list.map((s) => {
+      const facts = [`＋${yen(s.addJpy)}`];
+      if (s.addG != null) facts.push(`約${formatG(s.addG)}`);
+      if (s.fits === true) facts.push(`冷凍庫に入ります（${s.portionsNeeded}袋分）`);
+      if (s.fits === false) facts.push(`冷凍庫の空き（${b.freeSlots}袋）に入りきりません（${s.portionsNeeded}袋分）`);
+      return el(
+        'div',
+        { class: 'shop-row' },
+        el('span', { class: 'shop-main' }, el('span', { class: 'shop-name' }, s.names.join('＋')), el('span', { class: 'muted' }, facts.join('・'))),
+        el(
+          'button',
+          {
+            class: 'btn secondary small',
+            type: 'button',
+            onclick: () => {
+              for (const k of s.keys) picked.add(k);
+              renderCandidates();
+              renderMemo();
+              showMessage(`${s.names.join('・')}を注文メモに足しました`);
+            },
+          },
+          '足す',
+        ),
+      );
+    }),
+  );
+  const notes = [];
+  if (b.status === 'short' && !list.length) notes.push('ほかの候補を足してもラインに届きません（価格が未入力の候補は使えません）');
+  if (b.status === 'short' && b.freeSlots == null) notes.push('「冷凍庫に入る袋の数」を入れると、足した豆が冷凍庫に入るかも確かめます');
+  if (b.status === 'short' && list.length) notes.push('足した分は、飲み頃を過ぎる前に1杯分ずつ冷凍しておくと長く楽しめます');
+  $('bulkNote').textContent = notes.join('。');
+}
+
+function renderShipSettings() {
+  for (const k of ['shippingJpy', 'freeShippingJpy', 'freezerSlots']) {
+    if (document.activeElement !== $(k)) $(k).value = settings[k] != null ? String(settings[k]) : '';
+  }
+  $('freezerHint').textContent = `いま冷凍中の袋：${freezerCount(data?.portions ?? [])}袋`;
 }
 
 function renderDelivery(all, settings) {
@@ -81,15 +135,23 @@ function renderDelivery(all, settings) {
 }
 
 async function render() {
-  const [all, settings] = await Promise.all([readAll(db), getSettings(db)]);
+  const [all, loaded] = await Promise.all([readAll(db), getSettings(db)]);
+  settings = loaded;
   const alive = (r) => r.deletedAt == null;
-  const data = { beans: all.beans.filter(alive), txs: all.inventoryTx.filter(alive), brews: all.brews, tastings: all.tastings };
+  data = {
+    beans: all.beans.filter(alive),
+    txs: all.inventoryTx.filter(alive),
+    portions: all.frozenPortions.filter(alive),
+    brews: all.brews,
+    tastings: all.tastings,
+  };
   plan = restockPlan({ ...data, settings, today: localYmd() });
   candidates = shoppingCandidates(data);
   renderPlan();
   renderCandidates();
   renderMemo();
   renderDelivery(all, settings);
+  renderShipSettings();
 }
 
 $('copyMemo').addEventListener('click', async () => {
@@ -111,6 +173,17 @@ $('deliveryForm').addEventListener('submit', async (event) => {
   if (!Number.isInteger(n) || n < 0 || n > 30) return showMessage('0〜30の日数で入れてください', 'error', 'deliveryMsg');
   await updateSettings(db, { deliveryDays: n });
   showMessage('保存しました', 'ok', 'deliveryMsg');
+  await render();
+});
+
+$('shipForm').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const raw = { shippingJpy: $('shippingJpy').value, freeShippingJpy: $('freeShippingJpy').value, freezerSlots: $('freezerSlots').value };
+  const { value, errors } = normalizeShippingInput(raw);
+  for (const span of event.target.querySelectorAll('.field-error')) span.textContent = errors[span.dataset.for] ?? '';
+  if (Object.keys(errors).length) return;
+  await updateSettings(db, value);
+  showMessage('保存しました', 'ok', 'shipMsg');
   await render();
 });
 

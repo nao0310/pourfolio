@@ -42,6 +42,38 @@
       <p id="msg" role="status"></p>
     </section>
 
+    <!-- 送料無料ラインのまとめ買い案（spec 4.4） -->
+    <section class="card" id="bulkCard">
+      <h2>送料無料のまとめ買い</h2>
+      <p id="bulkText"></p>
+      <div id="bulkList"></div>
+      <p class="muted small" id="bulkNote"></p>
+      <details class="sub-action" id="shipDetails">
+        <summary>送料の設定</summary>
+        <p class="muted">店の案内を見て入れてください（アプリは店のサイトを見に行きません）。冷凍庫に入る袋の数は、1杯分ずつ小分けにした袋で数えます。</p>
+        <form id="shipForm" novalidate>
+          <label class="field">
+            <span class="label">送料</span>
+            <span class="with-unit"><input type="text" inputmode="numeric" id="shippingJpy" autocomplete="off"><span>円</span></span>
+            <span class="field-error" data-for="shippingJpy"></span>
+          </label>
+          <label class="field">
+            <span class="label">送料無料ライン（この金額以上で送料無料）</span>
+            <span class="with-unit"><input type="text" inputmode="numeric" id="freeShippingJpy" autocomplete="off"><span>円</span></span>
+            <span class="field-error" data-for="freeShippingJpy"></span>
+          </label>
+          <label class="field">
+            <span class="label">冷凍庫に入る袋の数</span>
+            <span class="with-unit"><input type="text" inputmode="numeric" id="freezerSlots" autocomplete="off"><span>袋</span></span>
+            <span class="hint" id="freezerHint"></span>
+            <span class="field-error" data-for="freezerSlots"></span>
+          </label>
+          <button class="btn secondary" type="submit">保存</button>
+        </form>
+        <p id="shipMsg" role="status"></p>
+      </details>
+    </section>
+
     <section class="card">
       <h2>お届けの日数</h2>
       <p class="muted" id="deliveryNote"></p>

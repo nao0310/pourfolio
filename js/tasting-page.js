@@ -15,6 +15,7 @@ import {
 import { formatSec } from './core/recipes.js';
 import { remainingG, cupsLeft, doseFromSettings } from './core/inventory.js';
 import { formatG } from './core/format.js';
+import { portionsOf, stockParts, stockPartsText } from './core/frozen.js';
 import { $, el, queryParam, showMessage } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
 
@@ -209,9 +210,11 @@ async function showSavedStock() {
     $('savedStock').textContent = '豆を選ばずに記録しました';
   } else {
     const loaded = await getBeanWithTx(db, bean.id);
-    const rest = remainingG(loaded?.txs ?? []);
+    // 残りは常温＋冷凍の合計（C4）。冷凍の袋があれば内訳も出す
+    const parts = stockParts(remainingG(loaded?.txs ?? []), portionsOf(loaded?.portions ?? [], bean.id));
     const dose = doseFromSettings(await getSettings(db));
-    $('savedStock').textContent = `${bean.name}の残り ${formatG(rest)}（あと${cupsLeft(rest, dose)}杯）`;
+    const detail = parts.frozenCount ? `・${stockPartsText(parts)}` : '';
+    $('savedStock').textContent = `${bean.name}の残り ${formatG(parts.totalG)}（あと${cupsLeft(parts.totalG, dose)}杯${detail}）`;
   }
   $('savedCard').hidden = false;
 }

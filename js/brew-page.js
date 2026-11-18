@@ -12,7 +12,11 @@ import {
   saveBrew,
   getSuggestion,
   listSuggestions,
+  listFrozenPortions,
+  listAliveTx,
 } from './db.js';
+import { frozenChoice, portionsOf, portionText } from './core/frozen.js';
+import { remainingG } from './core/inventory.js';
 import { basePlanForNext, applyAction, pickPendingSuggestion } from './core/dialin.js';
 import { planFromRecipe, planFromBrew, formatSec, POUR_STYLES } from './core/recipes.js';
 import { sortBeansForList } from './core/beans.js';
@@ -40,6 +44,8 @@ let beans = [];
 let speechOn = true;
 let loadedPlan = null;
 let suggestions = [];
+let portions = [];
+let txs = [];
 
 // ---- 計画（スタート前） ----
 
@@ -110,6 +116,32 @@ function fillBeanSelect(select, selectedId) {
   return usable;
 }
 
+/** 計画の画面の豆の下の一言（前回の豆か、冷凍の袋があるか） */
+function renderBeanNote(preferred = null) {
+  const id = $('bean').value;
+  const notes = [];
+  if (preferred && id === preferred) notes.push('前回の豆を選んでいます');
+  const n = id ? portionsOf(portions, id).length : 0;
+  if (n) notes.push(`冷凍${n}袋あり（記録するときに「冷凍の袋を使う」を選べます）`);
+  $('beanNote').textContent = notes.join('。');
+}
+
+/** 常温の残り（g） */
+const roomOf = (beanId) => remainingG(txs.filter((t) => t.beanId === beanId));
+
+/** 実績の確認：選んだ豆に冷凍の袋があれば「冷凍の袋を使う」を出す */
+function renderFrozenChoice(keepChecked) {
+  const beanId = $('rBean').value;
+  const { portion, checked } = frozenChoice({ portions, beanId, roomG: roomOf(beanId), doseG: Number(fields.dose?.input.value) || draft?.plan?.doseG });
+  $('rFrozenRow').hidden = !portion;
+  if (!portion) {
+    $('rFrozen').checked = false;
+    return;
+  }
+  $('rFrozenText').textContent = `冷凍の袋を使う：${portionText(portion)}`;
+  $('rFrozen').checked = keepChecked ?? checked;
+}
+
 async function showPlan(loaded, lastBeanId) {
   const { plan, recipe } = loaded;
   const equipment = await listEquipment(db);
@@ -130,7 +162,7 @@ async function showPlan(loaded, lastBeanId) {
   const preferred = plan.beanId ?? lastBeanId ?? null;
   const usable = fillBeanSelect($('bean'), preferred);
   if (!$('bean').value && usable[0]) $('bean').value = usable[0].id;
-  $('beanNote').textContent = preferred && $('bean').value === preferred ? '前回の豆を選んでいます' : '';
+  renderBeanNote(preferred);
   renderSuggestCard();
 
   const changed = plan.source === 'suggestion' && loaded.suggestion?.action?.to != null ? loaded.suggestion.action.variable : null;
@@ -361,6 +393,7 @@ function readForm() {
     totalSec: $('rTotal').value,
     beverageG: fields.bev.input.value,
     memo: $('rMemo').value,
+    useFrozen: !$('rFrozenRow').hidden && $('rFrozen').checked,
   };
 }
 
@@ -398,6 +431,11 @@ function buildResultForm() {
     errorFor: 'beverageG',
   });
   for (const id of ['rBean', 'rGrind', 'rTotal', 'rMemo']) $(id).addEventListener('input', onFormInput);
+  $('rBean').addEventListener('change', () => {
+    renderFrozenChoice();
+    onFormInput();
+  });
+  $('rFrozen').addEventListener('change', onFormInput);
 }
 
 function showResult() {
@@ -412,6 +450,7 @@ function showResult() {
   $('rGrind').value = input.grindSetting ?? '';
   $('rTotal').value = input.totalSec ?? '';
   $('rMemo').value = input.memo ?? '';
+  renderFrozenChoice(input.useFrozen);
 
   const plan = draft.plan;
   $('resultSub').textContent = [plan.name, draft.startedAtMs == null ? 'タイマーなし' : ''].filter(Boolean).join('・');
@@ -450,8 +489,10 @@ async function onSave(e) {
   }
   const bean = beans.find((b) => b.id === value.beanId) ?? null;
   const at = new Date(draft.startedAtMs ?? Date.now()).toISOString();
+  // 冷凍の袋を使う：保存すると袋を取り出したことになる（C4）
+  const portion = readForm().useFrozen ? frozenChoice({ portions, beanId: value.beanId, roomG: 0, doseG: 0 }).portion : null;
   try {
-    const { brew } = await saveBrew(db, buildBrew({ draft, value, at, bean }));
+    const { brew } = await saveBrew(db, buildBrew({ draft, value, at, bean, portion }));
     clearDraft();
     draft = null;
     // そのまま味の評価へ（spec 8章：実績の確認 → テイスティング）。戻るで実績の確認に戻らないよう replace
@@ -476,6 +517,7 @@ async function init() {
   const settings = await getSettings(db);
   speechOn = settings.speechOn !== false;
   beans = await listBeans(db);
+  [portions, txs] = await Promise.all([listFrozenPortions(db), listAliveTx(db)]);
   const saved = loadDraft();
   const sameAsSaved = saved && (location.search === '' || location.search === saved.returnSearch);
 
@@ -506,7 +548,10 @@ async function init() {
 }
 
 $('start').addEventListener('click', () => beginNew(true));
-$('bean').addEventListener('change', renderSuggestCard);
+$('bean').addEventListener('change', () => {
+  renderSuggestCard();
+  renderBeanNote();
+});
 $('noTimer').addEventListener('click', () => beginNew(false));
 $('resume').addEventListener('click', () => {
   const saved = loadDraft();
