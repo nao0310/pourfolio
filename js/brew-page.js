@@ -27,6 +27,7 @@ import { defaultEquipmentIds } from './core/equipment.js';
 import { doseFromSettings } from './core/inventory.js';
 import { frozenChoice, portionsOf, portionText } from './core/frozen.js';
 import { remainingG, stockCheckForBrew } from './core/inventory.js';
+import { experimentStatus } from './core/compare.js';
 import { basePlanForNext, applyAction, pickPendingSuggestion } from './core/dialin.js';
 import { planFromRecipe, planFromBrew, formatSec, POUR_STYLES, ratioOf } from './core/recipes.js';
 import { sortBeansForList } from './core/beans.js';
@@ -787,6 +788,8 @@ async function init() {
 
   [suggestions, suggestBrews] = await Promise.all([listSuggestions(db), listBrews(db)]);
   compare = queryParam('compare') ? await getExperiment(db, queryParam('compare')) : null;
+  // 結果を出した飲み比べ（古い画面から開いた）は、ふつうの1杯として淹れる（2-8の50番）
+  if (compare && experimentStatus(compare) === 'done') compare = null;
   if (compare) {
     $('crumb').textContent = '飲み比べ';
     $('crumb').href = `compare.html?id=${encodeURIComponent(compare.id)}`;

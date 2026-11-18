@@ -695,7 +695,8 @@ export async function deleteExperiment(db, id, now = new Date()) {
  */
 export async function attachBrewToExperiment(db, id, p, now = new Date()) {
   const cur = await getExperiment(db, id);
-  if (!cur) return null;
+  // 結果を出したあとの飲み比べにはつながない（古い画面から淹れ直しても、結果の杯を置き換えない、2-8の50番）
+  if (!cur || cur.revealedAt) return null;
   return updateExperiment(db, id, { entries: attachBrew(cur, p) }, now);
 }
 

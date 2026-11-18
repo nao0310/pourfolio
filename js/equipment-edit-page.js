@@ -216,8 +216,14 @@ async function init() {
   if (editId) {
     const eq = await getEquipment(db, editId);
     if (!eq) {
-      $('title').textContent = '見つかりません';
+      // 削除した器具を開いた：何が起きたかと戻り道を出す（2-8の51番）
+      document.title = '器具が見つかりません - Pourfolio';
+      $('title').textContent = '器具が見つかりません';
       form.hidden = true;
+      form.after(
+        el('p', { class: 'muted' }, '削除したのかもしれません。'),
+        el('p', {}, el('a', { class: 'btn block', href: 'equipment.html' }, '器具の一覧へ')),
+      );
       return;
     }
     document.title = '器具の編集 - Pourfolio';
