@@ -176,7 +176,17 @@ export function makeAction(kind, plan, grindStep = DEFAULT_GRIND_STEP) {
         text: `${ACTION_LABELS[kind]}（挽き目の目盛りが数字で記録されていないので、目盛りは手で合わせてください）`,
       };
     }
-    const to = fmt(kind === 'finer' ? n - step : n + step);
+    const toN = kind === 'finer' ? n - step : n + step;
+    // 目盛りはマイナスにならないので、0より細かくするときは数字を出さない（2-8の39番）
+    if (toN < 0) {
+      return {
+        ...base,
+        variable: 'grind',
+        from: cur,
+        text: `${ACTION_LABELS[kind]}（目盛り${cur}より細かい側は数字で出せないので、ミルの目盛りは手で合わせてください）`,
+      };
+    }
+    const to = fmt(toN);
     return {
       ...base,
       variable: 'grind',
