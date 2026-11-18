@@ -4,7 +4,7 @@ import { analysisRows, readinessText } from './core/analysis.js';
 import { factorAnalysis, roastCurves } from './core/factors.js';
 import { starLevel } from './core/chart-scale.js';
 import { plot, chartBox } from './chart.js';
-import { $, el } from './ui.js';
+import { $, el, termHelp, withTerm } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
 
 function factorCard(f, grinderName) {
@@ -31,13 +31,13 @@ function factorCard(f, grinderName) {
     'section',
     { class: 'card' },
     head,
-    el('p', { class: `factor-word ${f.word.level}` }, f.word.text, f.fit ? el('span', { class: 'muted small' }, `（相関 ${f.fit.r.toFixed(2)}・${f.n}杯）`) : ''),
+    el('p', { class: `factor-word ${f.word.level}` }, f.word.text, f.fit ? el('span', { class: 'muted small' }, `（相関 ${f.fit.r.toFixed(2)}・${f.n}杯）`, termHelp('correlation')) : ''),
     chartBox(chart, [f.hint, f.key === 'grind' && grinderName ? `${grinderName}の杯だけ（目盛りはグラインダーごとに違うため）` : ''].filter(Boolean).join('。')),
   );
 }
 
 function curveCard(curves) {
-  const card = el('section', { class: 'card' }, el('h2', {}, '飲み頃カーブ（焙煎度ごと）'), el('p', { class: 'muted' }, '焙煎後の日数ごとの★の平均です。同じ焙煎度で5袋たまると線を出します。'));
+  const card = el('section', { class: 'card' }, el('h2', {}, withTerm('飲み頃カーブ（焙煎度ごと）', 'peak')), el('p', { class: 'muted' }, '焙煎後の日数ごとの★の平均です。同じ焙煎度で5袋たまると線を出します。'));
   if (!curves.length) {
     card.append(el('p', { class: 'muted' }, '焙煎日のある豆で淹れて★を付けると、ここに出ます'));
     return card;

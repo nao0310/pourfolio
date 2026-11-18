@@ -42,7 +42,7 @@ import { formatSec } from './core/recipes.js';
 import { remainingG, cupsLeft, doseFromSettings } from './core/inventory.js';
 import { formatG } from './core/format.js';
 import { portionsOf, stockParts, stockPartsText } from './core/frozen.js';
-import { $, el, queryParam, showMessage, showPageLoadError } from './ui.js';
+import { $, el, queryParam, showMessage, showPageLoadError, termHelp } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
 import { askConfirm } from './confirm-box.js';
 
@@ -195,7 +195,9 @@ function renderSuggestion(s) {
     ['あなたの実績', r.history],
     ['確信度', r.confidence ? `${CONFIDENCE_LABELS[r.confidence.level] ?? ''}（${r.confidence.text}）` : ''],
   ].filter(([, v]) => v);
-  $('sReasons').replaceChildren(...items.map(([k, v]) => el('li', {}, el('strong', {}, k), el('span', {}, v))));
+  // 理論の行から、用語辞典の理論カードを開ける（X25）
+  const theoryTerm = ['finer', 'coarser'].includes(s.action?.kind) ? 'grind-time' : ['water', 'dose'].includes(s.action?.kind) ? 'ratio-theory' : 'extraction-balance';
+  $('sReasons').replaceChildren(...items.map(([k, v]) => el('li', {}, el('strong', {}, k), el('span', {}, v, k === '理論' ? termHelp(theoryTerm) : null))));
 }
 
 function showDone(saved, suggestion) {

@@ -35,6 +35,8 @@ import { roastGroup, ROAST_GROUPS } from './core/roast.js';
 import { localYmd, formatYmdJa, formatG, formatDateTimeJa, formatDateJa } from './core/format.js';
 import { roastPreferences, preferenceForBean, preferenceText } from './core/compare.js';
 import { variableFindings } from './core/experiment-plan.js';
+import { analysisRows } from './core/analysis.js';
+import { agingOf } from './core/aging.js';
 import { $, el, phrased, queryParam, showMessage as showBoxMessage, showToast, freshnessPill, frozenPill, stepperField, svgElement } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
 import { showCard } from './dismiss-card.js';
@@ -251,6 +253,17 @@ async function renderRoastPref(bean, allBeans) {
   $('varFindings').replaceChildren(...found.map((f) => el('li', {}, ...phrased(f.text))));
 }
 
+/** エイジング日誌（X31）の要約：この豆の飲み頃の山。焙煎日数のある杯がなければ出さない */
+async function renderAging(bean) {
+  const [brews, tastings] = await Promise.all([listBrews(db), listTastings(db)]);
+  const mine = brews.filter((b) => b.beanId === bean.id && b.deletedAt == null);
+  const a = mine.length ? agingOf(bean, analysisRows({ brews: mine, beans: [bean], tastings })) : null;
+  $('agingBox').hidden = !a || a.cups === 0;
+  if (!a || a.cups === 0) return;
+  $('agingLine').replaceChildren(...phrased(a.line));
+  $('agingLink').href = `aging.html?bean=${encodeURIComponent(bean.id)}`;
+}
+
 /** キャニスターの QR（X14）。開いたときだけ作る */
 function renderCanister(bean) {
   $('canisterCard').hidden = bean.status === 'ordered';
@@ -293,6 +306,7 @@ async function render() {
     renderStock(bean, txs, parts);
     renderFrozen(inFreezer, parts);
     renderTxList(txs);
+    await renderAging(bean);
   }
   const allBeans = await listBeans(db);
   renderInfo(bean, allBeans);

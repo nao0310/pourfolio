@@ -6,7 +6,7 @@ import { beanJourneys, averageCupsTo90 } from './core/dialin-history.js';
 import { starLevel } from './core/chart-scale.js';
 import { formatYmdJa } from './core/format.js';
 import { plot, chartBox, starLegend } from './chart.js';
-import { $, el, queryParam } from './ui.js';
+import { $, el, queryParam, withTerm } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
 
 let journeys = [];
@@ -48,7 +48,7 @@ function renderJourney(j) {
       { class: 'plan-numbers' },
       el('dt', {}, '自己ベスト'),
       el('dd', { class: 'num' }, j.best != null ? `★${j.best}` : '—'),
-      el('dt', {}, 'ベストの9割まで'),
+      el('dt', {}, withTerm('ベストの9割まで', 'cups-to-90')),
       el('dd', { class: 'num' }, j.cupsTo90 != null ? `${j.cupsTo90}杯目` : '—'),
     ),
     chartBox(chart, starLegend()),

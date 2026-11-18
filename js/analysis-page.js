@@ -7,6 +7,8 @@ import { roastCurves } from './core/factors.js';
 import { preferenceBy, topLine } from './core/preference.js';
 import { todayCaffeine } from './core/caffeine.js';
 import { lifeReadiness, weatherCount } from './core/life.js';
+import { reproGroups, reproScore, REPRO_MIN } from './core/repro.js';
+import { agingAll } from './core/aging.js';
 import { $, el } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
 
@@ -33,6 +35,9 @@ async function render() {
   const lifeReady = lifeReadiness(rows);
   // 今日はホームと同じ朝5時区切り（2-8の37番）
   const today = todayCaffeine(rows, new Date());
+  const repro = reproScore(reproGroups(rows, data.recipes));
+  const aging = agingAll(data.beans, rows);
+  const peaks = aging.filter((a) => a.peak).length;
 
   const summary = el(
     'section',
@@ -84,9 +89,22 @@ async function render() {
       ),
       entry(analysisHref('profile.html'), '嗜好プロファイル', profileReady.ready ? `★のある${rated.length}杯から` : readinessText(profileReady), profileReady.ready),
       entry(analysisHref('life.html'), '生活との関係', lifeReady.ready ? `時間帯・曜日・気分・天気・季節と★（天気の付いた杯 ${weatherCount(rows)}杯）` : readinessText(lifeReady), lifeReady.ready),
+      entry(
+        analysisHref('repro.html'),
+        '再現性',
+        repro.ready ? `再現性スコア ${repro.score}・★のブレ ±${repro.sd}（${repro.word.text}）` : `同じ豆の袋を同じレシピで${REPRO_MIN}杯淹れると表示します`,
+        repro.ready,
+      ),
+      entry(
+        analysisHref('aging.html'),
+        'エイジング日誌',
+        peaks ? `${peaks}袋の飲み頃の山を見られます` : aging.length ? '焙煎後日数ごとの★を並べています（山はもう少し）' : '焙煎日を入れた豆で淹れると表示します',
+        aging.length > 0,
+      ),
       entry(analysisHref('calendar.html'), 'カレンダーとカフェイン', rows.length ? '毎日の杯数とカフェインの目安' : '淹れた日から表示します', rows.length > 0),
       isDemo() ? null : entry('cost.html', 'コスト', '1杯の単価・月の支出・満足度あたりの値段', true),
       entry(analysisHref('report.html'), '月次レポート', '1か月の杯数・ベスト3・産地・支出・好みの変化を1枚に（印刷・PDF）', true),
+      entry('glossary.html', '用語辞典', 'TDS・抽出収率・嗜好スコアなど、分析の言葉の意味', true),
     ),
   );
 
