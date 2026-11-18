@@ -6,7 +6,7 @@ import { openDb, readAll, getSettings, setDeviceSettings, getUnratedBrew, getCoo
 import { APP_VERSION, versionLabel, whatsNew } from './core/version.js';
 import { restockPlan, restockText } from './core/restock.js';
 import { brewLine, tastingSummary } from './core/tastings.js';
-import { backupReminder, lastBackupText, beanRows, alertText, recentBrews } from './core/home.js';
+import { backupReminder, lastBackupText, beanRows, alertText, recentBrews, recordText } from './core/home.js';
 import { pickPendingSuggestion } from './core/dialin.js';
 import { doseFromSettings } from './core/inventory.js';
 import { localYmd, formatG } from './core/format.js';
@@ -231,7 +231,7 @@ function renderRecent(all, beanName) {
           el(
             'span',
             { class: 'muted' },
-            [tasting ? tastingSummary(tasting) || 'メモだけ' : '未評価', recordSec != null ? `記録 ${recordSec}秒` : ''].filter(Boolean).join('　'),
+            [tasting ? tastingSummary(tasting) || 'メモだけ' : '未評価', recordText(recordSec)].filter(Boolean).join('　'),
           ),
         ),
       ),

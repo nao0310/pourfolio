@@ -149,3 +149,17 @@ export function recentBrews(brews = [], tastings = [], n = RECENT_BREWS) {
       return { brew, tasting, recordSec: recordSec(brew, tasting) };
     });
 }
+
+/**
+ * 直近の抽出に出す「落ち切ってから評価を保存するまで」の文（2-8 の23番）。
+ * 「記録 437秒」では意味が分からないので「評価まで 7分17秒」のように分と秒で出す
+ * @param {number|null} sec recordSec の値
+ */
+export function recordText(sec) {
+  if (sec == null || !Number.isFinite(sec) || sec < 0) return '';
+  const s = Math.round(sec);
+  if (s < 60) return `評価まで ${s}秒`;
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return `評価まで ${m}分${r ? `${r}秒` : ''}`;
+}
