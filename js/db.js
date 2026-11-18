@@ -16,6 +16,7 @@ import { buildPhoto, photosOfBrew } from './core/photos.js';
 import { attachBrew, tastingsToSave } from './core/compare.js';
 import { withTds } from './core/extraction.js';
 import { withWeather } from './core/weather.js';
+import { markDone, snooze } from './core/maintenance.js';
 
 /** 本番のデータベース名（保存テストの pourfolio-storage-test とは別） */
 export const DB_NAME = 'pourfolio';
@@ -303,6 +304,11 @@ export async function setBeanStatus(db, beanId, status, now = new Date()) {
   return next;
 }
 
+/** 次の自分への一言（X32）を書く（空なら消す） */
+export async function setHandoverNote(db, beanId, note, now = new Date()) {
+  return updateBean(db, beanId, { handoverNote: note, handoverNoteAt: note ? nowIso(now) : null }, now);
+}
+
 /** 飲み切りを取り消す：前の状態（未開封・開封済み）に戻す（2-8の42番） */
 export async function unfinishBean(db, beanId, now = new Date()) {
   const txs = (await db.table('inventoryTx').where('beanId').equals(beanId).toArray()).filter(alive);
@@ -329,6 +335,30 @@ export async function addInventoryTx(db, fields, now = new Date()) {
   const tx = createRecord({ at: nowIso(now), brewId: null, memo: '', ...fields }, now);
   await db.table('inventoryTx').put(tx);
   return tx;
+}
+
+/**
+ * おすそ分け（X34）：渡した量を在庫から引き、相手とメモを残す。未開封の豆なら開封済みにする
+ * @param {{beanId:string, g:number, recipient?:string, memo?:string}} p normalizeGiftInput の value と豆のID
+ */
+export async function addGift(db, { beanId, g, recipient = '', memo = '' }, now = new Date()) {
+  let tx;
+  await db.transaction('rw', db.table('beans'), db.table('inventoryTx'), async () => {
+    const bean = await db.table('beans').get(beanId);
+    if (!bean || !alive(bean)) throw new Error('豆が見つかりません');
+    tx = await addInventoryTx(db, { beanId, deltaG: -g, kind: 'gift', recipient, memo, feedback: '' }, now);
+    if (bean.status === 'unopened') await db.table('beans').put(updateRecord(bean, { status: 'open' }, now));
+  });
+  return tx;
+}
+
+/** おすそ分けにもらった感想を書く（空なら消す） */
+export async function setGiftFeedback(db, txId, feedback, now = new Date()) {
+  const cur = await db.table('inventoryTx').get(txId);
+  if (!cur || !alive(cur) || cur.kind !== 'gift') throw new Error('おすそ分けの記録が見つかりません');
+  const next = updateRecord(cur, { feedback, feedbackAt: feedback ? nowIso(now) : null }, now);
+  await db.table('inventoryTx').put(next);
+  return next;
 }
 
 /**
@@ -492,6 +522,24 @@ export async function updateEquipment(db, id, changes, now = new Date()) {
 export async function deleteEquipment(db, id, now = new Date()) {
   const cur = await db.table('equipment').get(id);
   if (cur && alive(cur)) await db.table('equipment').put(markDeleted(cur, now));
+}
+
+/** お手入れ（D4）の「済んだ」：前回を今にする */
+export async function markMaintenanceDone(db, id, now = new Date()) {
+  const cur = await getEquipment(db, id);
+  if (!cur) throw new Error('器具が見つかりません');
+  const next = updateRecord(cur, { maintenance: markDone(cur.maintenance, now) }, now);
+  await db.table('equipment').put(next);
+  return next;
+}
+
+/** お手入れ（D4）の「あとで」：数日は知らせない */
+export async function snoozeMaintenance(db, id, now = new Date()) {
+  const cur = await getEquipment(db, id);
+  if (!cur) throw new Error('器具が見つかりません');
+  const next = updateRecord(cur, { maintenance: snooze(cur.maintenance, now) }, now);
+  await db.table('equipment').put(next);
+  return next;
 }
 
 // ---- レシピ（A1） ----
