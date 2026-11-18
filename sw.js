@@ -9,7 +9,7 @@
 // <manifest> npm run sw が書き込む（手で直さない）
 const MANIFEST = {
   "label": "3.3.1",
-  "version": "3595cebda56d",
+  "version": "0e8079c2a62d",
   "files": {
     "ai.html": "34607ec38ddc5690",
     "analysis.html": "97fad6697d25fa7e",
@@ -47,6 +47,7 @@ const MANIFEST = {
     "js/chart.js": "bfe7bcfbcfd6aa36",
     "js/compare-page.js": "f4c2917daf4da186",
     "js/confirm-box.js": "25ef25c80f228e42",
+    "js/core/aging.js": "873e9eee24b526af",
     "js/core/ai-text.js": "5b786a522a1e48f4",
     "js/core/analysis.js": "165493d2d7d14e84",
     "js/core/autosave.js": "48c2c11a385d1e22",
@@ -74,6 +75,7 @@ const MANIFEST = {
     "js/core/freshness.js": "4d56dabbc6fc23b5",
     "js/core/frozen.js": "4426f1550cb5a9e2",
     "js/core/ghost.js": "b4a197f101c8ae9a",
+    "js/core/glossary.js": "eca0f53f083e78f1",
     "js/core/grinder-scale.js": "8fdefe41b3440c73",
     "js/core/home.js": "154612fd596d9d44",
     "js/core/initial-recipe.js": "d9383e0e76c31245",
@@ -94,6 +96,7 @@ const MANIFEST = {
     "js/core/recipes.js": "55ddfa6fcd9cd3f0",
     "js/core/records.js": "68edcc359070daef",
     "js/core/report-image.js": "b81be060c39dc593",
+    "js/core/repro.js": "0eec519bd68c8fc9",
     "js/core/restock.js": "e50ddd0703d5602f",
     "js/core/roast.js": "e713f66bb296aa2d",
     "js/core/sample-data.js": "8122c5ccebd68c51",
