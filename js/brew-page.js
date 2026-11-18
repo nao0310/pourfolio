@@ -58,6 +58,8 @@ let beans = [];
 let speechOn = true;
 let loadedPlan = null;
 let suggestions = [];
+/** 提案のカードで、もっと新しい杯がある古い提案を出さないための抽出の一覧（2-8 の8番） */
+let suggestBrews = [];
 let portions = [];
 let txs = [];
 /** 登録した器具と水（水は D3。実績の確認で選ぶ） */
@@ -198,7 +200,7 @@ function planItem(label, value, changed = false) {
 /** 提案のカード。提案を入れた計画ならその説明、そうでなければ選んだ豆のまだ使っていない提案 */
 function renderSuggestCard() {
   const fromSuggestion = loadedPlan?.suggestion;
-  const s = fromSuggestion ?? pickPendingSuggestion(suggestions, $('bean').value || null);
+  const s = fromSuggestion ?? pickPendingSuggestion(suggestions, $('bean').value || null, suggestBrews);
   $('suggestCard').hidden = !s;
   if (!s) return;
   $('sText').textContent = s.action?.text ?? '';
@@ -754,7 +756,7 @@ async function init() {
     return;
   }
 
-  suggestions = await listSuggestions(db);
+  [suggestions, suggestBrews] = await Promise.all([listSuggestions(db), listBrews(db)]);
   compare = queryParam('compare') ? await getExperiment(db, queryParam('compare')) : null;
   if (compare) {
     $('crumb').textContent = '飲み比べ';

@@ -96,7 +96,7 @@ function renderToday(all, beanName, settings) {
   const rows = beanRows({ beans: all.beans, txs: all.inventoryTx, portions: all.frozenPortions, doseG: doseFromSettings(settings), today: localYmd(now) });
   const caf = todayCaffeine(analysisRows(all), now).mg;
   const pick = todayPicks({ rows, brews: all.brews, tastings: all.tastings, beans: all.beans, now, mood, cutoff: settings.caffeineCutoff ?? null, todayCaffeineMg: caf, n: 1 })[0];
-  const pending = last ? pickPendingSuggestion(all.suggestions, last.beanId) : null;
+  const pending = last ? pickPendingSuggestion(all.suggestions, last.beanId, all.brews) : null;
 
   $('todayPick').hidden = !pick;
   if (pick) {

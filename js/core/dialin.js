@@ -387,11 +387,33 @@ export function pickSuggestionForBrew(suggestions, brewId) {
   return list.length ? list.reduce((a, b) => (String(a.updatedAt) >= String(b.updatedAt) ? a : b)) : null;
 }
 
-/** その豆で、まだ次の抽出に使われていない、計画を変える提案のうち最新のもの。なければ null */
-export function pickPendingSuggestion(suggestions, beanId) {
+/**
+ * その豆で、まだ次の抽出に使われていない、計画を変える提案のうち最新のもの。なければ null
+ * brews を渡すと、その豆でもっと新しい杯がある杯の提案は使わない（2-8 の8番：古い杯をあとから評価したとき、
+ * 今の挽き目と合わない古い提案が出ないように）
+ * @param {object[]} suggestions
+ * @param {string|null} beanId
+ * @param {object[]|null} [brews] 全部の抽出
+ */
+export function pickPendingSuggestion(suggestions, beanId, brews = null) {
   if (!beanId) return null;
+  let latestAt = null;
+  const atOf = new Map();
+  if (brews) {
+    for (const b of brews) {
+      if (!alive(b)) continue;
+      atOf.set(b.id, String(b.at));
+      if (b.beanId === beanId && (latestAt == null || String(b.at) > latestAt)) latestAt = String(b.at);
+    }
+  }
   const list = (suggestions ?? []).filter(
-    (s) => alive(s) && s.beanId === beanId && s.nextBrewId == null && CHANGING_KINDS.includes(s.action?.kind) && s.action?.to != null,
+    (s) =>
+      alive(s) &&
+      s.beanId === beanId &&
+      s.nextBrewId == null &&
+      CHANGING_KINDS.includes(s.action?.kind) &&
+      s.action?.to != null &&
+      (latestAt == null || !atOf.has(s.brewId) || atOf.get(s.brewId) >= latestAt),
   );
   return list.length ? list.reduce((a, b) => (String(a.createdAt) >= String(b.createdAt) ? a : b)) : null;
 }
