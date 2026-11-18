@@ -7,6 +7,7 @@
   "scripts": {
     "test": "node --test \"tests/**/*.test.js\"",
     "serve": "node scripts/serve.js",
+    "sw": "node scripts/make-sw-manifest.js",
     "icons": "node scripts/make-icons.js"
   },
   "engines": {
