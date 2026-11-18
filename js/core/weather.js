@@ -14,7 +14,7 @@ export const PAST_DAYS = 92;
 /** 問い合わせの間隔（分）。これより短い間隔では問い合わせない */
 export const FETCH_INTERVAL_MIN = 60;
 /** 暑い日の線（今日の最高気温、℃）の初期値と、選べる範囲 */
-export const DEFAULT_HOT_C = 28;
+export const DEFAULT_HOT_C = 28; // D-164
 export const HOT_C_RANGE = Object.freeze({ min: 20, max: 40 });
 
 const HOUR_SEC = 3600;

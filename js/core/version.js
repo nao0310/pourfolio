@@ -3,10 +3,19 @@
 // ステップを仕上げるときに APP_VERSION と CHANGELOG の先頭を足す。上げ忘れは tests/version.test.js が見つける。
 // sw.js の一覧（npm run sw）にも番号が入り、更新の知らせに新しい番号を出す。
 
-export const APP_VERSION = '3.2';
+export const APP_VERSION = '3.3';
 
 /** 更新履歴（新しい順）。items は利用者向けの短い文で、2〜3個まで */
 export const CHANGELOG = Object.freeze([
+  {
+    version: '3.3',
+    date: '2026-11-18',
+    items: [
+      '「その他」→「天気の地点」で都道府県を選ぶと、淹れた杯にその時刻の気温・湿度・天気が付きます（通信できなかった日の杯も、あとで付きます）',
+      '暑い日（最高気温が決めた線以上）は、ホームに「急冷アイスで淹れる」が出ます',
+      '分析に「生活との関係」：時間帯・曜日・気分・天気・季節ごとの★と、季節ごとの好みが見られます',
+    ],
+  },
   {
     version: '3.2',
     date: '2026-11-18',

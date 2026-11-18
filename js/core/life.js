@@ -17,7 +17,7 @@ export const MIN_SEASON = 5;
 
 const r2 = (n) => Math.round(n * 100) / 100;
 
-/** 季節（D-163：春3〜5月・夏6〜8月・秋9〜11月・冬12〜2月） */
+/** 季節（D-165：春3〜5月・夏6〜8月・秋9〜11月・冬12〜2月） */
 export const SEASONS = Object.freeze([
   { key: 'spring', label: '春', months: [3, 4, 5] },
   { key: 'summer', label: '夏', months: [6, 7, 8] },

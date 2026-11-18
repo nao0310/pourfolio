@@ -166,3 +166,13 @@ test('評価までの時間：分と秒で出す（「記録 437秒」では分�
   assert.equal(recordText(120), '評価まで 2分');
   assert.equal(recordText(null), '');
 });
+
+test('暑い日のカード（X16）：アイスで淹れる行き先は、今日の1杯の1位 → 前回と同じ → レシピ帳', async () => {
+  const { icedHref, hotText } = await import('../js/core/home.js');
+  assert.equal(icedHref({ pickHref: 'brew.html?brew=b1&bean=x&mood=wake' }), 'brew.html?brew=b1&bean=x&mood=wake&iced=1');
+  assert.equal(icedHref({ pickHref: 'brew.html?initial=x&bean=x&iced=0' }), 'brew.html?initial=x&bean=x&iced=1', '前の指定を上書きする');
+  assert.equal(icedHref({ hasLast: true }), 'brew.html?from=last&iced=1');
+  assert.equal(icedHref({}), 'recipes.html');
+  assert.match(hotText({ maxC: 31.2, line: 28, placeName: '東京都（新宿）' }), /^東京都（新宿）は、今日の最高気温31.2℃の予報です（線は28℃）。/);
+  assert.match(hotText({ maxC: 30, line: 28 }), /^今日の最高気温30℃/);
+});

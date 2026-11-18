@@ -20,7 +20,7 @@ const PAGES = [
   'equipment.html', 'equipment-edit.html', 'analysis.html', 'analysis.html?demo=1', 'brew-chart.html', 'calendar.html',
   'factors.html', 'profile.html', 'dialin-history.html', 'cost.html', 'shopping.html', 'wishlist.html', 'shops.html', 'order-import.html',
   'compare.html', 'optimize.html', 'ai.html', 'report.html', 'share.html', 'scan.html', 'recipe-card.html', 'more.html', 'data.html',
-  'storage-test.html', 'tasting.html',
+  'storage-test.html', 'tasting.html', 'weather.html', 'life.html', 'life.html?demo=1',
 ];
 
 /** 記録があれば、IDの要る画面も足す（いちばん新しい豆・レシピ・抽出・器具・飲み比べ） */

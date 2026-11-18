@@ -25,6 +25,8 @@ import {
   attachBrewToExperiment,
   updateExperiment,
   updateSettings,
+  setBrewWeather,
+  getBrew,
   addWish,
   deleteWish,
   putAll,
@@ -205,8 +207,13 @@ async function nasty() {
   await deleteWish(db, deadWish.id, ago(1));
   await addWish(db, ok(normalizeWishInput({ name: '入荷待ちのルワンダ', country: 'ルワンダ' }), '気になる豆'), ago(3));
 
-  // 設定：カフェインの区切りと、いつもの粉量
-  await updateSettings(db, { caffeineCutoff: '15:00', defaultDoseG: 15 }, ago(30));
+  // 天気（X16）：極端な値の杯と、壊れた天気の杯（手で書き換えたファイルを想定）
+  await setBrewWeather(db, [{ id: brIce.id, weather: { tempC: 39.9, humidity: 100, code: 99 } }, { id: brDecaf.id, weather: { tempC: -25.4, humidity: 3, code: 75 } }], ago(1));
+  const broken = await getBrew(db, brLong.id);
+  await db.table('brews').put({ ...broken, context: { ...broken.context, weather: { tempC: 'あつい', humidity: null, code: 'x' } } });
+
+  // 設定：カフェインの区切りと、いつもの粉量。天気の地点は長い名前の手入力（通信できないときの様子も見る）
+  await updateSettings(db, { caffeineCutoff: '15:00', defaultDoseG: 15, weatherPlace: { key: 'custom', name: 'とても長い地点の名前'.repeat(3).slice(0, 30), lat: 35.68, lon: 139.76 }, hotDayC: 20 }, ago(30));
 
   // 在庫のつじつまを手で確かめる用のメモ（コンソールに出す）
   const { txs } = await getBeanWithTx(db, minus.id);

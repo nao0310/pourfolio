@@ -8,8 +8,8 @@
 
 // <manifest> npm run sw が書き込む（手で直さない）
 const MANIFEST = {
-  "label": "3.2",
-  "version": "2987890fd340",
+  "label": "3.3",
+  "version": "19375c9bcd12",
   "files": {
     "ai.html": "34607ec38ddc5690",
     "analysis.html": "97fad6697d25fa7e",
@@ -79,7 +79,7 @@ const MANIFEST = {
     "js/core/initial-recipe.js": "d9383e0e76c31245",
     "js/core/install.js": "1ce19201bb995ac2",
     "js/core/inventory.js": "ded15007fcb42145",
-    "js/core/life.js": "e1094d724775f2df",
+    "js/core/life.js": "8fa371cefae9e783",
     "js/core/monthly.js": "ad4ba1bfd7535622",
     "js/core/next-bean.js": "25091e04bb67413c",
     "js/core/offline.js": "907135ce0abe78fb",
@@ -106,9 +106,9 @@ const MANIFEST = {
     "js/core/today.js": "1814a6c90e899543",
     "js/core/tonya.js": "faac59308d2b0ca5",
     "js/core/usual.js": "306c68f4420764a8",
-    "js/core/version.js": "106cc6d8b1060c31",
+    "js/core/version.js": "373be11eea0377e1",
     "js/core/water.js": "26dace0c46b908b4",
-    "js/core/weather.js": "8152e5a8331c0ab1",
+    "js/core/weather.js": "c179c2e62f69cb9e",
     "js/core/wishlist.js": "6bf3695085913224",
     "js/cost-page.js": "96c52ecdbc7245ae",
     "js/cue.js": "4ec66c174d81b2d6",
