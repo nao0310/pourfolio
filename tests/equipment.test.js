@@ -35,7 +35,7 @@ test('フィルターの漂白は紙のときだけ残す', () => {
 
 test('グラインダーは刃・目盛りの刻み・ゼロ点を持つ', () => {
   const { value } = normalizeEquipmentInput({ kind: 'grinder', name: 'C40', burr: 'conical', step: '1', zeroPoint: '0' });
-  assert.deepEqual(value.attrs, { burr: 'conical', step: 1, zeroPoint: '0' });
+  assert.deepEqual(value.attrs, { burr: 'conical', step: 1, zeroPoint: '0', scale: [] });
   assert.equal(equipmentSummary(value), 'コニカル・刻み1・ゼロ点0');
   assert.ok(normalizeEquipmentInput({ kind: 'grinder', name: 'x', step: '-1' }).errors.step);
 });
@@ -45,6 +45,8 @@ test('保存した形 → フォーム → 保存した形 で値が変わらな
     { kind: 'dripper', name: 'V60', shape: 'cone', holes: '1', material: '樹脂', isDefault: 'on', memo: 'm' },
     { kind: 'filter', name: 'F', filterMaterial: 'paper', bleach: 'bleached' },
     { kind: 'grinder', name: 'G', burr: 'flat', step: '0.5', zeroPoint: '2' },
+    { kind: 'grinder', name: 'G2', step: '1', scale: [{ setting: '30', um: '900' }, { setting: '20', um: '600' }] },
+    { kind: 'water', name: 'W', tdsMgL: '80', hardnessMgL: '50', alkalinityMgL: '', ph: '7.2', sodiumMgL: '' },
   ]) {
     const { value } = normalizeEquipmentInput(raw);
     const form = equipmentToFormValues(value);
@@ -58,6 +60,30 @@ test('並び：種類の順、いつも使うが先。いつも使うがなく�
   const list = [e('g', 'grinder'), e('d2', 'dripper'), e('d', 'dripper'), e('k', 'kettle'), e('d33', 'dripper', { isDefault: true })];
   assert.deepEqual(sortEquipment(list).map((x) => x.id), ['d33', 'd', 'd2', 'g', 'k']);
   assert.deepEqual(groupEquipmentByKind(list).filter, []);
-  assert.deepEqual(defaultEquipmentIds(list), { dripperId: 'd33', filterId: null, grinderId: 'g', kettleId: 'k', scaleId: null });
+  assert.deepEqual(defaultEquipmentIds(list), { dripperId: 'd33', filterId: null, grinderId: 'g', kettleId: 'k', scaleId: null, waterId: null });
   assert.equal(defaultEquipmentIds([e('a', 'dripper'), e('b', 'dripper')]).dripperId, null);
+});
+
+test('グラインダーの目盛り表（D2）：行を目盛りの順に並べて持ち、おかしな行はエラー', () => {
+  const { value, errors } = normalizeEquipmentInput({
+    kind: 'grinder',
+    name: 'C40',
+    step: '1',
+    scale: [{ setting: '30', um: '900' }, { setting: '', um: '' }, { setting: '20', um: '650' }],
+  });
+  assert.deepEqual(errors, {});
+  assert.deepEqual(value.attrs.scale, [{ setting: 20, um: 650 }, { setting: 30, um: 900 }]);
+  assert.equal(equipmentSummary(value), '刻み1・目盛り表2行');
+  assert.ok(normalizeEquipmentInput({ kind: 'grinder', name: 'x', scale: [{ setting: '中', um: '600' }] }).errors.scale);
+  assert.ok(normalizeEquipmentInput({ kind: 'grinder', name: 'x', scale: [{ setting: '20', um: '5' }] }).errors.scale);
+});
+
+test('水（D3）は器具の種類の1つ。成分を持ち、いつも使う水が初期値になる', () => {
+  const { value, errors } = normalizeEquipmentInput({ kind: 'water', name: '浄水', tdsMgL: '８０', hardnessMgL: '50', ph: '7.2' });
+  assert.deepEqual(errors, {});
+  assert.deepEqual(value.attrs, { tdsMgL: 80, hardnessMgL: 50, alkalinityMgL: null, ph: 7.2, sodiumMgL: null });
+  assert.equal(equipmentSummary(value), 'TDS 80・硬度 50・pH 7.2（すべて基準の範囲）');
+  assert.ok(normalizeEquipmentInput({ kind: 'water', name: 'x', ph: '15' }).errors.ph);
+  const list = [{ id: 'w', kind: 'water', name: 'w', createdAt: '1' }];
+  assert.equal(defaultEquipmentIds(list).waterId, 'w');
 });

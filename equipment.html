@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>器具 - Pourfolio</title>
+  <title>器具と水 - Pourfolio</title>
   <meta name="theme-color" content="#5a371f">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -16,15 +16,33 @@
 <body>
   <main class="with-bottom-bar">
     <p class="crumb"><a href="./">トップ</a></p>
-    <h1>器具</h1>
-    <p class="muted">「いつも使う」器具は、新しいレシピを作るときに最初から選ばれます。</p>
+    <h1>器具と水</h1>
+    <p class="muted">「いつも使う」器具は、新しいレシピを作るときに最初から選ばれます。「いつも使う」水は、抽出の記録に最初から入ります。</p>
 
     <div id="list" aria-live="polite"><p class="muted">読み込み中…</p></div>
 
+    <!-- グラインダーの目盛りの換算（D2）。目盛り表のあるグラインダーが2つ以上のときだけ -->
+    <section class="card" id="convertCard" hidden>
+      <h2>目盛りの換算</h2>
+      <p class="hint">目盛り表から、別のグラインダーで同じくらいの粒度になる目盛りを出します（目安）</p>
+      <div class="inline-form">
+        <label class="field compact">
+          <span class="label">グラインダー</span>
+          <select id="convFrom"></select>
+        </label>
+        <label class="field compact">
+          <span class="label">目盛り</span>
+          <input type="text" id="convSetting" inputmode="decimal" autocomplete="off" placeholder="24">
+        </label>
+      </div>
+      <ul class="plain-list num-line" id="convResult"></ul>
+    </section>
+
     <div class="bottom-bar">
-      <a class="btn block" href="equipment-edit.html">＋ 器具を登録</a>
+      <a class="btn block" href="equipment-edit.html">＋ 器具・水を登録</a>
     </div>
   </main>
   <script type="module" src="js/equipment-page.js"></script>
+  <script type="module" src="js/tabbar.js"></script>
 </body>
 </html>

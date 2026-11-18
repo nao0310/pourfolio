@@ -117,6 +117,11 @@
           <span class="field-error" data-for="totalSec"></span>
         </label>
         <div class="field" id="rBevBox"></div>
+        <div class="field" id="rTdsBox"></div>
+        <label class="field" id="rWaterRow" hidden>
+          <span class="label">水</span>
+          <select id="rWaterId"></select>
+        </label>
         <label class="field">
           <span class="label">メモ</span>
           <textarea id="rMemo" rows="2"></textarea>
@@ -161,6 +166,7 @@
       <p class="timer-add" id="tAdd"></p>
       <p class="timer-count num" id="tCount" aria-live="off"></p>
       <p class="timer-next muted" id="tNext"></p>
+      <p class="timer-ghost num" id="tGhost"></p>
       <p class="timer-wake" id="tWake"></p>
     </div>
     <button class="timer-tap" type="button" id="tap">
@@ -170,5 +176,6 @@
   </section>
 
   <script type="module" src="js/brew-page.js"></script>
+  <script type="module" src="js/tabbar.js"></script>
 </body>
 </html>

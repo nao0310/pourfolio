@@ -133,7 +133,22 @@
       <div class="photo-grid" id="photos"></div>
       <p id="photoMsg" role="status"></p>
     </section>
+
+    <!-- TDS・抽出収率（A8）。屈折計で測ったときだけ。入れるとすぐ保存する（評価の保存とは別） -->
+    <section class="card" id="tdsCard" hidden>
+      <h2>TDS（屈折計）</h2>
+      <p class="hint">冷ましてから測った値を入れます。抽出収率は自動で計算します</p>
+      <div class="with-unit tds-row">
+        <label class="visually-hidden" for="tdsInput">TDS（%）</label>
+        <input type="text" id="tdsInput" inputmode="decimal" autocomplete="off" placeholder="1.35">
+        <span>%</span>
+        <button class="btn secondary small" type="button" id="tdsSave">保存</button>
+      </div>
+      <p class="num-line" id="tdsResult"></p>
+      <p id="tdsMsg" role="status"></p>
+    </section>
   </main>
   <script type="module" src="js/tasting-page.js"></script>
+  <script type="module" src="js/tabbar.js"></script>
 </body>
 </html>

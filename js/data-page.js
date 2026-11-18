@@ -5,6 +5,7 @@ import { doseFromSettings } from './core/inventory.js';
 import { localYmd } from './core/format.js';
 import { parseBackup, backupFileName, totalRecords, BackupError } from './core/backup.js';
 import { makeSampleData } from './core/sample-data.js';
+import { makeDemoData } from './core/demo-data.js';
 import { TABLES, SETTINGS_ID } from './core/records.js';
 import { formatDateTimeJa } from './core/format.js';
 import { registerServiceWorker, requestPersistentStorage, getOfflineStatus } from './pwa.js';
@@ -187,6 +188,12 @@ if (isDev) {
   $('sample').addEventListener('click', async () => {
     await putAll(db, makeSampleData());
     showMessage('サンプルを入れました');
+    await render();
+  });
+  $('demoData').addEventListener('click', async () => {
+    if (!confirm('分析のデモデータ（豆8袋・80杯）をこの端末のデータに入れますか？あとで1件ずつ消すのは大変です')) return;
+    await putAll(db, makeDemoData());
+    showMessage('デモデータを入れました');
     await render();
   });
 }

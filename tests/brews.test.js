@@ -59,8 +59,26 @@ test('実績の初期値は計画の値。総時間はタイマーから', () =>
     grindSetting: '24',
     totalSec: '3:35',
     beverageG: '',
+    tdsPct: '',
+    waterId: null,
     memo: '',
   });
+});
+
+test('実績のTDS（A8）と水（D3）：入れたときだけ記録し、範囲外はエラー', () => {
+  const ok = normalizeActualInput({ doseG: '20', waterG: '300', totalSec: '3:30', tdsPct: '１．３５', waterId: 'w1' });
+  assert.deepEqual(ok.errors, {});
+  assert.equal(ok.value.tdsPct, 1.35);
+  assert.equal(ok.value.waterId, 'w1');
+  const none = normalizeActualInput({ doseG: '20', waterG: '300', totalSec: '3:30', tdsPct: '' });
+  assert.equal(none.value.tdsPct, null);
+  assert.equal(none.value.waterId, null);
+  const bad = normalizeActualInput({ doseG: '20', waterG: '300', totalSec: '3:30', tdsPct: '12' });
+  assert.ok(bad.errors.tdsPct);
+  const f = finishDraft(newDraft(plan, 'b1', T0), T0 + 215_000);
+  const brew = buildBrew({ draft: f, value: ok.value, at: new Date(T0).toISOString() });
+  assert.equal(brew.actual.tdsPct, 1.35);
+  assert.equal(brew.equipment.waterId, 'w1');
 });
 
 test('実績の入力チェック', () => {

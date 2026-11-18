@@ -1,9 +1,12 @@
 // 味の評価の画面：クイック評価（B1）、ちょうど良さ評価（JAR、B2）、詳細評価（B3）、香味と雑味（B4）
 // 冷め際の評価（B5）：温度帯（熱いうち・温かいうち・冷めてから）ごとに1件。&stage=cool で冷めてからの評価を開く
 // tasting.html?brew=<抽出のID>（抽出を保存した直後は &saved=1 が付き、豆の残量を上に出す）
+import { normalizeTds, retentionTable, brewMetrics } from './core/extraction.js';
 import {
   openDb,
   getBrew,
+  listBrews,
+  setBrewTds,
   getTastingsByStage,
   saveTasting,
   getBeanWithTx,
@@ -293,6 +296,32 @@ async function onDeletePhoto(slot, photo) {
   await renderPhotos();
 }
 
+// ---- TDS・抽出収率（A8） ----
+
+async function renderTds() {
+  const table = retentionTable(await listBrews(db));
+  const m = brewMetrics(brew, table);
+  $('tdsInput').value = m.tdsPct ?? '';
+  $('tdsResult').textContent =
+    m.tdsPct == null
+      ? ''
+      : m.eyPct == null
+        ? `TDS ${m.tdsPct}%（抽出液の量が分からないので収率は出せません）`
+        : `抽出収率 ${m.eyPct}%（抽出液 ${m.beverageG}g${m.beverageEstimated ? '・見積もり' : ''}）`;
+  $('tdsCard').hidden = false;
+}
+
+async function onSaveTds() {
+  const { value, error } = normalizeTds($('tdsInput').value);
+  if (error) {
+    showMessage(error, 'error', 'tdsMsg');
+    return;
+  }
+  brew = await setBrewTds(db, brew.id, value);
+  showMessage(value == null ? 'TDSを消しました' : 'TDSを保存しました', 'ok', 'tdsMsg');
+  await renderTds();
+}
+
 // ---- はじまり ----
 
 async function showSavedStock() {
@@ -326,8 +355,10 @@ async function init() {
   loadStage();
   $('formView').hidden = false;
   await renderPhotos();
+  await renderTds();
 }
 
+$('tdsSave').addEventListener('click', onSaveTds);
 $('formView').addEventListener('submit', onSave);
 $('memo').addEventListener('input', clearErrors);
 $('allJust').addEventListener('click', () => {

@@ -16,6 +16,8 @@ import {
   listAliveTx,
   getExperiment,
   attachBrewToExperiment,
+  listBrews,
+  listTastings,
 } from './db.js';
 import { frozenChoice, portionsOf, portionText } from './core/frozen.js';
 import { remainingG } from './core/inventory.js';
@@ -36,6 +38,7 @@ import {
   PRECHECK_ITEMS,
 } from './core/brews.js';
 import { loadDraft, saveDraft, clearDraft } from './brew-draft.js';
+import { pickGhost, ghostLine } from './core/ghost.js';
 import * as cue from './cue.js';
 import { createWakeLock } from './wake-lock.js';
 import { $, el, queryParam, showMessage, stepperField } from './ui.js';
@@ -49,6 +52,9 @@ let loadedPlan = null;
 let suggestions = [];
 let portions = [];
 let txs = [];
+/** 登録した器具と水（水は D3。実績の確認で選ぶ） */
+let equipmentList = [];
+const waters = () => equipmentList.filter((e) => e.kind === 'water');
 /** 抽出前チェック（A5）で押した項目 */
 let precheck = {};
 /** 焙煎度比較（X27）で淹れるときの飲み比べ（?compare=ID） */
@@ -240,6 +246,14 @@ function renderPrecheck(plan) {
   );
 }
 
+/** ゴーストを選ぶための抽出と評価（計画の画面を開いたときに読んでおく。スタートを押した瞬間に音を使えるよう、押したあとは待たない） */
+let ghostSource = { brews: [], tastings: [] };
+
+/** 同じレシピで★がいちばん高かった杯（なければ null） */
+function findGhost(recipeId, beanId) {
+  return pickGhost({ ...ghostSource, recipeId, beanId });
+}
+
 /** 新しく始める。途中の抽出があれば、捨ててよいか確かめる */
 function beginNew(withTimer) {
   if (!loadedPlan) return;
@@ -251,6 +265,8 @@ function beginNew(withTimer) {
     compareId: compare?.id ?? null,
     compareBeanId: compare ? queryParam('bean') : null,
   };
+  // 前回のベストのペース（ゴースト、D-041）。下書きに入れておき、開き直しても同じ杯と比べる
+  if (withTimer) draft.ghost = findGhost(loadedPlan.plan.recipeId, draft.beanId);
   saveDraft(draft);
   $('content').hidden = true;
   if (withTimer) {
@@ -323,6 +339,7 @@ function tick() {
 
 function renderTimer(v, sec) {
   $('tElapsed').textContent = formatSec(Math.floor(sec));
+  $('tGhost').textContent = ghostLine(draft.ghost ?? null, draft.laps, v, pourName);
   const count = $('tCount');
   count.classList.remove('soon');
   const screen = $('timerView');
@@ -427,6 +444,8 @@ function readForm() {
     grindSetting: $('rGrind').value,
     totalSec: $('rTotal').value,
     beverageG: fields.bev.input.value,
+    tdsPct: fields.tds.input.value,
+    waterId: $('rWaterRow').hidden ? '' : $('rWaterId').value,
     memo: $('rMemo').value,
     useFrozen: !$('rFrozenRow').hidden && $('rFrozen').checked,
   };
@@ -465,7 +484,18 @@ function buildResultForm() {
     hint: '量ったときだけ入れます',
     errorFor: 'beverageG',
   });
+  fields.tds = make('rTdsBox', {
+    id: 'rTds',
+    label: 'TDS（屈折計）',
+    unit: '%',
+    step: 0.01,
+    decimals: 2,
+    min: 0,
+    hint: '屈折計で測ったときだけ入れます。あとから評価の画面でも入れられます',
+    errorFor: 'tdsPct',
+  });
   for (const id of ['rBean', 'rGrind', 'rTotal', 'rMemo']) $(id).addEventListener('input', onFormInput);
+  $('rWaterId').addEventListener('change', onFormInput);
   $('rBean').addEventListener('change', () => {
     renderFrozenChoice();
     onFormInput();
@@ -482,6 +512,8 @@ function showResult() {
   fields.water.set(input.waterG);
   fields.temp.set(input.tempC);
   fields.bev.set(input.beverageG);
+  fields.tds.set(input.tdsPct ?? '');
+  fillWaterSelect(input.waterId);
   $('rGrind').value = input.grindSetting ?? '';
   $('rTotal').value = input.totalSec ?? '';
   $('rMemo').value = input.memo ?? '';
@@ -507,6 +539,20 @@ function showResult() {
   document.title = '実績の確認 - Pourfolio';
   renderDiff();
   window.scrollTo(0, 0);
+}
+
+/** 水（D3）を登録しているときだけ選べるようにする。初めは「いつも使う」水 */
+function fillWaterSelect(selected) {
+  const list = waters();
+  $('rWaterRow').hidden = list.length === 0;
+  if (!list.length) return;
+  const def = list.find((w) => w.isDefault) ?? list[0];
+  const cur = selected == null ? def.id : selected;
+  $('rWaterId').replaceChildren(
+    el('option', { value: '' }, '記録しない'),
+    ...list.map((w) => el('option', { value: w.id, selected: w.id === cur }, w.name)),
+  );
+  $('rWaterId').value = list.some((w) => w.id === cur) ? cur : '';
 }
 
 function showErrors(errors) {
@@ -559,7 +605,7 @@ async function init() {
   const settings = await getSettings(db);
   speechOn = settings.speechOn !== false;
   beans = await listBeans(db);
-  [portions, txs] = await Promise.all([listFrozenPortions(db), listAliveTx(db)]);
+  [portions, txs, equipmentList] = await Promise.all([listFrozenPortions(db), listAliveTx(db), listEquipment(db)]);
   const saved = loadDraft();
   const sameAsSaved = saved && (location.search === '' || location.search === saved.returnSearch);
 
@@ -589,6 +635,12 @@ async function init() {
   }
   const last = await getLastBrew(db);
   await showPlan(loadedPlan, last?.beanId);
+  try {
+    const [brews, tastings] = await Promise.all([listBrews(db), listTastings(db)]);
+    ghostSource = { brews, tastings };
+  } catch (err) {
+    console.error(err); // ゴーストが出ないだけで、淹れるのには困らない
+  }
   if (saved) {
     $('resumeCard').hidden = false;
     $('resumeText').textContent = `${saved.plan.name || '前回と同じ'}（${saved.stage === 'timer' ? 'タイマーの途中' : '実績の確認の途中'}）`;

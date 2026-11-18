@@ -1,6 +1,8 @@
 // 器具の登録（D1）の入力を確かめて、保存する形に整える（純粋関数）
 
 import { parseNumber } from './beans.js';
+import { normalizeScaleRows, scaleOf } from './grinder-scale.js';
+import { normalizeWaterInput, waterSummary, WATER_KEYS } from './water.js';
 
 /** 器具の種類（表示の順もこの順） */
 export const EQUIPMENT_KINDS = Object.freeze({
@@ -9,6 +11,7 @@ export const EQUIPMENT_KINDS = Object.freeze({
   grinder: 'グラインダー',
   kettle: 'ケトル',
   scale: 'スケール',
+  water: '水', // 水プロファイル（D3）。器具と同じ画面で登録する（D-115）
 });
 export const KIND_ORDER = Object.freeze(Object.keys(EQUIPMENT_KINDS));
 
@@ -30,6 +33,7 @@ export const NAME_PLACEHOLDERS = Object.freeze({
   grinder: '例：コマンダンテ C40',
   kettle: '例：細口ケトル 0.6L',
   scale: '例：タイマー付きスケール',
+  water: '例：水道水＋浄水器',
 });
 
 const clean = (v) => String(v ?? '').normalize('NFKC').trim();
@@ -69,11 +73,19 @@ export function normalizeEquipmentInput(raw) {
     attrs = { material, bleach: material === 'paper' ? pickKey(raw.bleach, FILTER_BLEACH) : '' };
   } else if (kind === 'grinder') {
     const step = num('step', '目盛りの刻み', { min: 0.01, max: 100 });
+    // 目盛り表（D2）：raw.scale は [{setting, um}]（画面で行ごとに集める）
+    const scale = normalizeScaleRows(Array.isArray(raw.scale) ? raw.scale : []);
+    if (scale.error) errors.scale = scale.error;
     attrs = {
       burr: pickKey(raw.burr, GRINDER_BURRS),
       step,
       zeroPoint: clean(raw.zeroPoint),
+      scale: scale.value,
     };
+  } else if (kind === 'water') {
+    const w = normalizeWaterInput(raw);
+    Object.assign(errors, w.errors);
+    attrs = w.value;
   }
 
   return {
@@ -97,6 +109,8 @@ export function equipmentToFormValues(eq) {
     burr: str(a.burr),
     step: str(a.step),
     zeroPoint: str(a.zeroPoint),
+    scale: scaleOf(eq).map((r) => ({ setting: str(r.setting), um: str(r.um) })),
+    ...Object.fromEntries(WATER_KEYS.map((k) => [k, eq.kind === 'water' ? str(a[k]) : ''])),
     isDefault: Boolean(eq.isDefault),
     memo: str(eq.memo),
   };
@@ -125,7 +139,7 @@ export function groupEquipmentByKind(list) {
 
 /**
  * 種類ごとの「いつも使う」器具のID。いつも使うがなければ、その種類が1つだけのときはそれを使う。
- * @returns {{dripperId:string|null, filterId:string|null, grinderId:string|null, kettleId:string|null, scaleId:string|null}}
+ * @returns {{dripperId:string|null, filterId:string|null, grinderId:string|null, kettleId:string|null, scaleId:string|null, waterId:string|null}}
  */
 export function defaultEquipmentIds(list) {
   const groups = groupEquipmentByKind(list);
@@ -146,9 +160,11 @@ export function equipmentSummary(eq) {
   }
   if (eq.kind === 'filter') return [FILTER_MATERIALS[a.material], FILTER_BLEACH[a.bleach]].filter(Boolean).join('・');
   if (eq.kind === 'grinder') {
-    return [GRINDER_BURRS[a.burr], a.step != null ? `刻み${a.step}` : '', a.zeroPoint ? `ゼロ点${a.zeroPoint}` : '']
+    const n = scaleOf(eq).length;
+    return [GRINDER_BURRS[a.burr], a.step != null ? `刻み${a.step}` : '', a.zeroPoint ? `ゼロ点${a.zeroPoint}` : '', n ? `目盛り表${n}行` : '']
       .filter(Boolean)
       .join('・');
   }
+  if (eq.kind === 'water') return waterSummary(a);
   return '';
 }

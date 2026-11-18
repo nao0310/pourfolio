@@ -14,6 +14,7 @@ import { formatSec } from './recipes.js';
 import { formatDateTimeJa } from './format.js';
 import { groupPortionsByBean, stockParts } from './frozen.js';
 import { brewCostJpy } from './cost.js';
+import { retentionTable, brewMetrics } from './extraction.js';
 
 export const BOM = '﻿';
 const alive = (r) => r && r.deletedAt == null;
@@ -45,6 +46,7 @@ export function brewRows({ brews = [], beans = [], recipes = [], equipment = [],
   const eqOf = byId(equipment);
   const sugById = byId((suggestions ?? []).filter(alive));
   const expOf = byId((experiments ?? []).filter(alive));
+  const table = retentionTable(brews);
   const head = [
     '日時',
     '豆',
@@ -64,6 +66,11 @@ export function brewRows({ brews = [], beans = [], recipes = [], equipment = [],
     '総時間秒',
     '総時間',
     '抽出液g',
+    'TDS%',
+    '抽出収率%',
+    '推定抽出液g',
+    'カフェインmg',
+    '水',
     '原価円',
     '冷凍の袋',
     'タイマー',
@@ -100,6 +107,7 @@ export function brewRows({ brews = [], beans = [], recipes = [], equipment = [],
       const sug = pickSuggestionForBrew(suggestions, b.id);
       const used = b.suggestionId ? sugById.get(b.suggestionId) : null;
       const pGrind = typeof p.grind === 'string' ? p.grind : p.grind?.setting;
+      const m = brewMetrics(b, table);
       return [
         formatDateTimeJa(b.at),
         bean?.name ?? '',
@@ -119,6 +127,11 @@ export function brewRows({ brews = [], beans = [], recipes = [], equipment = [],
         a.totalSec ?? '',
         a.totalSec != null ? formatSec(a.totalSec) : '',
         a.beverageG ?? '',
+        m.tdsPct ?? '',
+        m.eyPct ?? '',
+        m.beverageEstimated ? (m.beverageG ?? '') : '',
+        m.caffeineMg ?? '',
+        eqOf.get(b.equipment?.waterId)?.name ?? '',
         brewCostJpy(b, bean, beans) ?? '',
         b.frozenPortionId ? '使った' : '',
         Boolean(b.timerUsed),
