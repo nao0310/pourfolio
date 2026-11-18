@@ -9,6 +9,7 @@
 import { pickTasting, jarWord } from './tastings.js';
 import { planFromBrew, ratioOf, scalePoursToWater, fillPourSecs } from './recipes.js';
 import { parseNumber } from './beans.js';
+import { cupsOf, perCupPlan } from './plan-adjust.js';
 
 /** 縦（濃さ）の呼び方 */
 export const STRENGTH_LABELS = Object.freeze({ weak: '薄い', ok: 'ちょうど', strong: '濃い' });
@@ -117,7 +118,8 @@ export function diagnose(tasting) {
  * @param {object|null} recipe
  */
 export function basePlanForNext(brew, recipe = null) {
-  const plan = planFromBrew(brew, recipe);
+  // 杯数を変えて淹れた杯は1杯分に戻す（2-8 の7番）。アイスの杯はお湯の量のまま（氷は呼ぶ側で足す）
+  const plan = perCupPlan(planFromBrew(brew, recipe), cupsOf(brew));
   const actualGrind = String(brew.actual?.grind?.setting ?? '').trim();
   if (actualGrind) plan.grind = { ...plan.grind, setting: actualGrind };
   return plan;

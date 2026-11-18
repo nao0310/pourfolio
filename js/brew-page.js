@@ -20,7 +20,7 @@ import {
   listTastings,
   listRecipes,
 } from './db.js';
-import { adjustPlan, adjustNotes, parseAdjustParams, adjustQuery, hotPlanOf, carryIce, isIced, MOODS, CUP_OPTIONS, cupsLabel } from './core/plan-adjust.js';
+import { adjustPlan, adjustNotes, parseAdjustParams, adjustQuery, hotPlanOf, carryIce, isIced, cupsOf, perCupPlan, perCupIceG, MOODS, CUP_OPTIONS, cupsLabel } from './core/plan-adjust.js';
 import { initialRecipe, initialPlan, baseRecipe } from './core/initial-recipe.js';
 import { defaultEquipmentIds } from './core/equipment.js';
 import { doseFromSettings } from './core/inventory.js';
@@ -70,9 +70,12 @@ let compare = null;
 
 // ---- 計画（スタート前） ----
 
-/** アイスで淹れた杯を土台にするときは、元の湯量に戻し、アイスを初めから選んでおく */
+/**
+ * 杯を土台にするとき：1杯分の計画（basePlanForNext か perCupPlan 済み）を受け取り、
+ * アイスの杯なら1杯分の氷を足して元の湯量に戻し、アイスを初めから選んでおく。杯数は1杯から（2-8 の7番）
+ */
 function fromBrewPlan(plan, src) {
-  return isIced(src) ? { plan: hotPlanOf(plan, src.context.iceG), icedDefault: true } : { plan, icedDefault: false };
+  return isIced(src) ? { plan: hotPlanOf(plan, perCupIceG(src)), icedDefault: true } : { plan, icedDefault: false };
 }
 
 /** 杯の淹れ方を土台にする（挽き目は実際に挽いた目盛り） */
@@ -106,7 +109,7 @@ async function loadPlan() {
     if (!src) return null;
     const recipe = src.recipeId ? await getRecipe(db, src.recipeId) : null;
     // 提案はお湯の量で計算してあるので、アイスの杯なら氷の量だけ引き継ぐ（気分・杯数は選べない）
-    const plan = carryIce({ ...applyAction(basePlanForNext(src, recipe), suggestion.action), source: 'suggestion', suggestionId: suggestion.id }, src.context?.iceG);
+    const plan = carryIce({ ...applyAction(basePlanForNext(src, recipe), suggestion.action), source: 'suggestion', suggestionId: suggestion.id }, perCupIceG(src));
     return { plan, base: plan, recipe, suggestion, fixed: true };
   }
   const recipeId = queryParam('recipe');
@@ -137,7 +140,7 @@ async function loadPlan() {
     const last = await getLastBrew(db);
     if (!last) return null;
     const recipe = last.recipeId ? await getRecipe(db, last.recipeId) : null;
-    const { plan, icedDefault } = fromBrewPlan(planFromBrew(last, recipe), last);
+    const { plan, icedDefault } = fromBrewPlan(perCupPlan(planFromBrew(last, recipe), cupsOf(last)), last);
     return { base: plan, recipe, icedDefault };
   }
   return null;

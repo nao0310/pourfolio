@@ -1,6 +1,7 @@
 // レシピの一覧と「すぐ淹れる」（A1）
 import { openDb, listRecipes, listBrews, getLastBrew, getRecipe, listBeans, setRecipeFavorite } from './db.js';
 import { orderRecipesForList, recipeSummary, templateLabel, planFromBrew, formatSec } from './core/recipes.js';
+import { cupsOf, perCupPlan } from './core/plan-adjust.js';
 import { $, el, showMessage } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
 
@@ -56,7 +57,7 @@ async function renderLast() {
     return;
   }
   const recipe = last.recipeId ? await getRecipe(db, last.recipeId) : null;
-  const plan = planFromBrew(last, recipe);
+  const plan = perCupPlan(planFromBrew(last, recipe), cupsOf(last)); // 「前回と同じ」は1杯分から（2-8 の7番）
   const bean = (await listBeans(db)).find((b) => b.id === plan.beanId);
   $('last').replaceChildren(
     el(

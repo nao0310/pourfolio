@@ -13,7 +13,11 @@ import {
   cupsLabel,
   hotPlanOf,
   carryIce,
+  cupsOf,
+  perCupPlan,
+  perCupIceG,
 } from '../js/core/plan-adjust.js';
+import { basePlanForNext } from '../js/core/dialin.js';
 import { planFromRecipe, make46, makeBasic } from '../js/core/recipes.js';
 
 const lastToG = (p) => p.pours[p.pours.length - 1].toG;
@@ -189,4 +193,42 @@ test('氷の量だけ引き継ぐ（提案を入れた計画用）', () => {
   assert.deepEqual(contextFromPlan(p), { iceG: 100 });
   assert.match(adjustNotes(p)[0], /お湯 150g.*氷 100g/);
   assert.equal(carryIce(planHand(), null).adjust, undefined);
+});
+
+test('杯数を変えた杯を1杯分に戻す：2杯（30g・450g）→ 15g・225g、注湯も合わせる（2-8 の7番）', () => {
+  const one = planFromRecipe({ id: 'r', name: '朝', doseG: 15, waterG: 225, pours: make46({ doseG: 15, ratio: 15 }).pours });
+  const two = adjustPlan(one, { cups: 2 });
+  assert.equal(two.doseG, 30);
+  assert.equal(two.waterG, 450);
+  const back = perCupPlan(two, 2);
+  assert.equal(back.doseG, 15);
+  assert.equal(back.waterG, 225);
+  assert.equal(lastToG(back), 225);
+  assert.equal(back.ratio, 15);
+  assert.equal(perCupPlan(one, 1), one);
+  const small = perCupPlan(adjustPlan(one, { cups: 0.7 }), 0.7);
+  assert.equal(small.doseG, 15);
+  assert.ok(Math.abs(small.waterG - 225) <= 1, `少なめは丸めの分だけずれてよい（${small.waterG}g）`);
+});
+
+test('杯の杯数と1杯分の氷：決めていなければ1杯。2杯のアイスなら氷も半分', () => {
+  assert.equal(cupsOf({ context: {} }), 1);
+  assert.equal(cupsOf({ context: { cups: 2 } }), 2);
+  assert.equal(cupsOf({ context: { cups: 9 } }), 1);
+  assert.equal(perCupIceG({ context: { cups: 2, iceG: 180 } }), 90);
+  assert.equal(perCupIceG({ context: {} }), null);
+});
+
+test('次の1杯の土台：2杯で淹れた杯からでも1杯分の計画になる。アイスの2杯は、お湯も氷も1杯分', () => {
+  const one = planFromRecipe({ id: 'r', name: '朝', doseG: 15, waterG: 225, pours: make46({ doseG: 15, ratio: 15 }).pours });
+  const hot2 = adjustPlan(one, { cups: 2 });
+  const brew = (planned, context) => ({ id: 'b', recipeId: null, planned, actual: { doseG: planned.doseG, waterG: planned.waterG, grind: { setting: '24' } }, context });
+  const base = basePlanForNext(brew(hot2, { cups: 2 }));
+  assert.equal(base.doseG, 15);
+  assert.equal(base.waterG, 225);
+  const ice2 = adjustPlan(one, { cups: 2, iced: true });
+  const b2 = brew(ice2, { cups: 2, iceG: ice2.adjust.iceG });
+  const hot = hotPlanOf(basePlanForNext(b2), perCupIceG(b2));
+  assert.equal(hot.doseG, 15);
+  assert.equal(hot.waterG, 225);
 });

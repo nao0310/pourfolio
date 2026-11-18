@@ -3,7 +3,7 @@
 
 import { ROAST_LEVELS, roastGroup } from './roast.js';
 import { ratioOf, planFromRecipe, applyTemplate, make46, DEFAULT_RATIO } from './recipes.js';
-import { applyOverrides, isIced } from './plan-adjust.js';
+import { applyOverrides, isIced, cupsOf } from './plan-adjust.js';
 import { pickTasting } from './tastings.js';
 import { convertSetting, scaleOf, settingFor, sizeWord, umAt } from './grinder-scale.js';
 import { parseNumber } from './beans.js';
@@ -97,7 +97,7 @@ function grindOn(brew, grinderId, grinders) {
 /** 杯の集まりから中央値の4つの値 */
 function medians(list, grinderId, grinders, step) {
   const brews = list.map((x) => x.brew);
-  const doseG = median(brews.map((b) => b.actual?.doseG ?? b.planned?.doseG));
+  const doseG = median(brews.map((b) => (b.actual?.doseG ?? b.planned?.doseG) / cupsOf(b))); // 杯数を変えた杯は1杯分（2-8 の7番）
   const ratio = median(brews.map((b) => ratioOf(b.actual?.doseG, b.actual?.waterG) ?? ratioOf(b.planned?.doseG, b.planned?.waterG)));
   const tempC = median(brews.map((b) => b.actual?.tempC ?? b.planned?.tempC));
   const g = median(brews.map((b) => grindOn(b, grinderId, grinders)));
