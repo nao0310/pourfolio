@@ -504,3 +504,15 @@ p > a:not(.btn):only-child { display: inline-block; padding: 11px 0; }
   font-weight: 700;
 }
 .update-bar .btn { flex: none; }
+
+/* Ver（2-2） */
+.whatsnew-card { border: 2px solid var(--accent); }
+.whatsnew-card p { margin: 0; }
+.whatsnew-card ul { margin: 8px 0 0; padding-left: 1.3em; line-height: 1.6; }
+.whatsnew-card .row { align-items: center; }
+.link-more { color: var(--accent); display: inline-block; padding: 12px 4px; }
+.app-version { font-size: 1.15rem; font-weight: 700; margin: 0 0 6px; }
+.changelog { margin-top: 8px; }
+.changelog summary { cursor: pointer; color: var(--accent); padding: 10px 0; min-height: 44px; box-sizing: border-box; }
+.changelog h3 { font-size: 1rem; margin: 12px 0 4px; }
+.changelog ul { margin: 0; padding-left: 1.3em; line-height: 1.6; }

@@ -8,20 +8,21 @@
 
 // <manifest> npm run sw が書き込む（手で直さない）
 const MANIFEST = {
-  "version": "4c58e45ecc14",
+  "label": "2.1",
+  "version": "c579379f32c0",
   "files": {
     "bean-edit.html": "4e651973b3d90345",
     "bean.html": "d7bc9ef7a27698a7",
     "beans.html": "ea449c8392d90f17",
     "brew.html": "6e33a58acb171f35",
-    "css/base.css": "6cae14a12c58ac22",
-    "data.html": "d9bc026c63026f72",
+    "css/base.css": "c796eb5ccd1c7f8e",
+    "data.html": "23d354a1d5b2e33f",
     "equipment-edit.html": "42de8951a09272a3",
     "equipment.html": "ad84ca1c98692907",
     "icons/apple-touch-icon.png": "d47279adae204755",
     "icons/icon-192.png": "bcb5cc1b418e8852",
     "icons/icon-512.png": "497d0329a3dad10a",
-    "index.html": "5e783bdd73efa2e3",
+    "index.html": "aafe89a8aabc8425",
     "js/bean-edit-page.js": "fcf03a504625307d",
     "js/bean-page.js": "c8074d4746dba6a0",
     "js/beans-page.js": "bddc081bcd08528c",
@@ -45,13 +46,14 @@ const MANIFEST = {
     "js/core/sample-data.js": "25a2fad465fac3fa",
     "js/core/tastings.js": "0788a597a8fd46f1",
     "js/core/timer.js": "158a32d82adfeb48",
+    "js/core/version.js": "910ad563972dae99",
     "js/cue.js": "4ec66c174d81b2d6",
-    "js/data-page.js": "6dd0c736865c469f",
+    "js/data-page.js": "a4f4705f1a5cf089",
     "js/db.js": "28775352054c4d2f",
     "js/equipment-edit-page.js": "189ab98a4f008939",
     "js/equipment-page.js": "b1bf191837d8dac2",
-    "js/index-page.js": "edca2892d068d2b1",
-    "js/pwa.js": "0f9adfe2b1d8a06a",
+    "js/index-page.js": "88d53fe8c229779e",
+    "js/pwa.js": "0a455ba0a3ad9be0",
     "js/recipe-edit-page.js": "5a6c1ceaff4049fe",
     "js/recipes-page.js": "f56e2275daa4067a",
     "js/storage-test.js": "5000534b3289040c",
@@ -201,8 +203,8 @@ if (typeof self !== 'undefined' && typeof self.addEventListener === 'function') 
       self.skipWaiting();
     } else if (msg.type === 'status' && event.ports[0]) {
       isReady().then(
-        (ready) => event.ports[0].postMessage({ version: MANIFEST.version, ready }),
-        () => event.ports[0].postMessage({ version: MANIFEST.version, ready: false }),
+        (ready) => event.ports[0].postMessage({ version: MANIFEST.version, label: MANIFEST.label ?? null, ready }),
+        () => event.ports[0].postMessage({ version: MANIFEST.version, label: MANIFEST.label ?? null, ready: false }),
       );
     }
   });

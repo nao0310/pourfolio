@@ -1,0 +1,87 @@
+// アプリの番号（Ver）と更新履歴（純粋関数）
+// 番号はROADMAPのステップ番号と同じ（2-2 → 2.2）。マージ後の手直しは3つ目の数を足す（2.2.1）。
+// ステップを仕上げるときに APP_VERSION と CHANGELOG の先頭を足す。上げ忘れは tests/version.test.js が見つける。
+// sw.js の一覧（npm run sw）にも番号が入り、更新の知らせに新しい番号を出す。
+
+export const APP_VERSION = '2.1';
+
+/** 更新履歴（新しい順）。items は利用者向けの短い文で、2〜3個まで */
+export const CHANGELOG = Object.freeze([
+  {
+    version: '2.1',
+    date: '2026-11-18',
+    items: ['通信がなくても全部の画面が開けるようになりました', '新しい版の準備ができると「更新する」で切り替えられます', 'Safariで開いているときは、ホーム画面に追加するよう案内します'],
+  },
+  {
+    version: '1.7',
+    date: '2026-11-18',
+    items: ['トップ画面に今日の1杯・在庫・飲み頃・直近の抽出をまとめました', '書き出しの促しと、表計算用のCSVの書き出しを足しました'],
+  },
+  { version: '1.6', date: '2026-11-18', items: ['評価のあとに、次の1杯の直し方と根拠を出します'] },
+  { version: '1.5', date: '2026-11-18', items: ['★・一言・ちょうど良さで味を評価できます'] },
+  { version: '1.4', date: '2026-11-18', items: ['合図付きのタイマーで淹れ、実績を記録できます'] },
+  { version: '1.3', date: '2026-11-18', items: ['器具とレシピ（4:6の雛形つき）を登録できます'] },
+  { version: '1.2', date: '2026-11-18', items: ['豆を登録し、残量と飲み頃を見られます'] },
+  { version: '1.1', date: '2026-11-18', items: ['記録の保存と、書き出し・復元ができます'] },
+  { version: '0.2', date: '2026-11-18', items: ['iPhoneのホーム画面に追加して使えるようになりました'] },
+]);
+
+/** 「2.1.3」を [2, 1, 3] にする。形が違えば null */
+export function parseVersion(v) {
+  if (typeof v !== 'string' || !/^\d+(\.\d+){1,2}$/.test(v)) return null;
+  return v.split('.').map(Number);
+}
+
+/** a が新しければ正、同じなら 0、古ければ負（2.1 と 2.1.0 は同じ） */
+export function compareVersions(a, b) {
+  const pa = parseVersion(a) ?? [];
+  const pb = parseVersion(b) ?? [];
+  for (let i = 0; i < 3; i += 1) {
+    const d = (pa[i] ?? 0) - (pb[i] ?? 0);
+    if (d !== 0) return d;
+  }
+  return 0;
+}
+
+/** 画面に出す形「Ver 2.1」 */
+export function versionLabel(v = APP_VERSION) {
+  return `Ver ${v}`;
+}
+
+/** ROADMAPのステップ番号（「2-1」）を番号（「2.1」）にする */
+export function stepToVersion(step) {
+  const m = /^(\d+)-(\d+)$/.exec(String(step ?? '').trim());
+  return m ? `${Number(m[1])}.${Number(m[2])}` : null;
+}
+
+/**
+ * ROADMAPの文章から、チェックの付いたステップのうちいちばん新しい番号を返す
+ * @param {string} roadmap
+ */
+export function latestDoneStep(roadmap) {
+  let best = null;
+  for (const m of roadmap.matchAll(/^- \[x\] (\d+-\d+) /gm)) {
+    const v = stepToVersion(m[1]);
+    if (!best || compareVersions(v, best) > 0) best = v;
+  }
+  return best;
+}
+
+/** この機能が入る前の番号。前に見た番号を覚えていない、記録のある利用者はこの版から上げたとみなす */
+export const BEFORE_TRACKING = '2.1';
+
+/**
+ * 更新のあとに一度だけ出す「Ver ○ になりました」の中身
+ * - 前に見た番号より新しい版の変更点を、新しい順にまとめる
+ * - 前に見た番号がないとき：記録があれば 2.1 から上げたとみなし、なければ（初めて使う）出さない
+ * @param {{lastSeen?:string|null, hasRecords?:boolean, current?:string, changelog?:readonly {version:string, items:string[]}[]}} args
+ * @returns {{show:boolean, version:string, items:string[]}}
+ */
+export function whatsNew({ lastSeen = null, hasRecords = false, current = APP_VERSION, changelog = CHANGELOG } = {}) {
+  const from = parseVersion(lastSeen ?? '') ? lastSeen : hasRecords ? BEFORE_TRACKING : null;
+  if (!from || compareVersions(current, from) <= 0) return { show: false, version: current, items: [] };
+  const items = changelog
+    .filter((e) => compareVersions(e.version, from) > 0 && compareVersions(e.version, current) <= 0)
+    .flatMap((e) => e.items);
+  return { show: items.length > 0, version: current, items: items.slice(0, 6) };
+}

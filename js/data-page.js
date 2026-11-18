@@ -8,6 +8,7 @@ import { makeSampleData } from './core/sample-data.js';
 import { TABLES, SETTINGS_ID } from './core/records.js';
 import { formatDateTimeJa } from './core/format.js';
 import { registerServiceWorker, requestPersistentStorage, getOfflineStatus } from './pwa.js';
+import { APP_VERSION, CHANGELOG, versionLabel } from './core/version.js';
 
 const LABELS = {
   beans: '豆',
@@ -178,6 +179,24 @@ if (isDev) {
   });
 }
 
+/** 更新履歴（新しい順） */
+function renderChangelog() {
+  const box = $('changelog');
+  box.replaceChildren();
+  for (const e of CHANGELOG) {
+    const h = document.createElement('h3');
+    const [y, m, d] = e.date.split('-').map(Number);
+    h.textContent = `${versionLabel(e.version)}（${y}/${m}/${d}）`;
+    const ul = document.createElement('ul');
+    for (const item of e.items) {
+      const li = document.createElement('li');
+      li.textContent = item;
+      ul.append(li);
+    }
+    box.append(h, ul);
+  }
+}
+
 /** オフラインの準備の状況と、アプリの版（G3） */
 async function renderOffline() {
   const st = await getOfflineStatus().catch(() => null);
@@ -186,12 +205,15 @@ async function renderOffline() {
   else if (st.ready) text = '準備済み：通信がなくても開けます';
   else text = '準備中：通信できる場所で、一度アプリを開き直してください';
   $('offlineStatus').textContent = text;
-  const parts = [];
-  if (st?.version) parts.push(`アプリの版：${st.version}`);
-  if (st?.updateWaiting) parts.push('新しい版が準備できています（画面の上の「更新する」で切り替わります）');
-  $('appVersion').textContent = parts.join('　');
+  // 番号のあとの英数字は、ファイルがそろっているかを確かめるための指紋
+  $('appVersionLabel').textContent = st?.version ? `${versionLabel()}（${st.version.slice(0, 8)}）` : versionLabel();
+  $('appVersion').textContent = st?.updateWaiting
+    ? `新しい版${st.waitingLabel ? `（${versionLabel(st.waitingLabel)}）` : ''}が準備できています（画面の上の「更新する」で切り替わります）`
+    : '';
 }
 
+$('appVersionLabel').textContent = versionLabel(APP_VERSION);
+renderChangelog();
 registerServiceWorker().then(() => navigator.serviceWorker?.ready).then(renderOffline, renderOffline);
 requestPersistentStorage();
 render().catch((err) => {

@@ -37,6 +37,10 @@ function showUpdatePrompt(worker) {
   bar.setAttribute('role', 'status');
   const text = document.createElement('span');
   text.textContent = '新しい版があります';
+  // 待っている新しい版に番号を聞いて「新しい版（Ver 2.3）があります」にする
+  askStatus(worker).then((st) => {
+    if (st?.label) text.textContent = `新しい版（Ver ${st.label}）があります`;
+  });
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = 'btn';
@@ -86,17 +90,9 @@ export async function registerServiceWorker() {
   }
 }
 
-/**
- * オフラインの準備の状況
- * @returns {Promise<{supported:boolean, version:string|null, ready:boolean, updateWaiting:boolean}>}
- */
-export async function getOfflineStatus() {
-  if (!('serviceWorker' in navigator)) return { supported: false, version: null, ready: false, updateWaiting: false };
-  const reg = await navigator.serviceWorker.getRegistration('./');
-  const updateWaiting = Boolean(reg?.waiting && navigator.serviceWorker.controller);
-  const worker = navigator.serviceWorker.controller ?? reg?.active;
-  if (!worker) return { supported: true, version: null, ready: false, updateWaiting };
-  const answer = await new Promise((resolve) => {
+/** service worker に状況（版・番号・準備済みか）を聞く。答えがなければ null */
+function askStatus(worker) {
+  return new Promise((resolve) => {
     const ch = new MessageChannel();
     const timer = setTimeout(() => resolve(null), 3000);
     ch.port1.onmessage = (e) => {
@@ -105,7 +101,27 @@ export async function getOfflineStatus() {
     };
     worker.postMessage({ type: 'status' }, [ch.port2]);
   });
-  return { supported: true, version: answer?.version ?? null, ready: Boolean(answer?.ready), updateWaiting };
+}
+
+/**
+ * オフラインの準備の状況
+ * @returns {Promise<{supported:boolean, version:string|null, ready:boolean, updateWaiting:boolean, waitingLabel?:string|null}>}
+ */
+export async function getOfflineStatus() {
+  if (!('serviceWorker' in navigator)) return { supported: false, version: null, ready: false, updateWaiting: false };
+  const reg = await navigator.serviceWorker.getRegistration('./');
+  const updateWaiting = Boolean(reg?.waiting && navigator.serviceWorker.controller);
+  const worker = navigator.serviceWorker.controller ?? reg?.active;
+  if (!worker) return { supported: true, version: null, ready: false, updateWaiting };
+  const answer = await askStatus(worker);
+  const waiting = updateWaiting ? await askStatus(reg.waiting) : null;
+  return {
+    supported: true,
+    version: answer?.version ?? null,
+    ready: Boolean(answer?.ready),
+    updateWaiting,
+    waitingLabel: waiting?.label ?? null,
+  };
 }
 
 /** 「消されにくい保存」を要求し、結果を返す（true / false / null=非対応） */
