@@ -216,7 +216,7 @@ export async function addInventoryTx(db, fields, now = new Date()) {
 }
 
 /**
- * 1杯淹れた分を在庫から減らす（抽出の記録画面ができるまでの簡易版。1-4で抽出記録とつなぐ）。
+ * 1杯淹れた分を在庫から減らす（アプリで淹れなかった1杯用。抽出の記録は作らない。アプリで淹れたときは saveBrew）。
  * 未開封の豆なら開封済みにする。
  */
 export async function recordCupUsage(db, beanId, doseG, now = new Date()) {
@@ -357,7 +357,34 @@ export async function deleteRecipe(db, id, now = new Date()) {
   if (cur && alive(cur)) await db.table('recipes').put(markDeleted(cur, now));
 }
 
-// ---- 抽出（読むだけ。記録は1-4） ----
+// ---- 抽出（A4） ----
+
+/**
+ * 抽出を1件保存し、使った粉の分だけ豆の在庫を減らす（在庫の履歴に抽出とのつながり brewId を付ける）。
+ * 未開封の豆なら開封済みにする。豆を選んでいなければ在庫は変えない。
+ * @param {object} fields buildBrew（js/core/brews.js）で作った中身
+ * @returns {Promise<{brew: object, tx: object|null}>}
+ */
+export async function saveBrew(db, fields, now = new Date()) {
+  const brew = createRecord(fields, now);
+  let tx = null;
+  await db.transaction('rw', db.table('beans'), db.table('inventoryTx'), db.table('brews'), async () => {
+    await db.table('brews').put(brew);
+    const doseG = brew.actual?.doseG;
+    if (!brew.beanId || !(doseG > 0)) return;
+    const bean = await db.table('beans').get(brew.beanId);
+    if (!bean || !alive(bean)) return;
+    tx = await addInventoryTx(db, { beanId: bean.id, deltaG: -doseG, kind: 'brew', brewId: brew.id, at: brew.at }, now);
+    if (bean.status === 'unopened') await db.table('beans').put(updateRecord(bean, { status: 'open' }, now));
+  });
+  return { brew, tx };
+}
+
+/** 抽出を1件読む。ない・削除済みなら null */
+export async function getBrew(db, id) {
+  const b = await db.table('brews').get(id);
+  return b && alive(b) ? b : null;
+}
 
 /** 削除の印が付いていない抽出の一覧 */
 export async function listBrews(db) {
