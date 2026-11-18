@@ -1,6 +1,7 @@
 // 味の評価の画面：クイック評価（B1）とちょうど良さ評価（JAR、B2）
 // tasting.html?brew=<抽出のID>（抽出を保存した直後は &saved=1 が付き、豆の残量を上に出す）
-import { openDb, getBrew, getTastingForBrew, saveTasting, getBeanWithTx, getSettings } from './db.js';
+import { openDb, getBrew, getTastingForBrew, saveTasting, getBeanWithTx, getSettings, saveSuggestionForBrew } from './db.js';
+import { CONFIDENCE_LABELS, CHANGING_KINDS } from './core/dialin.js';
 import {
   STAR_MAX,
   QUICK_TAGS,
@@ -134,7 +135,13 @@ async function onSave(e) {
   $('save').disabled = true;
   try {
     const saved = await saveTasting(db, brew.id, value);
-    showDone(saved);
+    let suggestion = null;
+    try {
+      suggestion = await saveSuggestionForBrew(db, brew.id);
+    } catch (err) {
+      console.error(err); // 提案が作れなくても評価は保存できている
+    }
+    showDone(saved, suggestion);
   } catch (err) {
     console.error(err);
     showMessage('保存できませんでした。もう一度押してください', 'error');
@@ -143,7 +150,36 @@ async function onSave(e) {
   }
 }
 
-function showDone(saved) {
+/** 提案の「淹れる」ボタンの文字 */
+function brewButtonLabel(action) {
+  if (action.kind === 'keep') return '同じ計画で淹れる';
+  if (action.kind === 'repeat') return '同じ条件でもう1杯淹れる';
+  if (CHANGING_KINDS.includes(action.kind) && action.to == null) return '前回と同じ計画で淹れる';
+  return 'この提案で淹れる';
+}
+
+function renderSuggestion(s) {
+  $('suggestCard').hidden = !s;
+  $('noSuggest').hidden = Boolean(s);
+  if (!s) return;
+  $('sCell').textContent = s.cellName;
+  $('sAction').textContent = s.action.text;
+  $('sNext').textContent = [s.nextStep, s.alt].filter(Boolean).join('。');
+  $('sNext').hidden = !$('sNext').textContent;
+  $('sBrew').textContent = brewButtonLabel(s.action);
+  $('sBrew').href = `brew.html?suggestion=${encodeURIComponent(s.id)}`;
+  const r = s.reasons ?? {};
+  const items = [
+    ['あなたの入力', (r.input ?? []).join('・')],
+    ['理論', r.theory],
+    ['あなたの実績', r.history],
+    ['確信度', r.confidence ? `${CONFIDENCE_LABELS[r.confidence.level] ?? ''}（${r.confidence.text}）` : ''],
+  ].filter(([, v]) => v);
+  $('sReasons').replaceChildren(...items.map(([k, v]) => el('li', {}, el('strong', {}, k), el('span', {}, v))));
+}
+
+function showDone(saved, suggestion) {
+  renderSuggestion(suggestion);
   $('formView').hidden = true;
   $('doneView').hidden = false;
   document.title = '評価を保存しました - Pourfolio';

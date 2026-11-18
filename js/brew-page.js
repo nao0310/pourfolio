@@ -1,6 +1,19 @@
 // 抽出の画面：計画（A1）→ ガイド付きタイマー（A2・A3）→ 実績の確認（A4）→ 保存 → 味の評価（tasting.html）
 // 途中の状態は下書き（js/brew-draft.js）に残し、画面を開き直しても続きから進める。
-import { openDb, getRecipe, getLastBrew, listBeans, listEquipment, getSettings, updateSettings, saveBrew } from './db.js';
+import {
+  openDb,
+  getRecipe,
+  getLastBrew,
+  getBrew,
+  listBeans,
+  listEquipment,
+  getSettings,
+  updateSettings,
+  saveBrew,
+  getSuggestion,
+  listSuggestions,
+} from './db.js';
+import { basePlanForNext, applyAction, pickPendingSuggestion } from './core/dialin.js';
 import { planFromRecipe, planFromBrew, formatSec, POUR_STYLES } from './core/recipes.js';
 import { sortBeansForList } from './core/beans.js';
 import { formatG } from './core/format.js';
@@ -26,11 +39,22 @@ let draft = null;
 let beans = [];
 let speechOn = true;
 let loadedPlan = null;
+let suggestions = [];
 
 // ---- 計画（スタート前） ----
 
-/** URL（?recipe=ID または ?from=last）から計画を作る。見つからなければ null */
+/** URL（?recipe=ID、?from=last、?suggestion=ID）から計画を作る。見つからなければ null */
 async function loadPlan() {
+  const suggestionId = queryParam('suggestion');
+  if (suggestionId) {
+    // ダイヤルイン提案（F1）：提案を出した抽出の計画に、提案の1つだけを入れる（レシピは変えない）
+    const suggestion = await getSuggestion(db, suggestionId);
+    const src = suggestion ? await getBrew(db, suggestion.brewId) : null;
+    if (!src) return null;
+    const recipe = src.recipeId ? await getRecipe(db, src.recipeId) : null;
+    const plan = { ...applyAction(basePlanForNext(src, recipe), suggestion.action), source: 'suggestion', suggestionId: suggestion.id };
+    return { plan, recipe, suggestion };
+  }
   const recipeId = queryParam('recipe');
   if (recipeId) {
     const recipe = await getRecipe(db, recipeId);
@@ -45,8 +69,32 @@ async function loadPlan() {
   return null;
 }
 
-function planItem(label, value) {
-  return el('div', { class: 'plan-item' }, el('span', { class: 'muted' }, label), el('span', { class: 'num plan-value' }, value || '—'));
+function planItem(label, value, changed = false) {
+  return el(
+    'div',
+    { class: `plan-item${changed ? ' changed' : ''}` },
+    el('span', { class: 'muted' }, changed ? `${label}（変更）` : label),
+    el('span', { class: 'num plan-value' }, value || '—'),
+  );
+}
+
+/** 提案のカード。提案を入れた計画ならその説明、そうでなければ選んだ豆のまだ使っていない提案 */
+function renderSuggestCard() {
+  const fromSuggestion = loadedPlan?.suggestion;
+  const s = fromSuggestion ?? pickPendingSuggestion(suggestions, $('bean').value || null);
+  $('suggestCard').hidden = !s;
+  if (!s) return;
+  $('sText').textContent = s.action?.text ?? '';
+  if (fromSuggestion) {
+    $('sTitle').textContent = '提案を入れた計画です';
+    $('sNote').textContent = 'レシピは変わりません。この1杯の計画だけを変えています';
+    $('sRow').hidden = true;
+  } else {
+    $('sTitle').textContent = 'この豆の前回の提案';
+    $('sNote').textContent = `${s.cellName ?? ''}（前回の評価から）`;
+    $('sUse').href = `brew.html?suggestion=${encodeURIComponent(s.id)}`;
+    $('sRow').hidden = false;
+  }
 }
 
 /** 豆の選択肢（飲み切り以外） */
@@ -66,9 +114,13 @@ async function showPlan(loaded, lastBeanId) {
   const eqName = (id) => equipment.find((e) => e.id === id)?.name ?? '';
 
   $('content').hidden = false;
-  $('name').textContent = plan.source === 'lastBrew' ? `前回と同じ：${recipe?.name ?? plan.name}` : plan.name;
+  const names = {
+    lastBrew: [`前回と同じ：${recipe?.name ?? plan.name}`, '前回の抽出の計画を写しました'],
+    suggestion: [`提案を入れた計画：${recipe?.name ?? plan.name}`, '評価した抽出の計画に、提案の1つだけを入れました'],
+  }[plan.source] ?? [plan.name, `レシピ 版${plan.recipeVersion}`];
+  $('name').textContent = names[0];
   document.title = `${$('name').textContent} - Pourfolio`;
-  $('sub').textContent = plan.source === 'lastBrew' ? '前回の抽出の計画を写しました' : `レシピ 版${plan.recipeVersion}`;
+  $('sub').textContent = names[1];
   if (plan.recipeId && recipe) $('editLink').href = `recipe-edit.html?id=${encodeURIComponent(plan.recipeId)}`;
   else $('editLink').hidden = true;
 
@@ -77,13 +129,15 @@ async function showPlan(loaded, lastBeanId) {
   const usable = fillBeanSelect($('bean'), preferred);
   if (!$('bean').value && usable[0]) $('bean').value = usable[0].id;
   $('beanNote').textContent = preferred && $('bean').value === preferred ? '前回の豆を選んでいます' : '';
+  renderSuggestCard();
 
+  const changed = plan.source === 'suggestion' && loaded.suggestion?.action?.to != null ? loaded.suggestion.action.variable : null;
   $('plan').replaceChildren(
-    planItem('粉量', formatG(plan.doseG)),
-    planItem('湯量', formatG(plan.waterG)),
-    planItem('比率', plan.ratio ? `1:${plan.ratio}` : ''),
+    planItem('粉量', formatG(plan.doseG), changed === 'doseG'),
+    planItem('湯量', formatG(plan.waterG), changed === 'waterG'),
+    planItem('比率', plan.ratio ? `1:${plan.ratio}` : '', changed === 'doseG' || changed === 'waterG'),
     planItem('湯温', plan.tempC != null ? `${plan.tempC}℃` : ''),
-    planItem('挽き目', plan.grind?.setting ?? ''),
+    planItem('挽き目', plan.grind?.setting ?? '', changed === 'grind'),
     planItem('目標時間', formatSec(plan.targetTotalSec)),
   );
   const equipRows = [
@@ -429,8 +483,13 @@ async function init() {
     return;
   }
 
+  suggestions = await listSuggestions(db);
   loadedPlan = await loadPlan();
   if (!loadedPlan) {
+    if (queryParam('suggestion')) {
+      $('notFound').querySelector('h1').textContent = '提案が見つかりません';
+      $('notFound').querySelector('p').textContent = '提案を出した抽出が削除されています。「淹れる」の一覧から選び直してください。';
+    }
     $('notFound').hidden = false;
     return;
   }
@@ -443,6 +502,7 @@ async function init() {
 }
 
 $('start').addEventListener('click', () => beginNew(true));
+$('bean').addEventListener('change', renderSuggestCard);
 $('noTimer').addEventListener('click', () => beginNew(false));
 $('resume').addEventListener('click', () => {
   const saved = loadDraft();
