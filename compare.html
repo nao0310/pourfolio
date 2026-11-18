@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>焙煎度の飲み比べ - Pourfolio</title>
+  <meta name="theme-color" content="#5a371f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Pourfolio">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/base.css">
+</head>
+<body>
+  <main>
+    <p class="crumb"><a href="beans.html" id="crumb">豆と在庫</a></p>
+
+    <!-- 一覧と、新しく始める（X27） -->
+    <div id="listView" hidden>
+      <h1>焙煎度の飲み比べ</h1>
+      <p class="muted">同じ豆の焙煎度違いを、同じレシピで淹れて飲み比べます。結果を産地ごとにまとめ、好きな焙煎度がわかります。</p>
+
+      <div id="openList"></div>
+
+      <div class="card" id="prefCard" hidden>
+        <h2>わかった好み</h2>
+        <ul class="pref-list" id="prefList"></ul>
+      </div>
+
+      <form class="card" id="startForm" novalidate>
+        <h2>新しく始める</h2>
+        <div id="groups"></div>
+        <fieldset class="field">
+          <legend class="label">比べる豆（2〜4袋）</legend>
+          <div id="beanChecks"></div>
+          <span class="field-error" data-for="beanIds"></span>
+        </fieldset>
+        <label class="field">
+          <span class="label">レシピ</span>
+          <select id="recipe"></select>
+          <span class="hint">1袋ずつ同じレシピで淹れます。量の少ないレシピ（粉10g前後）がおすすめです</span>
+          <span class="field-error" data-for="recipeId"></span>
+        </label>
+        <label class="check-row">
+          <input type="checkbox" id="blind" checked>
+          <span>ブラインドにする（どのカップか分からないまま評価する）</span>
+        </label>
+        <p id="msg" role="status"></p>
+        <div class="row">
+          <button class="btn" type="submit" id="start">飲み比べを始める</button>
+        </div>
+      </form>
+
+      <div class="card" id="doneCard" hidden>
+        <h2>これまでの飲み比べ</h2>
+        <ul class="link-list" id="doneList"></ul>
+      </div>
+    </div>
+
+    <!-- 飲み比べ1回 -->
+    <div id="expView" hidden>
+      <h1 id="title"></h1>
+      <p class="muted" id="sub"></p>
+
+      <section class="card" id="brewCard">
+        <h2>1. 淹れる</h2>
+        <p class="hint" id="brewHint"></p>
+        <ul class="compare-entries" id="entries"></ul>
+      </section>
+
+      <section class="card" id="tasteCard" hidden>
+        <h2>2. 飲み比べる</h2>
+        <p class="hint" id="tasteHint"></p>
+        <div id="cups"></div>
+      </section>
+
+      <section class="card" id="revealCard" hidden>
+        <h2 id="revealTitle">3. 答え合わせ</h2>
+        <p class="hint" id="revealHint"></p>
+        <div id="answers"></div>
+        <span class="field-error" data-for="ratings"></span>
+        <span class="field-error" data-for="answers"></span>
+        <p id="rMsg" role="status"></p>
+        <div class="row">
+          <button class="btn" type="button" id="reveal">結果を見る</button>
+        </div>
+      </section>
+
+      <section class="card suggest-card" id="resultCard" hidden>
+        <h2>結果</h2>
+        <ol class="compare-results" id="results"></ol>
+        <p class="suggest-action" id="prefText"></p>
+        <p class="muted small">評価はそれぞれの抽出の「温かいうち」の評価として保存しました。押すと評価の画面で詳しく直せます</p>
+      </section>
+
+      <div class="row">
+        <a class="btn secondary" href="compare.html">飲み比べの一覧</a>
+        <button class="link-btn" type="button" id="remove">この飲み比べをやめる</button>
+      </div>
+    </div>
+
+    <div id="notFound" hidden>
+      <h1>飲み比べが見つかりません</h1>
+      <p class="muted">やめた飲み比べです。<a href="compare.html">飲み比べの一覧</a>に戻ってください。</p>
+    </div>
+  </main>
+  <script type="module" src="js/compare-page.js"></script>
+</body>
+</html>

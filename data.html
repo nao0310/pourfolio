@@ -28,6 +28,11 @@
     <div class="card">
       <h2>書き出し</h2>
       <p class="muted">全部の記録を1つのファイル（JSON）にします。iPhoneでは「ファイルに保存」を選んでください。</p>
+      <p class="muted" id="photoUsage"></p>
+      <label class="check-row" id="noPhotosRow" hidden>
+        <input type="checkbox" id="noPhotos">
+        <span>写真を含めない（ファイルが小さくなります。写真は復元で戻りません）</span>
+      </label>
       <div class="row">
         <button class="btn" id="export" type="button">書き出す</button>
       </div>

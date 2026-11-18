@@ -3,10 +3,19 @@
 // ステップを仕上げるときに APP_VERSION と CHANGELOG の先頭を足す。上げ忘れは tests/version.test.js が見つける。
 // sw.js の一覧（npm run sw）にも番号が入り、更新の知らせに新しい番号を出す。
 
-export const APP_VERSION = '2.3.1';
+export const APP_VERSION = '2.4';
 
 /** 更新履歴（新しい順）。items は利用者向けの短い文で、2〜3個まで */
 export const CHANGELOG = Object.freeze([
+  {
+    version: '2.4',
+    date: '2026-11-18',
+    items: [
+      '味の評価で、香りや酸味などの「強さ」と「好み」を分けて記録でき、香味と雑味も選べます',
+      '冷めてからの味も評価できます（15分後にトップでお知らせ）。粉や抽出液の写真も残せます',
+      '焙煎度違いの豆をブラインドで飲み比べ、産地ごとの好きな焙煎度がわかります',
+    ],
+  },
   {
     version: '2.3.1',
     date: '2026-11-18',

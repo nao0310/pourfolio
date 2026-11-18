@@ -2,7 +2,7 @@
 import { isStandalone, registerServiceWorker, requestPersistentStorage } from './pwa.js';
 import { installAdvice } from './core/install.js';
 import { loadDraft } from './brew-draft.js';
-import { openDb, readAll, getSettings, updateSettings, getUnratedBrew } from './db.js';
+import { openDb, readAll, getSettings, updateSettings, getUnratedBrew, getCoolPromptBrew } from './db.js';
 import { APP_VERSION, versionLabel, whatsNew } from './core/version.js';
 import { restockPlan, restockText } from './core/restock.js';
 import { brewLine, tastingSummary } from './core/tastings.js';
@@ -11,6 +11,7 @@ import { pickPendingSuggestion } from './core/dialin.js';
 import { doseFromSettings } from './core/inventory.js';
 import { localYmd, formatG } from './core/format.js';
 import { STAGES } from './core/freshness.js';
+import { openExperiments, experimentStatus, STATUS_LABELS } from './core/compare.js';
 import { $, el, freshnessPill, frozenPill } from './ui.js';
 
 registerServiceWorker();
@@ -53,6 +54,24 @@ async function renderUnrated(beanName) {
   $('unratedText').textContent = [beanName(brew.beanId) || '豆なし', brewLine(brew)].join('　');
   $('unratedLink').href = `tasting.html?brew=${enc(brew.id)}`;
   $('unratedCard').hidden = false;
+}
+
+/** 焙煎度の飲み比べ（X27）の途中（いちばん新しい1つ） */
+function renderCompare(all) {
+  const e = openExperiments(all.experiments)[0];
+  if (!e) return;
+  $('compareText').textContent = `${e.title}（${STATUS_LABELS[experimentStatus(e)]}）`;
+  $('compareLink').href = `compare.html?id=${enc(e.id)}`;
+  $('compareCard').hidden = false;
+}
+
+/** 冷めた味の評価（B5）：落ち切って15分〜3時間で、冷めてからの評価がまだの1杯 */
+async function renderCool(beanName) {
+  const brew = await getCoolPromptBrew(db);
+  if (!brew) return;
+  $('coolText').textContent = [beanName(brew.beanId) || '豆なし', brewLine(brew)].join('　');
+  $('coolLink').href = `tasting.html?brew=${enc(brew.id)}&stage=cool`;
+  $('coolCard').hidden = false;
 }
 
 /** 今日の1杯：前回と同じで淹れる（＋その豆のまだ使っていない提案） */
@@ -211,6 +230,8 @@ async function init() {
   renderRecent(all, beanName);
   renderRestock(all, settings);
   await renderUnrated(beanName);
+  await renderCool(beanName);
+  renderCompare(all);
   await renderWhatsNew(settings, all);
 }
 

@@ -20,18 +20,43 @@ const clean = (v) => String(v ?? '').normalize('NFKC').trim();
  * @param {object} plan planFromRecipe / planFromBrew で作った計画
  * @param {string|null} beanId
  * @param {number|null} startedAtMs スタートした時刻（ミリ秒）。タイマーを使わないときは null
+ * @param {object|null} [precheck] 抽出前チェック（A5）で確かめた項目 { temp, rinse, preheat, tare }
  */
-export function newDraft(plan, beanId, startedAtMs) {
+export function newDraft(plan, beanId, startedAtMs, precheck = null) {
   return {
     v: DRAFT_VERSION,
     plan,
     beanId: beanId || null,
     startedAtMs,
+    precheck: precheck == null ? null : normalizePrecheck(precheck),
     laps: [],
     finishedSec: null,
     stage: startedAtMs == null ? 'result' : 'timer',
     input: null,
   };
+}
+
+/** 抽出前チェック（A5）の項目。チェックしなくてもスタートできる */
+export const PRECHECK_ITEMS = Object.freeze([
+  { key: 'temp', label: '湯温', hint: 'ケトルの湯が計画の温度になっている' },
+  { key: 'rinse', label: 'リンス', hint: 'ペーパーフィルターを湯で流した' },
+  { key: 'preheat', label: '予熱', hint: 'ドリッパーとサーバーを温めた' },
+  { key: 'tare', label: 'スケールの0点', hint: '粉を入れてから0gに合わせた' },
+]);
+
+export const PRECHECK_KEYS = Object.freeze(PRECHECK_ITEMS.map((i) => i.key));
+
+/** 抽出前チェックの形をそろえる（知らない項目は捨て、どの項目も true か false） */
+export function normalizePrecheck(input) {
+  return Object.fromEntries(PRECHECK_KEYS.map((k) => [k, input?.[k] === true]));
+}
+
+/** 抽出前チェックで確かめた項目の名前「湯温・リンス」（記録がなければ空文字） */
+export function precheckText(precheck) {
+  if (!precheck) return '';
+  return PRECHECK_ITEMS.filter((i) => precheck[i.key] === true)
+    .map((i) => i.label)
+    .join('・');
 }
 
 /** 下書きとして使える形か（壊れた・古い下書きは捨てるため） */
@@ -202,11 +227,13 @@ export function buildBrew({ draft, value, at, bean = null, portion = null }) {
     recipeId: plan.recipeId ?? null,
     recipeVersion: plan.recipeVersion ?? null,
     suggestionId: plan.suggestionId ?? null, // ダイヤルイン提案（F1）を入れた計画で淹れたとき、その提案
+    experimentId: draft.compareId ?? null, // 焙煎度比較（X27）で淹れたとき、その飲み比べ
     frozenPortionId: usePortion?.id ?? null, // 冷凍の袋（C4）を使ったとき、その袋（保存すると取り出したことになる）
     equipment: { ...(plan.equipment ?? {}), grinderId: plan.grind?.grinderId ?? null },
     planned: plannedCopy(plan),
     actual,
     timerUsed: draft.startedAtMs != null,
+    precheck: draft.precheck ? normalizePrecheck(draft.precheck) : null, // 抽出前チェック（A5）。チェックの欄を使わなかった杯は null
     beanState: null,
     context: {},
     derived: { ratio: ratioOf(actual.doseG, actual.waterG), daysOffRoast, diff },

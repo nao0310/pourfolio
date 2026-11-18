@@ -21,15 +21,19 @@
       <p class="muted">削除された抽出です。トップに戻ってください。</p>
     </div>
 
-    <!-- 味の評価（B1・B2） -->
+    <!-- 味の評価（B1・B2・B3・B4） -->
     <form id="formView" hidden novalidate>
       <div class="card saved-card" id="savedCard" hidden>
         <p><strong>抽出を保存しました</strong></p>
         <p class="num-line" id="savedStock"></p>
       </div>
 
-      <h1>味の評価</h1>
+      <h1 id="formTitle">味の評価</h1>
       <p class="muted" id="sub"></p>
+
+      <!-- 温度帯（B5） -->
+      <div class="seg3" id="stageTabs" role="group" aria-label="温度帯"></div>
+      <p class="hint" id="stageHint"></p>
 
       <div class="card">
         <h2>総合</h2>
@@ -49,10 +53,28 @@
         <span class="field-error" data-for="jar"></span>
       </div>
 
+      <!-- 香味と雑味（B4） -->
+      <div class="card">
+        <h2>香味</h2>
+        <p class="hint">感じた香りや味のなかまを押し、近い言葉を選びます。いくつ選んでもよい</p>
+        <div id="flavors"></div>
+        <h2 class="tags-head">雑味</h2>
+        <div class="chips" id="defects"></div>
+      </div>
+
+      <!-- 詳細評価（B3）。ふだんは閉じておく -->
+      <details class="card detail-card" id="detailBox">
+        <summary>詳しく評価する（強さと好み）<span class="detail-count muted" id="detailCount"></span></summary>
+        <p class="hint">「強さ」はどれだけ感じるか（0＝感じない、15＝とても強い）、「好み」はどれだけ好きか（1＝とても嫌い、5＝どちらでもない、9＝とても好き）。強くても好きとは限らないので、分けて入れます</p>
+        <div id="detail"></div>
+        <span class="field-error" data-for="detail"></span>
+      </details>
+
       <div class="card">
         <label class="field">
           <span class="label">メモ</span>
           <textarea id="memo" rows="2"></textarea>
+          <span class="hint">iPhoneのキーボードのマイク（🎤）を押すと、話して入力できます</span>
         </label>
       </div>
 
@@ -67,10 +89,15 @@
 
     <!-- 保存したあと -->
     <div id="doneView" hidden>
-      <h1>評価を保存しました</h1>
+      <h1 id="doneTitle">評価を保存しました</h1>
       <div class="card">
         <p id="doneBrew" class="muted"></p>
         <p id="doneSummary"></p>
+      </div>
+      <!-- 温度帯ごとの評価（B5） -->
+      <div class="card" id="stageListCard" hidden>
+        <h2>温度帯ごとの評価</h2>
+        <ul class="stage-list" id="stageList"></ul>
       </div>
       <!-- 次の1杯の直し方（ダイヤルイン提案、F1） -->
       <div class="card suggest-card" id="suggestCard" hidden>
@@ -85,12 +112,27 @@
         <ol class="reasons" id="sReasons"></ol>
       </div>
       <p class="muted" id="noSuggest" hidden>ちょうど良さの「濃さ」「酸味」「苦味」「渋み」か、一言の「薄い」「濃い」「酸っぱい」「苦い」「渋い」を入れると、次の1杯の直し方が出ます。</p>
+      <!-- 冷めた味の評価への案内（B5） -->
+      <div class="card" id="coolCard" hidden>
+        <p id="coolText"></p>
+        <div class="row">
+          <a class="btn secondary" id="coolLink">冷めた味を評価する</a>
+        </div>
+      </div>
       <div class="row">
         <a class="btn" href="index.html" id="doneTop">トップへ</a>
         <button class="btn secondary" type="button" id="edit">評価を直す</button>
         <a class="btn secondary" id="doneBean" hidden>豆を見る</a>
       </div>
     </div>
+
+    <!-- 写真（A7）。選ぶとすぐ保存する（評価の保存とは別） -->
+    <section class="card" id="photoCard" hidden>
+      <h2>写真</h2>
+      <p class="hint">撮るか、写真ライブラリから選びます。小さくしてこの端末にだけ保存します</p>
+      <div class="photo-grid" id="photos"></div>
+      <p id="photoMsg" role="status"></p>
+    </section>
   </main>
   <script type="module" src="js/tasting-page.js"></script>
 </body>

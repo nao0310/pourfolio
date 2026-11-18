@@ -60,7 +60,7 @@ test('移行：版1のデータベースを開き直すと、記録はそのま�
 
   const db = openDb('pourfolio-test', { indexedDB, IDBKeyRange });
   await db.open();
-  assert.equal(db.verno, 4, '今の版まで上がる');
+  assert.equal(db.verno, 5, '今の版まで上がる');
   const all = await readAll(db);
   assert.deepEqual(all.beans, [bean]);
   assert.deepEqual(all.brews, [brew]);

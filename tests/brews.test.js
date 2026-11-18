@@ -153,3 +153,18 @@ test('ダイヤルイン提案を入れた計画で淹れたら、抽出の記�
   const plain = buildBrew({ draft: newDraft(plan, 'b1', null), value, at: '2026-11-18T07:45:35+09:00' });
   assert.equal(plain.suggestionId, null);
 });
+
+test('抽出前チェック（A5）：確かめた項目を抽出の記録に残す。チェックの欄を使わなければ null', async () => {
+  const { normalizePrecheck, precheckText, PRECHECK_KEYS } = await import('../js/core/brews.js');
+  assert.deepEqual(PRECHECK_KEYS, ['temp', 'rinse', 'preheat', 'tare']);
+  assert.deepEqual(normalizePrecheck({ temp: true, rinse: 'yes', foo: true }), { temp: true, rinse: false, preheat: false, tare: false });
+  assert.equal(precheckText({ temp: true, rinse: false, preheat: true, tare: true }), '湯温・予熱・スケールの0点');
+  assert.equal(precheckText(null), '');
+
+  const value = normalizeActualInput({ ...initialActualInput(newDraft(plan, 'b1', null)), totalSec: '3:30' }).value;
+  const checked = newDraft(plan, 'b1', T0, { temp: true, tare: true });
+  assert.ok(isValidDraft(checked));
+  const brew = buildBrew({ draft: checked, value, at: new Date(T0).toISOString() });
+  assert.deepEqual(brew.precheck, { temp: true, rinse: false, preheat: false, tare: true });
+  assert.equal(buildBrew({ draft: newDraft(plan, 'b1', T0), value, at: new Date(T0).toISOString() }).precheck, null);
+});

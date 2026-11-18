@@ -13,6 +13,7 @@ import {
   markArrived,
   freezeBean,
   takeOutPortion,
+  listExperiments,
 } from './db.js';
 import { normalizeFreezeInput, portionsOf, stockParts, stockPartsText, portionText, labelRange, MAX_PORTIONS } from './core/frozen.js';
 import { arrivalChanges } from './core/orders.js';
@@ -23,6 +24,7 @@ import { remainingG, cupsLeft, consumptionPace, emptyForecast, doseFromSettings,
 import { freshness, FRESHNESS_WINDOWS, FALLBACK_GROUP, STAGES } from './core/freshness.js';
 import { roastGroup, ROAST_GROUPS } from './core/roast.js';
 import { localYmd, formatYmdJa, formatG, formatDateTimeJa } from './core/format.js';
+import { roastPreferences, preferenceForBean, preferenceText } from './core/compare.js';
 import { $, el, queryParam, showMessage, freshnessPill, frozenPill, stepperField } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
 
@@ -166,6 +168,16 @@ function renderInfo(bean, allBeans) {
   if (!$('orderRow').hidden) $('orderLink').href = url;
 }
 
+/** 焙煎度比較（X27）でわかった、この豆の産地の好きな焙煎度 */
+async function renderRoastPref(bean, allBeans) {
+  const pref = preferenceForBean(roastPreferences(await listExperiments(db), allBeans), bean);
+  const text = preferenceText(pref);
+  $('roastPref').hidden = !text;
+  $('roastPref').textContent = text ? `${text}。次の注文は「${pref.best}」がおすすめです` : '';
+  $('roastPrefNote').hidden = Boolean(text);
+  $('compareLink').href = `compare.html?bean=${encodeURIComponent(bean.id)}`;
+}
+
 async function render() {
   const found = await getBeanWithTx(db, beanId ?? '');
   if (!found) {
@@ -197,7 +209,9 @@ async function render() {
     renderFrozen(inFreezer, parts);
     renderTxList(txs);
   }
-  renderInfo(bean, await listBeans(db));
+  const allBeans = await listBeans(db);
+  renderInfo(bean, allBeans);
+  await renderRoastPref(bean, allBeans);
   $('content').hidden = false;
 }
 
