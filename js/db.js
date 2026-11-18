@@ -114,11 +114,22 @@ function keepDeviceSettings(incoming, current) {
   if (!current) return incoming;
   const out = { ...incoming };
   for (const k of DEVICE_SETTINGS_KEYS) {
+    if (k === 'lastBackupAt') continue;
     if (k in current) out[k] = current[k];
     else delete out[k];
   }
+  // 最後に書き出した日時は、どちらか新しいほう（どちらの書き出しも、バックアップがある印なので）
+  out.lastBackupAt = laterIso(current.lastBackupAt, incoming.lastBackupAt);
   return out;
 }
+
+const laterIso = (a, b) => {
+  const ta = Date.parse(a ?? '');
+  const tb = Date.parse(b ?? '');
+  if (Number.isNaN(ta)) return Number.isNaN(tb) ? null : b;
+  if (Number.isNaN(tb)) return a;
+  return tb > ta ? b : a;
+};
 
 /** 全部の表を空にする */
 export async function clearAll(db) {
@@ -143,7 +154,9 @@ export async function putAll(db, tables) {
 export const BLANK_SETTINGS_AT = new Date(0);
 
 /** 設定のうち、その端末だけのもの（復元しても今の端末の値を残す。変えても updatedAt を進めない） */
-export const DEVICE_SETTINGS_KEYS = Object.freeze(['lastSeenVersion']);
+// 最後に書き出した日時（lastBackupAt）も、書き出すたびに設定の updatedAt を進めると、別の端末で変えた設定が
+// 復元で「古い」と判断されて捨てられるため、ここに入れる（総仕上げの58番。復元ではどちらか新しい日時を残す）
+export const DEVICE_SETTINGS_KEYS = Object.freeze(['lastSeenVersion', 'lastBackupAt']);
 
 /** 設定（1件）を読む。なければ作って返す（作った日時は BLANK_SETTINGS_AT） */
 export async function getSettings(db, now = new Date()) {

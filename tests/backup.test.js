@@ -55,8 +55,8 @@ test('壊れたファイルや別のファイルは理由つきで断る', () =>
     [JSON.stringify({ app: 'pourfolio', formatVersion: 'x', tables: {} }), /版が分かりません/],
     [JSON.stringify({ app: 'pourfolio', formatVersion: 99, tables: {} }), /新しい版/],
     [JSON.stringify({ app: 'pourfolio', formatVersion: 1 }), /記録が入っていません/],
-    [JSON.stringify({ app: 'pourfolio', formatVersion: 1, tables: { beans: {} } }), /beans/],
-    [JSON.stringify({ app: 'pourfolio', formatVersion: 1, tables: { brews: [{ id: 'a' }, { x: 1 }] } }), /brews.*2件目/],
+    [JSON.stringify({ app: 'pourfolio', formatVersion: 1, tables: { beans: {} } }), /「豆」の中身が壊れています/], // 表の名前は日本語（総仕上げの76番）
+    [JSON.stringify({ app: 'pourfolio', formatVersion: 1, tables: { brews: [{ id: 'a' }, { x: 1 }] } }), /「抽出の記録」の2件目/],
   ];
   for (const [text, msg] of bad) {
     assert.throws(() => parseBackup(text), (e) => e instanceof BackupError && msg.test(e.message), text);

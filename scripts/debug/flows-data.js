@@ -73,8 +73,12 @@ if (on('data')) {
   // 書き出す（2度押し）
   const downloads = [];
   page.on('download', (d) => downloads.push(d));
-  await page.click('#export');
-  await page.click('#export');
+  // 人の2度押しに近づけて、間をあけずに2回押す（page.click は押せるようになるまで待つので、2回目が遅れて新しい書き出しになる）
+  await page.evaluate(() => {
+    const b = document.getElementById('export');
+    b.click();
+    b.click();
+  });
   await page.waitForTimeout(1500);
   log('data', `書き出すの2度押し → ダウンロード ${downloads.length} 件、知らせ「${await msg(page)}」`);
   const file = path.join(tmp, 'backup.json');

@@ -52,6 +52,7 @@ import { bestBrewForBean } from './core/today.js';
 import { handoverFor, handoverBrewHref, conditionsText, bestHead } from './core/handover.js';
 import { autosaveAfterChange } from './autosave-file.js';
 import { $, el, queryParam, showMessage, stepperField, showPageLoadError, showToast } from './ui.js';
+import { isQuotaError, QUOTA_TEXT } from './core/errors.js';
 import { singleFlight } from './core/once.js';
 import { registerServiceWorker, blockUpdatePrompt, recheckUpdatePrompt } from './pwa.js';
 import { askConfirm } from './confirm-box.js';
@@ -783,7 +784,7 @@ const onSave = singleFlight(async (e) => {
       return;
     }
     submit.disabled = false;
-    showMessage('保存できませんでした。もう一度押してください', 'error', 'rMsg');
+    showMessage(isQuotaError(err) ? QUOTA_TEXT : '保存できませんでした。もう一度押してください', 'error', 'rMsg');
   }
 });
 

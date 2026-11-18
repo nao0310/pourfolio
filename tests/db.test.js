@@ -3,7 +3,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { IDBFactory, IDBKeyRange } from 'fake-indexeddb';
 import { openDb, readAll, exportAll, restoreBackup, clearAll, putAll, countAlive, getSettings, updateSettings, setDeviceSettings } from '../js/db.js';
-import { parseBackup } from '../js/core/backup.js';
+import { parseBackup, withBackupAt, TABLE_LABELS } from '../js/core/backup.js';
+import { isQuotaError } from '../js/core/errors.js';
 import { makeSampleData } from '../js/core/sample-data.js';
 import { TABLES, markDeleted, SETTINGS_ID } from '../js/core/records.js';
 
@@ -116,4 +117,46 @@ test('端末だけの設定を変えても updatedAt は進まない。それ以
   assert.equal(n.updatedAt, s.updatedAt);
   await assert.rejects(setDeviceSettings(db, { defaultDoseG: 20 }));
   db.close();
+});
+
+test('書き出しても設定の updatedAt は進まず、別の端末で変えた設定が復元で入る（総仕上げの58番）', async () => {
+  // 端末A：設定を変える → 端末B：書き出す（日時は端末だけの設定）→ 端末Aで書き出したファイルを、Bで復元
+  const a = freshDb();
+  await updateSettings(a, { defaultDoseG: 18, caffeineCutoff: '14:00' }, new Date('2026-11-18T08:00:00Z'));
+  const b = openDb('pourfolio-test-b', { indexedDB: new IDBFactory(), IDBKeyRange });
+  await getSettings(b);
+  const bAt = new Date('2026-11-18T09:00:00Z');
+  await setDeviceSettings(b, { lastBackupAt: bAt.toISOString() });
+  assert.equal((await getSettings(b)).updatedAt, new Date(0).toISOString());
+  const aAt = new Date('2026-11-18T08:30:00Z');
+  const file = parseBackup(JSON.stringify(withBackupAt(await exportAll(a, aAt), aAt)));
+  assert.equal(file.tables.settings[0].lastBackupAt, aAt.toISOString());
+  await restoreBackup(b, file);
+  const s = await getSettings(b);
+  assert.equal(s.defaultDoseG, 18);
+  assert.equal(s.caffeineCutoff, '14:00');
+  assert.equal(s.lastBackupAt, bAt.toISOString()); // 新しいほう
+  a.close();
+  b.close();
+});
+
+test('書き出す → 全部消す → 復元で、書き出した日時が残る（総仕上げの58番）', async () => {
+  const db = freshDb();
+  await updateSettings(db, { defaultDoseG: 16 }, NOW);
+  const file = parseBackup(JSON.stringify(withBackupAt(await exportAll(db, NOW), NOW)));
+  await clearAll(db);
+  await getSettings(db); // ホームを開いた
+  await restoreBackup(db, file);
+  assert.equal((await getSettings(db)).lastBackupAt, NOW.toISOString());
+  db.close();
+});
+
+test('壊れたファイルの知らせは表の日本語の名前で（76番）。空きが足りない失敗を見分ける（61番）', () => {
+  const bad = JSON.stringify({ app: 'pourfolio', formatVersion: 99, exportedAt: NOW.toISOString(), tables: {} });
+  assert.throws(() => parseBackup(bad.replace('99', '1').replace('"tables":{}', '"tables":{"beans":[{"name":"x"}]}')), /「豆」の1件目にIDがありません/);
+  assert.equal(TABLE_LABELS.brews, '抽出の記録');
+  const quota = Object.assign(new Error('Transaction aborted'), { name: 'AbortError', inner: Object.assign(new Error('x'), { name: 'QuotaExceededError' }) });
+  assert.equal(isQuotaError(quota), true);
+  assert.equal(isQuotaError(new Error('ほかの失敗')), false);
+  assert.equal(isQuotaError(null), false);
 });

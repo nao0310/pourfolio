@@ -37,6 +37,33 @@ export function makeBackup(tables, now = new Date()) {
   };
 }
 
+/**
+ * 書き出すファイルの設定に、今回の書き出しの日時を入れる（書き出す → 全部消す → 復元でも「書き出した」ことが残るように、総仕上げの58番）。
+ * 設定の updatedAt は変えない（変えると、別の端末で変えた設定より新しいと判断されるため）
+ */
+export function withBackupAt(backup, now = new Date()) {
+  const at = (now instanceof Date ? now : new Date(now)).toISOString();
+  const settings = (backup.tables.settings ?? []).map((r) => ({ ...r, lastBackupAt: at }));
+  return { ...backup, tables: { ...backup.tables, settings } };
+}
+
+/** 表の日本語の名前（データの画面の件数と、壊れたファイルの知らせで使う。総仕上げの76・78番） */
+export const TABLE_LABELS = Object.freeze({
+  beans: '豆',
+  inventoryTx: '在庫の履歴',
+  equipment: '器具',
+  recipes: 'レシピ',
+  brews: '抽出の記録',
+  tastings: '評価',
+  suggestions: '提案',
+  orders: '注文',
+  frozenPortions: '冷凍の袋',
+  photos: '写真',
+  experiments: '実験',
+  wishlist: '気になる豆',
+  settings: '設定',
+});
+
 const pad2 = (n) => String(n).padStart(2, '0');
 
 /** 書き出しファイルの名前（例：pourfolio-backup-20261118-0742.json） */
@@ -98,10 +125,10 @@ export function parseBackup(input, { migrations = MIGRATIONS, currentVersion = F
   const tables = {};
   for (const name of TABLES) {
     const rows = data.tables[name] ?? [];
-    if (!Array.isArray(rows)) throw new BackupError(`「${name}」の中身が壊れています`);
+    if (!Array.isArray(rows)) throw new BackupError(`「${TABLE_LABELS[name] ?? name}」の中身が壊れています`);
     rows.forEach((row, i) => {
       if (!isPlainObject(row) || typeof row.id !== 'string' || row.id === '') {
-        throw new BackupError(`「${name}」の${i + 1}件目にIDがありません`);
+        throw new BackupError(`「${TABLE_LABELS[name] ?? name}」の${i + 1}件目にIDがありません`);
       }
     });
     tables[name] = rows;
