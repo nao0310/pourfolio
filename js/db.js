@@ -7,7 +7,7 @@ import { beansFromOrder } from './core/orders.js';
 import { initialStockG } from './core/roast.js';
 import { remainingG, adjustDelta } from './core/inventory.js';
 import { makeBackup, mergeRecords } from './core/backup.js';
-import { buildTasting, pickTasting, pickUnratedBrew } from './core/tastings.js';
+import { buildTasting, pickTasting, pickUnratedBrew, tastingsByStage, pickCoolPrompt, DEFAULT_STAGE } from './core/tastings.js';
 import { suggestNext, basePlanForNext, buildSuggestion, pickSuggestionForBrew, linkSuggestions } from './core/dialin.js';
 import { parseNumber } from './core/beans.js';
 import { nextLabelNos, buildPortions, freezeMemo, isInFreezer } from './core/frozen.js';
@@ -543,25 +543,32 @@ export async function getLastBrew(db) {
   return list.find(alive) ?? null;
 }
 
-// ---- 味の評価（B1・B2） ----
+// ---- 味の評価（B1〜B5） ----
 
-/** その抽出の「自分・温かいうち」の評価。なければ null */
-export async function getTastingForBrew(db, brewId) {
-  return pickTasting(await db.table('tastings').where('brewId').equals(brewId).toArray(), brewId);
+/** その抽出の「自分」の評価（温度帯を省くと主な評価＝温かいうち）。なければ null */
+export async function getTastingForBrew(db, brewId, stage = DEFAULT_STAGE) {
+  return pickTasting(await db.table('tastings').where('brewId').equals(brewId).toArray(), brewId, stage);
+}
+
+/** その抽出の温度帯ごとの評価 { hot, warm, cool } */
+export async function getTastingsByStage(db, brewId) {
+  return tastingsByStage(await db.table('tastings').where('brewId').equals(brewId).toArray(), brewId);
 }
 
 /**
- * 抽出の評価を保存する。すでにあればその1件を直す（1杯につき1件のまま）。
+ * 抽出の評価を保存する。同じ温度帯の評価がすでにあればその1件を直す（1杯・1温度帯につき1件のまま）。
  * @param {object} value normalizeTastingInput の value
+ * @param {Date} [now]
+ * @param {{stage?: string}} [opts] 温度帯（B5）。省くと温かいうち
  * @returns {Promise<object>} 保存した評価
  */
-export async function saveTasting(db, brewId, value, now = new Date()) {
+export async function saveTasting(db, brewId, value, now = new Date(), { stage = DEFAULT_STAGE } = {}) {
   let saved;
   await db.transaction('rw', db.table('brews'), db.table('tastings'), async () => {
     const brew = await db.table('brews').get(brewId);
     if (!brew || !alive(brew)) throw new Error('抽出の記録が見つかりません');
-    const fields = buildTasting({ brewId, value });
-    const cur = pickTasting(await db.table('tastings').where('brewId').equals(brewId).toArray(), brewId);
+    const fields = buildTasting({ brewId, value, stage });
+    const cur = pickTasting(await db.table('tastings').where('brewId').equals(brewId).toArray(), brewId, fields.stage);
     saved = cur ? updateRecord(cur, fields, now) : createRecord(fields, now);
     await db.table('tastings').put(saved);
   });
@@ -572,6 +579,12 @@ export async function saveTasting(db, brewId, value, now = new Date()) {
 export async function getUnratedBrew(db, now = new Date()) {
   const [brews, tastings] = await Promise.all([db.table('brews').toArray(), db.table('tastings').toArray()]);
   return pickUnratedBrew(brews, tastings, now);
+}
+
+/** 冷めた味の評価を促す抽出（B5）。なければ null */
+export async function getCoolPromptBrew(db, now = new Date()) {
+  const [brews, tastings] = await Promise.all([db.table('brews').toArray(), db.table('tastings').toArray()]);
+  return pickCoolPrompt(brews, tastings, now);
 }
 
 // ---- ダイヤルイン提案（F1） ----

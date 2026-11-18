@@ -18,6 +18,11 @@ import {
   DETAIL_KEYS,
   LIKING_WORDS,
   detailAnsweredCount,
+  STAGE_KEYS,
+  stageLabel,
+  normalizeStage,
+  tastingsByStage,
+  coolReadyMs,
 } from '../js/core/tastings.js';
 
 test('タグは7つ、ちょうど良さは渋みを含む6項目', () => {
@@ -155,4 +160,23 @@ test('香味と雑味（B4）：詳細評価・香味・雑味のどれかだけ
   assert.deepEqual(value.flavors, ['floral/jasmine', 'fruity/citrus']);
   assert.deepEqual(value.defects, ['紙っぽい']);
   assert.equal(tastingSummary(value), '★4　ジャスミン・柑橘　雑味 紙っぽい');
+});
+
+test('温度帯（B5）：熱いうち・温かいうち・冷めてから。知らない値は温かいうち', () => {
+  assert.deepEqual(STAGE_KEYS, ['hot', 'warm', 'cool']);
+  assert.equal(stageLabel('cool'), '冷めてから');
+  assert.equal(normalizeStage('lukewarm'), 'warm');
+  assert.equal(buildTasting({ brewId: 'b1', value: normalizeTastingInput({ stars: 3 }).value, stage: 'cool' }).stage, 'cool');
+  assert.equal(buildTasting({ brewId: 'b1', value: normalizeTastingInput({ stars: 3 }).value, stage: '?' }).stage, 'warm');
+
+  const ts = [
+    { id: 'w', brewId: 'b1', stage: 'warm', stars: 4, updatedAt: '1' },
+    { id: 'c', brewId: 'b1', stage: 'cool', stars: 5, updatedAt: '1' },
+    { id: 'old', brewId: 'b1', stars: 2, updatedAt: '0' }, // 2-3までの記録（stage なし）は温かいうち
+  ];
+  assert.equal(pickTasting(ts, 'b1').id, 'w');
+  assert.equal(pickTasting(ts, 'b1', 'cool').id, 'c');
+  assert.deepEqual(Object.fromEntries(Object.entries(tastingsByStage(ts, 'b1')).map(([k, v]) => [k, v?.id ?? null])), { hot: null, warm: 'w', cool: 'c' });
+  assert.equal(coolReadyMs({ at: '2026-11-18T00:00:00Z', actual: { totalSec: 200 } }), Date.parse('2026-11-18T00:18:20Z'));
+  assert.equal(coolReadyMs({ at: 'x' }), null);
 });

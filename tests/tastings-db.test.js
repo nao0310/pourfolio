@@ -2,7 +2,19 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { IDBFactory, IDBKeyRange } from 'fake-indexeddb';
-import { openDb, saveBrew, saveTasting, getTastingForBrew, getUnratedBrew, exportAll, clearAll, restoreBackup, readAll } from '../js/db.js';
+import {
+  openDb,
+  saveBrew,
+  saveTasting,
+  getTastingForBrew,
+  getTastingsByStage,
+  getUnratedBrew,
+  getCoolPromptBrew,
+  exportAll,
+  clearAll,
+  restoreBackup,
+  readAll,
+} from '../js/db.js';
 import { normalizeTastingInput } from '../js/core/tastings.js';
 import { parseBackup } from '../js/core/backup.js';
 
@@ -66,4 +78,36 @@ test('書き出し→全削除→復元で、評価が戻る', async () => {
   assert.equal(await getTastingForBrew(db, brew.id), null);
   await restoreBackup(db, parseBackup(file));
   assert.deepEqual(await getTastingForBrew(db, brew.id), t);
+});
+
+test('冷め際の評価（B5）：温度帯ごとに1件ずつ。主な評価（温かいうち）は変わらない', async () => {
+  const db = freshDb();
+  const { brew } = await saveBrew(db, brewFields(), NOW);
+  const warm = await saveTasting(db, brew.id, input({ stars: 4, jar: { acidity: 1 } }), later(4));
+  assert.equal(warm.stage, 'warm');
+  // 落ち切って15分たつまでは促さない。主な評価が済んでから
+  assert.equal(await getCoolPromptBrew(db, later(10)), null);
+  assert.equal((await getCoolPromptBrew(db, later(19))).id, brew.id); // 3:30＋15分＝18:30から
+  const cool = await saveTasting(db, brew.id, input({ stars: 5, intensity: { sweetness: 11 }, liking: { sweetness: 8 } }), later(20), { stage: 'cool' });
+  assert.notEqual(cool.id, warm.id);
+  assert.equal(await getCoolPromptBrew(db, later(21)), null);
+  // 冷めてからの評価を直しても1件のまま
+  const cool2 = await saveTasting(db, brew.id, input({ stars: 3 }), later(22), { stage: 'cool' });
+  assert.equal(cool2.id, cool.id);
+  assert.equal((await readAll(db)).tastings.length, 2);
+  assert.equal((await getTastingForBrew(db, brew.id)).stars, 4); // 主な評価はそのまま
+  const by = await getTastingsByStage(db, brew.id);
+  assert.equal(by.hot, null);
+  assert.equal(by.warm.id, warm.id);
+  assert.equal(by.cool.stars, 3);
+  assert.equal((await getTastingForBrew(db, brew.id, 'cool')).id, cool.id);
+});
+
+test('冷めた味の促し：主な評価がまだなら出さない（先に「評価する」を出す）。3時間を過ぎたら出さない', async () => {
+  const db = freshDb();
+  const { brew } = await saveBrew(db, brewFields(), NOW);
+  assert.equal(await getCoolPromptBrew(db, later(30)), null);
+  await saveTasting(db, brew.id, input({ stars: 4 }), later(31));
+  assert.equal((await getCoolPromptBrew(db, later(32))).id, brew.id);
+  assert.equal(await getCoolPromptBrew(db, later(3.5 + 181)), null);
 });

@@ -28,8 +28,12 @@
         <p class="num-line" id="savedStock"></p>
       </div>
 
-      <h1>味の評価</h1>
+      <h1 id="formTitle">味の評価</h1>
       <p class="muted" id="sub"></p>
+
+      <!-- 温度帯（B5） -->
+      <div class="seg3" id="stageTabs" role="group" aria-label="温度帯"></div>
+      <p class="hint" id="stageHint"></p>
 
       <div class="card">
         <h2>総合</h2>
@@ -84,10 +88,15 @@
 
     <!-- 保存したあと -->
     <div id="doneView" hidden>
-      <h1>評価を保存しました</h1>
+      <h1 id="doneTitle">評価を保存しました</h1>
       <div class="card">
         <p id="doneBrew" class="muted"></p>
         <p id="doneSummary"></p>
+      </div>
+      <!-- 温度帯ごとの評価（B5） -->
+      <div class="card" id="stageListCard" hidden>
+        <h2>温度帯ごとの評価</h2>
+        <ul class="stage-list" id="stageList"></ul>
       </div>
       <!-- 次の1杯の直し方（ダイヤルイン提案、F1） -->
       <div class="card suggest-card" id="suggestCard" hidden>
@@ -102,6 +111,13 @@
         <ol class="reasons" id="sReasons"></ol>
       </div>
       <p class="muted" id="noSuggest" hidden>ちょうど良さの「濃さ」「酸味」「苦味」「渋み」か、一言の「薄い」「濃い」「酸っぱい」「苦い」「渋い」を入れると、次の1杯の直し方が出ます。</p>
+      <!-- 冷めた味の評価への案内（B5） -->
+      <div class="card" id="coolCard" hidden>
+        <p id="coolText"></p>
+        <div class="row">
+          <a class="btn secondary" id="coolLink">冷めた味を評価する</a>
+        </div>
+      </div>
       <div class="row">
         <a class="btn" href="index.html" id="doneTop">トップへ</a>
         <button class="btn secondary" type="button" id="edit">評価を直す</button>

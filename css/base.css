@@ -611,3 +611,12 @@ p > a:not(.btn):only-child { display: inline-block; padding: 11px 0; }
 .flavor-count { position: absolute; top: -8px; right: -4px; min-width: 20px; padding: 0 5px; border-radius: 10px; background: var(--accent); color: var(--accent-fg); font-size: 0.75rem; line-height: 20px; }
 .flavor-words { margin-top: 12px; padding-top: 8px; border-top: 1px dashed var(--line); }
 .flavor-words .chips { margin-top: 6px; }
+
+/* 冷め際の評価（B5） */
+.seg3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 8px; }
+.seg3 .seg { min-height: 44px; padding: 4px 2px; border: 2px solid var(--line); border-radius: 10px; background: transparent; color: var(--fg); font: inherit; font-size: 0.9rem; cursor: pointer; }
+.seg3 .seg[aria-pressed="true"] { border-color: var(--accent); background: var(--accent); color: var(--accent-fg); font-weight: 700; }
+.stage-done { margin-left: 4px; font-size: 0.75rem; opacity: 0.8; }
+.stage-list { list-style: none; margin: 0; padding: 0; }
+.stage-list li { display: flex; flex-direction: column; padding: 6px 0; border-top: 1px solid var(--line); }
+.stage-list li:first-child { border-top: 0; }
