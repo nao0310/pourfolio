@@ -11,6 +11,7 @@ import { pickPendingSuggestion } from './core/dialin.js';
 import { doseFromSettings } from './core/inventory.js';
 import { localYmd, formatG } from './core/format.js';
 import { STAGES } from './core/freshness.js';
+import { openExperiments, experimentStatus, STATUS_LABELS } from './core/compare.js';
 import { $, el, freshnessPill, frozenPill } from './ui.js';
 
 registerServiceWorker();
@@ -53,6 +54,15 @@ async function renderUnrated(beanName) {
   $('unratedText').textContent = [beanName(brew.beanId) || '豆なし', brewLine(brew)].join('　');
   $('unratedLink').href = `tasting.html?brew=${enc(brew.id)}`;
   $('unratedCard').hidden = false;
+}
+
+/** 焙煎度の飲み比べ（X27）の途中（いちばん新しい1つ） */
+function renderCompare(all) {
+  const e = openExperiments(all.experiments)[0];
+  if (!e) return;
+  $('compareText').textContent = `${e.title}（${STATUS_LABELS[experimentStatus(e)]}）`;
+  $('compareLink').href = `compare.html?id=${enc(e.id)}`;
+  $('compareCard').hidden = false;
 }
 
 /** 冷めた味の評価（B5）：落ち切って15分〜3時間で、冷めてからの評価がまだの1杯 */
@@ -221,6 +231,7 @@ async function init() {
   renderRestock(all, settings);
   await renderUnrated(beanName);
   await renderCool(beanName);
+  renderCompare(all);
   await renderWhatsNew(settings, all);
 }
 

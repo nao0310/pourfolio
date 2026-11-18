@@ -79,7 +79,8 @@ test('保存した評価を入力の形に戻せる', () => {
 test('評価の記録は自分・温かいうち。spec 9章の形', () => {
   const { value } = normalizeTastingInput({ stars: 4, tags: ['酸っぱい'], jar: { acidity: 1 }, memo: '' });
   const t = buildTasting({ brewId: 'b1', value });
-  assert.deepEqual(Object.keys(t), ['brewId', 'by', 'stage', 'stars', 'tags', 'jar', 'intensity', 'liking', 'flavors', 'defects', 'memo']);
+  assert.deepEqual(Object.keys(t), ['brewId', 'by', 'stage', 'stars', 'tags', 'jar', 'intensity', 'liking', 'flavors', 'defects', 'memo', 'blind', 'experimentId']);
+  assert.equal(t.blind, false);
   assert.equal(t.by, 'me');
   assert.equal(t.stage, 'warm');
   assert.notEqual(t.jar, value.jar); // 写しを持つ

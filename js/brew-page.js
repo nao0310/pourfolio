@@ -14,6 +14,8 @@ import {
   listSuggestions,
   listFrozenPortions,
   listAliveTx,
+  getExperiment,
+  attachBrewToExperiment,
 } from './db.js';
 import { frozenChoice, portionsOf, portionText } from './core/frozen.js';
 import { remainingG } from './core/inventory.js';
@@ -49,6 +51,8 @@ let portions = [];
 let txs = [];
 /** 抽出前チェック（A5）で押した項目 */
 let precheck = {};
+/** 焙煎度比較（X27）で淹れるときの飲み比べ（?compare=ID） */
+let compare = null;
 
 // ---- 計画（スタート前） ----
 
@@ -123,7 +127,7 @@ function fillBeanSelect(select, selectedId) {
 function renderBeanNote(preferred = null) {
   const id = $('bean').value;
   const notes = [];
-  if (preferred && id === preferred) notes.push('前回の豆を選んでいます');
+  if (preferred && id === preferred) notes.push(queryParam('bean') === id ? '飲み比べの袋を選んでいます' : '前回の豆を選んでいます');
   const n = id ? portionsOf(portions, id).length : 0;
   if (n) notes.push(`冷凍${n}袋あり（記録するときに「冷凍の袋を使う」を選べます）`);
   $('beanNote').textContent = notes.join('。');
@@ -161,8 +165,8 @@ async function showPlan(loaded, lastBeanId) {
   if (plan.recipeId && recipe) $('editLink').href = `recipe-edit.html?id=${encodeURIComponent(plan.recipeId)}`;
   else $('editLink').hidden = true;
 
-  // 豆：初期値は前回の豆（なければ一覧の先頭）
-  const preferred = plan.beanId ?? lastBeanId ?? null;
+  // 豆：初期値は ?bean= の豆（焙煎度比較）、前回の豆、一覧の先頭の順
+  const preferred = queryParam('bean') ?? plan.beanId ?? lastBeanId ?? null;
   const usable = fillBeanSelect($('bean'), preferred);
   if (!$('bean').value && usable[0]) $('bean').value = usable[0].id;
   renderBeanNote(preferred);
@@ -243,6 +247,9 @@ function beginNew(withTimer) {
   draft = {
     ...newDraft(loadedPlan.plan, $('bean').value || null, withTimer ? Date.now() : null, precheck),
     returnSearch: location.search,
+    // 焙煎度比較（X27）で淹れるとき：保存したら飲み比べにつなぎ、飲み比べの画面に戻る
+    compareId: compare?.id ?? null,
+    compareBeanId: compare ? queryParam('bean') : null,
   };
   saveDraft(draft);
   $('content').hidden = true;
@@ -521,8 +528,15 @@ async function onSave(e) {
   const portion = readForm().useFrozen ? frozenChoice({ portions, beanId: value.beanId, roomG: 0, doseG: 0 }).portion : null;
   try {
     const { brew } = await saveBrew(db, buildBrew({ draft, value, at, bean, portion }));
+    const { compareId, compareBeanId } = draft;
     clearDraft();
     draft = null;
+    if (compareId) {
+      // 焙煎度比較（X27）：評価はあとで飲み比べの画面でまとめて入れる（ブラインドを崩さないため）
+      await attachBrewToExperiment(db, compareId, { brewId: brew.id, beanId: brew.beanId, targetBeanId: compareBeanId });
+      location.replace(`compare.html?id=${encodeURIComponent(compareId)}&brewed=1`);
+      return;
+    }
     // そのまま味の評価へ（spec 8章：実績の確認 → テイスティング）。戻るで実績の確認に戻らないよう replace
     location.replace(`tasting.html?brew=${encodeURIComponent(brew.id)}&saved=1`);
   } catch (err) {
@@ -558,6 +572,12 @@ async function init() {
   }
 
   suggestions = await listSuggestions(db);
+  compare = queryParam('compare') ? await getExperiment(db, queryParam('compare')) : null;
+  if (compare) {
+    $('crumb').textContent = '飲み比べ';
+    $('crumb').href = `compare.html?id=${encodeURIComponent(compare.id)}`;
+    $('compareNote').hidden = false;
+  }
   loadedPlan = await loadPlan();
   if (!loadedPlan) {
     if (queryParam('suggestion')) {

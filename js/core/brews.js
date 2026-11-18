@@ -227,6 +227,7 @@ export function buildBrew({ draft, value, at, bean = null, portion = null }) {
     recipeId: plan.recipeId ?? null,
     recipeVersion: plan.recipeVersion ?? null,
     suggestionId: plan.suggestionId ?? null, // ダイヤルイン提案（F1）を入れた計画で淹れたとき、その提案
+    experimentId: draft.compareId ?? null, // 焙煎度比較（X27）で淹れたとき、その飲み比べ
     frozenPortionId: usePortion?.id ?? null, // 冷凍の袋（C4）を使ったとき、その袋（保存すると取り出したことになる）
     equipment: { ...(plan.equipment ?? {}), grinderId: plan.grind?.grinderId ?? null },
     planned: plannedCopy(plan),

@@ -7,12 +7,13 @@ import { beansFromOrder } from './core/orders.js';
 import { initialStockG } from './core/roast.js';
 import { remainingG, adjustDelta } from './core/inventory.js';
 import { makeBackup, mergeRecords } from './core/backup.js';
-import { buildTasting, pickTasting, pickUnratedBrew, tastingsByStage, pickCoolPrompt, DEFAULT_STAGE } from './core/tastings.js';
+import { buildTasting, pickTasting, pickUnratedBrew, tastingsByStage, pickCoolPrompt, normalizeTastingInput, DEFAULT_STAGE } from './core/tastings.js';
 import { suggestNext, basePlanForNext, buildSuggestion, pickSuggestionForBrew, linkSuggestions } from './core/dialin.js';
 import { parseNumber } from './core/beans.js';
 import { nextLabelNos, buildPortions, freezeMemo, isInFreezer } from './core/frozen.js';
 import { localYmd } from './core/format.js';
 import { buildPhoto, photosOfBrew } from './core/photos.js';
+import { attachBrew, tastingsToSave } from './core/compare.js';
 
 /** 本番のデータベース名（保存テストの pourfolio-storage-test とは別） */
 export const DB_NAME = 'pourfolio';
@@ -575,6 +576,8 @@ export async function saveTasting(db, brewId, value, now = new Date(), { stage =
     if (!brew || !alive(brew)) throw new Error('抽出の記録が見つかりません');
     const fields = buildTasting({ brewId, value, stage });
     const cur = pickTasting(await db.table('tastings').where('brewId').equals(brewId).toArray(), brewId, fields.stage);
+    // 飲み比べ（X27）で付けた評価を評価の画面で直しても、ブラインドだったことは残す
+    if (cur) Object.assign(fields, { blind: cur.blind === true, experimentId: cur.experimentId ?? null });
     saved = cur ? updateRecord(cur, fields, now) : createRecord(fields, now);
     await db.table('tastings').put(saved);
   });
@@ -591,6 +594,77 @@ export async function getUnratedBrew(db, now = new Date()) {
 export async function getCoolPromptBrew(db, now = new Date()) {
   const [brews, tastings] = await Promise.all([db.table('brews').toArray(), db.table('tastings').toArray()]);
   return pickCoolPrompt(brews, tastings, now);
+}
+
+// ---- 焙煎度比較（X27） ----
+
+/** 飲み比べの一覧（削除の印が付いたものは除く） */
+export async function listExperiments(db) {
+  return (await db.table('experiments').toArray()).filter(alive);
+}
+
+/** 飲み比べ1件。ない・削除済みなら null */
+export async function getExperiment(db, id) {
+  const e = await db.table('experiments').get(id);
+  return e && alive(e) ? e : null;
+}
+
+/** 飲み比べを始める（fields は core/compare.js の buildExperiment） */
+export async function addExperiment(db, fields, now = new Date()) {
+  const rec = createRecord(fields, now);
+  await db.table('experiments').put(rec);
+  return rec;
+}
+
+/** 飲み比べの一部を変える（カップの評価など） */
+export async function updateExperiment(db, id, changes, now = new Date()) {
+  const cur = await getExperiment(db, id);
+  if (!cur) throw new Error('飲み比べが見つかりません');
+  const next = updateRecord(cur, changes, now);
+  await db.table('experiments').put(next);
+  return next;
+}
+
+/** 飲み比べをやめる（削除の印。淹れた抽出と評価は残す） */
+export async function deleteExperiment(db, id, now = new Date()) {
+  const cur = await getExperiment(db, id);
+  if (cur) await db.table('experiments').put(markDeleted(cur, now));
+}
+
+/**
+ * 飲み比べで淹れた抽出をつなぐ（抽出の保存のすぐあと）
+ * @param {{brewId:string, beanId:string|null, targetBeanId?:string|null}} p
+ */
+export async function attachBrewToExperiment(db, id, p, now = new Date()) {
+  const cur = await getExperiment(db, id);
+  if (!cur) return null;
+  return updateExperiment(db, id, { entries: attachBrew(cur, p) }, now);
+}
+
+/**
+ * 結果を出す：カップの評価（答え合わせ済み）を残し、それぞれの抽出の「温かいうち」の評価として保存する。
+ * すでに評価があればその1件を直す。ブラインドで評価したことと、どの飲み比べかを評価に残す。
+ * @param {object[]} ratings beanId の入ったカップの評価（ブラインドなら core/compare.js の reveal の結果）
+ */
+export async function finishExperiment(db, id, ratings, now = new Date()) {
+  let saved;
+  await db.transaction('rw', db.table('experiments'), db.table('brews'), db.table('tastings'), async () => {
+    const cur = await getExperiment(db, id);
+    if (!cur) throw new Error('飲み比べが見つかりません');
+    saved = updateRecord(cur, { ratings, revealedAt: new Date(now).toISOString() }, now);
+    await db.table('experiments').put(saved);
+    for (const t of tastingsToSave(saved)) {
+      const brew = await db.table('brews').get(t.brewId);
+      if (!brew || !alive(brew)) continue;
+      const { value } = normalizeTastingInput(t.value, { allowEmpty: true });
+      const fields = buildTasting({ brewId: t.brewId, value, blind: cur.blind !== false, experimentId: cur.id });
+      const old = pickTasting(await db.table('tastings').where('brewId').equals(t.brewId).toArray(), t.brewId);
+      // 評価の画面で入れた詳細評価・香味などは残し、★・一言・メモだけを飲み比べの評価にする
+      const merged = old ? { ...fields, jar: old.jar ?? fields.jar, intensity: old.intensity ?? fields.intensity, liking: old.liking ?? fields.liking, flavors: old.flavors ?? fields.flavors, defects: old.defects ?? fields.defects } : fields;
+      await db.table('tastings').put(old ? updateRecord(old, merged, now) : createRecord(merged, now));
+    }
+  });
+  return saved;
 }
 
 // ---- 写真（A7） ----

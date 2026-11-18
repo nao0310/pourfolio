@@ -6,6 +6,7 @@ import { freezerCount } from './core/frozen.js';
 import { yen } from './core/cost.js';
 import { deliveryDays, DEFAULT_DELIVERY_DAYS } from './core/orders.js';
 import { localYmd, formatG, formatYmdJa } from './core/format.js';
+import { roastPreferences, preferenceForBean, preferenceText } from './core/compare.js';
 import { $, el, showMessage } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
 
@@ -15,6 +16,8 @@ let candidates = [];
 const picked = new Set();
 let data = null;
 let settings = {};
+/** 焙煎度比較（X27）でわかった産地ごとの好み */
+let prefs = [];
 
 function renderPlan() {
   const t = restockText(plan);
@@ -38,6 +41,10 @@ function candidateRow(c) {
     c.priceJpy != null ? `${c.priceJpy.toLocaleString('ja-JP')}円` : '',
     c.inStock ? '在庫あり' : '',
   ].filter(Boolean);
+  // 焙煎度比較でわかった好み（同じ銘柄の袋の産地から）。違う焙煎度が好きなら知らせる
+  const bean = data.beans.find((b) => b.name === c.name && b.roastLevel === c.roastLevel) ?? data.beans.find((b) => b.name === c.name);
+  const pref = bean ? preferenceForBean(prefs, bean) : null;
+  const prefNote = pref?.best ? `${preferenceText(pref)}${pref.best !== c.roastLevel ? `。次は「${pref.best}」で` : ''}` : '';
   return el(
     'div',
     { class: 'shop-row' },
@@ -58,6 +65,7 @@ function candidateRow(c) {
         { class: 'shop-main' },
         el('span', { class: 'shop-name' }, [c.name, c.roastLevel].filter(Boolean).join('　')),
         el('span', { class: 'muted' }, facts.join('・')),
+        prefNote && el('span', { class: 'pref-note' }, prefNote),
       ),
     ),
     c.productUrl && el('a', { class: 'link-more', href: c.productUrl, target: '_blank', rel: 'noopener noreferrer' }, '店のページ'),
@@ -145,6 +153,7 @@ async function render() {
     brews: all.brews,
     tastings: all.tastings,
   };
+  prefs = roastPreferences(all.experiments, data.beans);
   plan = restockPlan({ ...data, settings, today: localYmd() });
   candidates = shoppingCandidates(data);
   renderPlan();

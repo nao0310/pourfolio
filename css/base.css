@@ -629,3 +629,26 @@ p > a:not(.btn):only-child { display: inline-block; padding: 11px 0; }
 .photo-thumb { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; border: 1px solid var(--line); cursor: zoom-in; }
 .photo-thumb.zoom { position: fixed; inset: 0; z-index: 50; width: 100%; height: 100%; aspect-ratio: auto; object-fit: contain; background: rgba(0, 0, 0, 0.9); border: 0; border-radius: 0; cursor: zoom-out; }
 .photo-empty { display: flex; align-items: center; justify-content: center; aspect-ratio: 1; padding: 4px; border: 2px dashed var(--line); border-radius: 10px; line-height: 1.3; }
+
+/* 焙煎度比較（X27） */
+.compare-groups { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin-bottom: 12px; }
+.compare-groups .btn { white-space: normal; text-align: left; }
+.compare-entries, .compare-results, .pref-list { list-style: none; margin: 0; padding: 0; }
+.compare-entries li { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 52px; border-top: 1px solid var(--line); }
+.compare-entries li:first-child { border-top: 0; }
+.compare-bean { flex: 1; min-width: 0; }
+.compare-done { display: flex; flex-direction: column; align-items: flex-end; color: var(--muted, inherit); font-size: 0.9rem; }
+.cup-block { padding: 12px 0; border-top: 1px solid var(--line); }
+.cup-block:first-child { border-top: 0; }
+.cup-block h3 { margin: 0 0 6px; }
+.cup-block .chips { margin: 8px 0; }
+.cup-block textarea { width: 100%; box-sizing: border-box; }
+.answer-row select { width: 100%; }
+.compare-results li { display: flex; gap: 12px; align-items: baseline; padding: 8px 0; border-top: 1px solid var(--line); }
+.compare-results li:first-child { border-top: 0; }
+.compare-rank { flex: 0 0 2.5em; font-weight: 700; font-size: 1.1rem; }
+.compare-result-body { display: flex; flex-direction: column; min-width: 0; }
+.pref-list li { display: flex; flex-direction: column; padding: 6px 0; }
+.link-list { margin: 0; padding-left: 1.2em; }
+.link-list li { padding: 6px 0; }
+.pref-note { color: var(--accent); font-size: 0.9rem; font-weight: 700; }

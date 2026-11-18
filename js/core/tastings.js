@@ -192,9 +192,10 @@ export function jarAnsweredCount(jar) {
 
 /**
  * 保存する評価の記録の中身（id・日時の共通項目は db 側で付ける）
- * @param {{brewId:string, value:object, stage?:string}} p value は normalizeTastingInput の value、stage は温度帯（B5）
+ * @param {{brewId:string, value:object, stage?:string, blind?:boolean, experimentId?:string|null}} p
+ *   value は normalizeTastingInput の value、stage は温度帯（B5）、blind・experimentId は焙煎度比較（X27）で付ける
  */
-export function buildTasting({ brewId, value, stage = DEFAULT_STAGE }) {
+export function buildTasting({ brewId, value, stage = DEFAULT_STAGE, blind = false, experimentId = null }) {
   return {
     brewId,
     by: DEFAULT_BY,
@@ -207,6 +208,8 @@ export function buildTasting({ brewId, value, stage = DEFAULT_STAGE }) {
     flavors: [...value.flavors],
     defects: [...value.defects],
     memo: value.memo,
+    blind: blind === true, // 豆名を伏せて評価したか（spec 9章）
+    experimentId: experimentId ?? null, // 飲み比べ（X27）で付けた評価なら、その飲み比べ
   };
 }
 
@@ -249,7 +252,7 @@ export function coolReadyMs(brew) {
 export function pickCoolPrompt(brews, tastings, now = new Date()) {
   const nowMs = new Date(now).getTime();
   const list = (brews ?? []).filter((b) => {
-    if (!alive(b)) return false;
+    if (!alive(b) || b.experimentId) return false; // 飲み比べ（X27）の杯は促さない
     const ready = coolReadyMs(b);
     if (ready == null || nowMs < ready || nowMs - brewEndMs(b) > COOL_WITHIN_HOURS * 3_600_000) return false;
     return pickTasting(tastings, b.id) != null && pickTasting(tastings, b.id, 'cool') == null;
@@ -271,7 +274,7 @@ export function pickUnratedBrew(brews, tastings, now = new Date(), withinHours =
   const nowMs = new Date(now).getTime();
   const rated = new Set((tastings ?? []).filter(alive).map((t) => t.brewId));
   const candidates = (brews ?? []).filter((b) => {
-    if (!alive(b) || rated.has(b.id)) return false;
+    if (!alive(b) || rated.has(b.id) || b.experimentId) return false; // 飲み比べ（X27）の杯は飲み比べの画面で評価する
     const at = Date.parse(b.at);
     return Number.isFinite(at) && at <= nowMs + 60_000 && nowMs - at <= withinHours * 3_600_000;
   });
