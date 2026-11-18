@@ -248,3 +248,124 @@ export async function deleteInventoryTx(db, txId, now = new Date()) {
   const cur = await db.table('inventoryTx').get(txId);
   if (cur && alive(cur)) await db.table('inventoryTx').put(markDeleted(cur, now));
 }
+
+// ---- 器具（D1） ----
+
+/** 削除の印が付いていない器具の一覧 */
+export async function listEquipment(db) {
+  return (await db.table('equipment').toArray()).filter(alive);
+}
+
+/** 器具1つ。ない・削除済みなら null */
+export async function getEquipment(db, id) {
+  const eq = await db.table('equipment').get(id);
+  return eq && alive(eq) ? eq : null;
+}
+
+/** 「いつも使う」を同じ種類の中で1つだけにする */
+async function clearOtherDefaults(db, saved, now) {
+  if (!saved.isDefault) return;
+  const others = (await db.table('equipment').where('kind').equals(saved.kind).toArray()).filter(
+    (e) => alive(e) && e.id !== saved.id && e.isDefault,
+  );
+  if (others.length) await db.table('equipment').bulkPut(others.map((e) => updateRecord(e, { isDefault: false }, now)));
+}
+
+/**
+ * 器具を登録する。その種類で最初の1つなら「いつも使う」にする。
+ * @param {object} fields normalizeEquipmentInput の value
+ */
+export async function addEquipment(db, fields, now = new Date()) {
+  let eq;
+  await db.transaction('rw', db.table('equipment'), async () => {
+    const sameKind = (await db.table('equipment').where('kind').equals(fields.kind).toArray()).filter(alive);
+    eq = createRecord({ ...fields, isDefault: Boolean(fields.isDefault) || sameKind.length === 0 }, now);
+    await db.table('equipment').put(eq);
+    await clearOtherDefaults(db, eq, now);
+  });
+  return eq;
+}
+
+/** 器具を直す */
+export async function updateEquipment(db, id, changes, now = new Date()) {
+  let next;
+  await db.transaction('rw', db.table('equipment'), async () => {
+    const cur = await db.table('equipment').get(id);
+    if (!cur || !alive(cur)) throw new Error('器具が見つかりません');
+    next = updateRecord(cur, changes, now);
+    await db.table('equipment').put(next);
+    await clearOtherDefaults(db, next, now);
+  });
+  return next;
+}
+
+/** 器具を削除する（印を付けるだけ。レシピや抽出の記録に残ったIDはそのまま） */
+export async function deleteEquipment(db, id, now = new Date()) {
+  const cur = await db.table('equipment').get(id);
+  if (cur && alive(cur)) await db.table('equipment').put(markDeleted(cur, now));
+}
+
+// ---- レシピ（A1） ----
+
+/** 削除の印が付いていないレシピの一覧 */
+export async function listRecipes(db) {
+  return (await db.table('recipes').toArray()).filter(alive);
+}
+
+/** レシピ1つ。ない・削除済みなら null */
+export async function getRecipe(db, id) {
+  const r = await db.table('recipes').get(id);
+  return r && alive(r) ? r : null;
+}
+
+/**
+ * レシピを作る（版番号1）。
+ * @param {object} fields normalizeRecipeInput の value
+ */
+export async function addRecipe(db, fields, now = new Date()) {
+  const r = createRecord({ ...fields, version: 1, parentId: null }, now);
+  await db.table('recipes').put(r);
+  return r;
+}
+
+/**
+ * レシピを直す。上書きして版番号を1つ上げる（抽出の記録は計画の写しを持つので、過去の記録は変わらない）
+ */
+export async function updateRecipe(db, id, fields, now = new Date()) {
+  let next;
+  await db.transaction('rw', db.table('recipes'), async () => {
+    const cur = await db.table('recipes').get(id);
+    if (!cur || !alive(cur)) throw new Error('レシピが見つかりません');
+    next = updateRecord(cur, { ...fields, version: (cur.version ?? 1) + 1 }, now);
+    await db.table('recipes').put(next);
+  });
+  return next;
+}
+
+/** お気に入りだけを切り替える（淹れ方は変わらないので版番号は上げない） */
+export async function setRecipeFavorite(db, id, favorite, now = new Date()) {
+  const cur = await db.table('recipes').get(id);
+  if (!cur || !alive(cur)) throw new Error('レシピが見つかりません');
+  const next = updateRecord(cur, { favorite: Boolean(favorite) }, now);
+  await db.table('recipes').put(next);
+  return next;
+}
+
+/** レシピを削除する（印を付けるだけ） */
+export async function deleteRecipe(db, id, now = new Date()) {
+  const cur = await db.table('recipes').get(id);
+  if (cur && alive(cur)) await db.table('recipes').put(markDeleted(cur, now));
+}
+
+// ---- 抽出（読むだけ。記録は1-4） ----
+
+/** 削除の印が付いていない抽出の一覧 */
+export async function listBrews(db) {
+  return (await db.table('brews').toArray()).filter(alive);
+}
+
+/** いちばん新しい抽出。なければ null */
+export async function getLastBrew(db) {
+  const list = await db.table('brews').orderBy('at').reverse().toArray();
+  return list.find(alive) ?? null;
+}
