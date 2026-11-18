@@ -4,6 +4,7 @@ import { normalizeBeanInput, beanToFormValues, PROCESS_OPTIONS, VARIETY_OPTIONS,
 import { ROAST_LEVELS, initialStockG } from './core/roast.js';
 import { formatG } from './core/format.js';
 import { $, el, queryParam, showMessage } from './ui.js';
+import { parseProductText, productMemo } from './core/tonya.js';
 import { registerServiceWorker } from './pwa.js';
 
 const db = openDb();
@@ -84,8 +85,60 @@ function updatePreview() {
   box.textContent = `在庫に入る量：約${formatG(stock.g)}（生豆時から${stock.lossPct}%減る見積もり。${how}）。届いたら実重量を量って入れると正確になります`;
 }
 
+// ---- 商品ページの文章から入れる（X28） ----
+/** 商品ページの価格表（100g・200g…の値段）。価格を手で直すまでは、表記重量に合わせて価格を入れ直す */
+let priceTable = [];
+let autoPrice = false;
+
+/** 選択肢にあればそのまま、なければ「その他」＋自由入力 */
+const withOther = (k, v, options) => (options.includes(v) ? { [k]: v, [`${k}Other`]: '' } : { [k]: 'その他', [`${k}Other`]: v });
+
+$('pasteRead').addEventListener('click', () => {
+  const p = parseProductText($('pasteText').value);
+  if (!p.found) {
+    showMessage('銘柄や産地が見つかりませんでした。商品ページの文章を全部コピーしたか確かめてください', 'error', 'pasteMsg');
+    return;
+  }
+  const values = { name: p.name, shop: DEFAULT_SHOP, productCode: p.productCode };
+  const filled = ['銘柄'];
+  const put = (k, v, label) => {
+    if (!v) return;
+    Object.assign(values, typeof v === 'object' ? v : { [k]: v });
+    if (label) filled.push(label);
+  };
+  put('country', p.country, '産地');
+  put('region', p.region, '地域');
+  put('farm', p.farm, '農園');
+  if (p.variety) put('variety', withOther('variety', p.variety, VARIETY_OPTIONS), '品種');
+  if (p.process) put('process', withOther('process', p.process, PROCESS_OPTIONS), '精製');
+  put('roastLevel', p.roastLevel, `焙煎度（店の標準の${p.roastLevel}）`);
+  if (p.labelWeightG) {
+    put('labelWeightG', String(p.labelWeightG), `表記重量（生豆時${p.labelWeightG}g）`);
+    values.labelWeightBasis = 'green';
+  }
+  put('priceJpy', p.priceJpy != null ? String(p.priceJpy) : '', '価格');
+  put('flavorNotes', p.flavorNotes, '店の風味説明');
+  const memo = productMemo(p);
+  if (memo && !form.elements.memo.value) put('memo', memo, 'メモ（規格など）');
+  writeForm(values);
+  priceTable = p.priceTable;
+  autoPrice = p.priceJpy != null;
+  if (filled.length > 4) $('more').open = true;
+  const table = priceTable.length > 1 ? `価格は表記重量に合わせて入れ直します（${priceTable.map((r) => `${r.g}g ${r.priceJpy.toLocaleString('ja-JP')}円`).join('・')}）。` : '';
+  showMessage(`入れた項目：${filled.join('・')}。焙煎度と重さは注文した内容に直してください。${table}`, 'ok', 'pasteMsg');
+  $('pasteBox').open = false;
+  updatePreview();
+  form.elements.name.scrollIntoView({ block: 'center', behavior: 'smooth' });
+});
+
 form.addEventListener('input', (event) => {
   if (event.target.name === 'variety' || event.target.name === 'process') syncOtherInputs();
+  if (event.target.name === 'priceJpy') autoPrice = false;
+  if (event.target.name === 'labelWeightG' && autoPrice) {
+    const g = Number(String(event.target.value).normalize('NFKC'));
+    const hit = priceTable.find((r) => r.g === g);
+    if (hit) form.elements.priceJpy.value = String(hit.priceJpy);
+  }
   updatePreview();
 });
 form.addEventListener('change', updatePreview);

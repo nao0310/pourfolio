@@ -26,7 +26,7 @@ function beanCard(bean, txs, doseG, today) {
   return el(
     'a',
     { class: `card bean-card${bean.status === 'finished' ? ' finished' : ''}`, href: `bean.html?id=${encodeURIComponent(bean.id)}` },
-    el('div', { class: 'bean-card-top' }, el('span', { class: 'bean-name' }, bean.name), freshnessPill(f)),
+    el('div', { class: 'bean-card-top' }, el('span', { class: 'bean-name' }, bean.name), bean.status !== 'ordered' && freshnessPill(f)),
     sub && el('div', { class: 'muted' }, sub),
     bean.status === 'ordered'
       ? el(
@@ -95,6 +95,14 @@ $('doseForm').addEventListener('submit', async (event) => {
   showMessage(`1杯 ${formatG(g)} で計算します`, 'ok', 'doseMsg');
   await render();
 });
+
+// 注文メールから登録して戻ってきたとき
+const registered = Number(new URLSearchParams(location.search).get('registered'));
+if (registered > 0) {
+  $('registeredMsg').textContent = `${registered}袋を「入荷待ち」として登録しました。届いたら、豆を押して「届いた」で重さを入れてください`;
+  $('registeredMsg').hidden = false;
+  history.replaceState(null, '', 'beans.html');
+}
 
 registerServiceWorker();
 render().catch((err) => {

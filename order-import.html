@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>注文メールから登録 - Pourfolio</title>
+  <meta name="theme-color" content="#5a371f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Pourfolio">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/base.css">
+</head>
+<body>
+  <main>
+    <p class="crumb"><a href="beans.html">豆と在庫</a></p>
+    <h1>注文メールから登録</h1>
+    <p class="muted">珈琲問屋の「ご注文ありがとうございます」のメールを貼り付けると、注文した豆を「入荷待ち」としてまとめて登録します。届いたら、豆の画面の「届いた」で重さを量って入れます。</p>
+
+    <section class="card">
+      <label class="field">
+        <span class="label">メールの本文</span>
+        <textarea id="mail" rows="8" placeholder="メールを開き、本文を長押し →「すべてを選択」→「コピー」して、ここに貼り付け"></textarea>
+        <span class="hint">名前・住所・電話番号は読み取らず、保存もしません。</span>
+      </label>
+      <div class="row">
+        <button class="btn" type="button" id="read">読み取る</button>
+        <button class="btn secondary" type="button" id="clear">消す</button>
+      </div>
+      <p id="readMsg" role="status"></p>
+    </section>
+
+    <section id="result" hidden>
+      <div class="card">
+        <h2>注文</h2>
+        <dl class="plan-numbers" id="orderInfo"></dl>
+        <p class="error" id="dupNote" hidden></p>
+      </div>
+      <h2>登録する豆</h2>
+      <p class="muted">印の付いた豆を、1袋ずつ登録します。銘柄と焙煎度は直せます。</p>
+      <div id="items"></div>
+      <p class="muted" id="others"></p>
+      <button class="btn block" type="button" id="save">入荷待ちとして登録</button>
+      <p id="msg" role="status"></p>
+    </section>
+  </main>
+  <script type="module" src="js/order-import-page.js"></script>
+</body>
+</html>

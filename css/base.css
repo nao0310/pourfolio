@@ -531,3 +531,12 @@ p > a:not(.btn):only-child { display: inline-block; padding: 11px 0; }
 .shop-main { display: flex; flex-direction: column; min-width: 0; }
 .shop-name { font-weight: 700; }
 #memo { width: 100%; box-sizing: border-box; font: inherit; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--fg); }
+
+/* 注文メールから登録（2-2） */
+.import-item .field { margin-top: 4px; }
+.import-item.off { opacity: 0.55; }
+.import-sub { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 8px; }
+.import-sub select { min-height: 44px; font: inherit; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--fg); }
+.top-links { margin: 0 0 8px; }
+.paste-card summary { cursor: pointer; color: var(--accent); font-weight: 700; padding: 6px 0; min-height: 44px; display: flex; align-items: center; }
+.paste-card textarea, #mail { width: 100%; box-sizing: border-box; font: inherit; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--fg); }
