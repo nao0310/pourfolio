@@ -1,9 +1,8 @@
-// 抽出の画面：計画（A1）→ ガイド付きタイマー（A2・A3）→ 実績の確認（A4）→ 保存
+// 抽出の画面：計画（A1）→ ガイド付きタイマー（A2・A3）→ 実績の確認（A4）→ 保存 → 味の評価（tasting.html）
 // 途中の状態は下書き（js/brew-draft.js）に残し、画面を開き直しても続きから進める。
-import { openDb, getRecipe, getLastBrew, listBeans, listEquipment, getSettings, updateSettings, saveBrew, getBeanWithTx } from './db.js';
+import { openDb, getRecipe, getLastBrew, listBeans, listEquipment, getSettings, updateSettings, saveBrew } from './db.js';
 import { planFromRecipe, planFromBrew, formatSec, POUR_STYLES } from './core/recipes.js';
 import { sortBeansForList } from './core/beans.js';
-import { remainingG, cupsLeft, doseFromSettings } from './core/inventory.js';
 import { formatG } from './core/format.js';
 import { timerView, cuesBetween, addLap, autoAdvance, pourName, pourEndSec } from './core/timer.js';
 import {
@@ -397,32 +396,12 @@ async function onSave(e) {
     const { brew } = await saveBrew(db, buildBrew({ draft, value, at, bean }));
     clearDraft();
     draft = null;
-    await showDone(brew, bean);
+    // そのまま味の評価へ（spec 8章：実績の確認 → テイスティング）。戻るで実績の確認に戻らないよう replace
+    location.replace(`tasting.html?brew=${encodeURIComponent(brew.id)}&saved=1`);
   } catch (err) {
     console.error(err);
     showMessage('保存できませんでした。もう一度押してください', 'error', 'rMsg');
   }
-}
-
-async function showDone(brew, bean) {
-  $('resultView').hidden = true;
-  $('doneView').hidden = false;
-  document.title = '保存しました - Pourfolio';
-  const a = brew.actual;
-  $('doneSummary').textContent = [
-    bean?.name ?? '豆なし',
-    `${formatG(a.doseG)}・${formatG(a.waterG)}`,
-    formatSec(a.totalSec),
-  ].join('　');
-  if (bean) {
-    const loaded = await getBeanWithTx(db, bean.id);
-    const dose = doseFromSettings(await getSettings(db));
-    const rest = remainingG(loaded?.txs ?? []);
-    $('doneStock').textContent = `${bean.name}の残り ${formatG(rest)}（あと${cupsLeft(rest, dose)}杯）`;
-    $('doneBean').href = `bean.html?id=${encodeURIComponent(bean.id)}`;
-    $('doneBean').hidden = false;
-  }
-  window.scrollTo(0, 0);
 }
 
 function discard() {
