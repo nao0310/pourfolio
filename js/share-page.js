@@ -55,8 +55,9 @@ async function initSend(id) {
     $('shareBtn').addEventListener('click', async () => {
       try {
         await navigator.share({ title: `レシピ「${recipe.name}」`, url: link });
-      } catch {
-        // 閉じただけのときは何もしない
+      } catch (err) {
+        // 閉じただけのときは何もしない。それ以外の失敗は知らせる（2-8の45番）
+        if (err?.name !== 'AbortError') showMessage('共有できませんでした。「リンクをコピー」を使ってください', 'error', 'copyMsg');
       }
     });
   }

@@ -49,7 +49,7 @@ import * as cue from './cue.js';
 import { createWakeLock } from './wake-lock.js';
 import { bestBrewForBean } from './core/today.js';
 import { autosaveAfterChange } from './autosave-file.js';
-import { $, el, queryParam, showMessage, stepperField, showPageLoadError } from './ui.js';
+import { $, el, queryParam, showMessage, stepperField, showPageLoadError, showToast } from './ui.js';
 import { singleFlight } from './core/once.js';
 import { registerServiceWorker, blockUpdatePrompt, recheckUpdatePrompt } from './pwa.js';
 import { askConfirm } from './confirm-box.js';
@@ -847,7 +847,13 @@ $('speechToggle').addEventListener('click', async () => {
   speechOn = !speechOn;
   renderSpeechToggle();
   if (!speechOn) cue.stopSpeaking();
-  await updateSettings(db, { speechOn });
+  try {
+    await updateSettings(db, { speechOn });
+  } catch (err) {
+    // 今の抽出では切り替わっている。次に開いたときに戻るだけなので、知らせるだけにする（2-8の45番）
+    console.error(err);
+    showToast('読み上げの設定を保存できませんでした。次に開いたときは前の設定に戻ります', 'error');
+  }
 });
 $('resultView').addEventListener('submit', (e) => {
   e.preventDefault(); // 保存中の2回目でも、ブラウザの送信は止める

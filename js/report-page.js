@@ -66,5 +66,5 @@ setupAnalysisPage();
 registerServiceWorker();
 init().catch((err) => {
   console.error(err);
-  $('sheet').replaceChildren(el('p', { class: 'muted' }, '読み込みに失敗しました。開き直してください'));
+  $('sheet').replaceChildren(el('p', { class: 'error' }, '読み込めませんでした。開き直してください')); // 赤い文で（2-8の45番）
 });

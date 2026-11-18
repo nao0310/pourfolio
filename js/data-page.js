@@ -274,9 +274,17 @@ if (autosaveSupported()) {
 
 $('appVersionLabel').textContent = versionLabel(APP_VERSION);
 renderChangelog();
-registerServiceWorker().then(() => navigator.serviceWorker?.ready).then(renderOffline, renderOffline);
+// 準備がいつまでも終わらないときも「確かめています…」のままにせず、5秒で今の状況を出す（2-8の49番）
+const swReady = registerServiceWorker().then(() => navigator.serviceWorker?.ready);
+Promise.race([swReady, new Promise((resolve) => setTimeout(resolve, 5000))]).then(renderOffline, renderOffline);
+swReady.then(renderOffline, () => {}); // 5秒より遅れて準備できたら、出し直す
 requestPersistentStorage();
 render().catch((err) => {
   console.error(err);
-  showMessage('記録の読み込みに失敗しました', 'error');
+  // 件数の「読み込み中…」を残さない（2-8の45番）
+  const dt = document.createElement('dt');
+  dt.className = 'error';
+  dt.textContent = '件数を読み込めませんでした';
+  $('counts').replaceChildren(dt, document.createElement('dd'));
+  showMessage('記録を読み込めませんでした。開き直してください', 'error');
 });

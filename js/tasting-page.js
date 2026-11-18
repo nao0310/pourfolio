@@ -305,8 +305,14 @@ async function onPickPhoto(slot, file) {
 
 async function onDeletePhoto(slot, photo) {
   if (!(await askConfirm(`${slot.label}の写真を削除しますか？元に戻せません`, { ok: '削除する', danger: true }))) return;
-  await deletePhoto(db, photo.id);
-  showMessage(`${slot.label}の写真を消しました`, 'ok', 'photoMsg');
+  try {
+    await deletePhoto(db, photo.id);
+  } catch (err) {
+    console.error(err);
+    showMessage('写真を削除できませんでした。もう一度押してください', 'error', 'photoMsg'); // 2-8の45番
+    return;
+  }
+  showMessage(`${slot.label}の写真を削除しました`, 'ok', 'photoMsg');
   await renderPhotos();
 }
 
@@ -382,7 +388,13 @@ async function onSaveTds() {
     showMessage(error, 'error', 'tdsMsg');
     return;
   }
-  brew = await setBrewTds(db, brew.id, value);
+  try {
+    brew = await setBrewTds(db, brew.id, value);
+  } catch (err) {
+    console.error(err);
+    showMessage('TDSを保存できませんでした。もう一度押してください', 'error', 'tdsMsg'); // 2-8の45番
+    return;
+  }
   showMessage(value == null ? 'TDSを消しました' : 'TDSを保存しました', 'ok', 'tdsMsg');
   await renderTds();
 }
