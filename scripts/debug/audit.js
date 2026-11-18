@@ -36,7 +36,7 @@ async function pagesWithIds({ every = false } = {}) {
   const recipe = newest(alive('recipes'));
   const brew = newest(alive('brews'), 'at');
   const eq = newest(alive('equipment'));
-  const exp = newest(alive('experiments'));
+  const exp = newest(alive('experiments').filter((e) => e.kind !== 'optimize'));
   if (bean) out.push(`bean.html?id=${bean.id}`, `bean-edit.html?id=${bean.id}`, `dialin-history.html?bean=${bean.id}`, `brew.html?bean=${bean.id}`, `ai.html?bean=${bean.id}`, `share.html?bean=${bean.id}`, `recipe-card.html?bean=${bean.id}&canister=1`);
   if (recipe) out.push(`recipe-edit.html?id=${recipe.id}`, `recipe-card.html?recipe=${recipe.id}`, `share.html?recipe=${recipe.id}`, `brew.html?recipe=${recipe.id}`);
   if (brew) out.push(`tasting.html?brew=${brew.id}`, `brew.html?brew=${brew.id}`);
