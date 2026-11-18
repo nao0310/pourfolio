@@ -33,6 +33,7 @@ const PAGE_TAB = Object.freeze({
   'life.html': 'analysis',
   'repro.html': 'analysis',
   'aging.html': 'analysis',
+  'wrapped.html': 'analysis',
   'more.html': 'more',
   'equipment.html': 'more',
   'compare.html': 'more',

@@ -3,12 +3,12 @@
 import { IMAGE_W, IMAGE_H, pourChart } from './core/report-image.js';
 import { formatSec } from './core/recipes.js';
 
-const C = { bg: '#faf6f0', card: '#ffffff', fg: '#2b1d12', muted: '#7a6656', line: '#e6dccf', accent: '#8b5a34', star: '#c7871f' };
+export const C = { bg: '#faf6f0', card: '#ffffff', fg: '#2b1d12', muted: '#7a6656', line: '#e6dccf', accent: '#8b5a34', star: '#c7871f' };
 const FONT = '"Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", system-ui, sans-serif';
 
-const font = (px, weight = 400) => `${weight} ${px}px ${FONT}`;
+export const font = (px, weight = 400) => `${weight} ${px}px ${FONT}`;
 
-function roundRect(ctx, x, y, w, h, r) {
+export function roundRect(ctx, x, y, w, h, r) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);
   ctx.arcTo(x + w, y, x + w, y + h, r);
@@ -18,7 +18,7 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-function text(ctx, s, x, y, { px = 36, weight = 400, color = C.fg, align = 'left', maxW } = {}) {
+export function text(ctx, s, x, y, { px = 36, weight = 400, color = C.fg, align = 'left', maxW } = {}) {
   ctx.font = font(px, weight);
   ctx.fillStyle = color;
   ctx.textAlign = align;

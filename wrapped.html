@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="color-scheme" content="light dark">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>年間まとめ - Pourfolio</title>
+  <meta name="theme-color" content="#5a371f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Pourfolio">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/base.css">
+</head>
+<body>
+  <main>
+    <p class="crumb"><a data-analysis href="analysis.html">分析</a></p>
+    <div class="wr-head">
+      <h1>年間まとめ</h1>
+      <label class="wr-year"><span class="visually-hidden">年</span><select id="year" aria-label="年"></select></label>
+    </div>
+
+    <div class="wr-deck" id="deck" tabindex="0" aria-roledescription="スライド" aria-label="年間まとめのカード" aria-live="polite">
+      <section class="wr-slide"><p class="muted">読み込み中…</p></section>
+    </div>
+    <div class="wr-nav">
+      <button class="btn secondary" type="button" id="prevBtn">前へ</button>
+      <span class="wr-count num" id="count"></span>
+      <button class="btn" type="button" id="nextBtn">次へ</button>
+    </div>
+    <p class="hint">左右にスワイプするか、カードの右側を押すと次へ進みます。左側を押すと戻ります。</p>
+  </main>
+  <!-- tabbar：npm run sw が書き込む（手で直さない） -->
+  <nav class="tabbar" aria-label="メニュー">
+    <a class="tab" href="./"><svg viewBox="0 0 24 24" class="tab-icon" aria-hidden="true"><path d="M4 11 12 4l8 7v9h-5v-6H9v6H4z"></path></svg><span class="tab-label">ホーム</span></a>
+    <a class="tab" href="recipes.html"><svg viewBox="0 0 24 24" class="tab-icon" aria-hidden="true"><path d="M5 6h14l-2 7a5 5 0 0 1-10 0zM9 20h6M12 18v2"></path></svg><span class="tab-label">淹れる</span></a>
+    <a class="tab" href="beans.html"><svg viewBox="0 0 24 24" class="tab-icon" aria-hidden="true"><path d="M12 3c4 0 6 4 6 9s-2 9-6 9-6-4-6-9 2-9 6-9zM12 4c-2 4 2 8 0 16"></path></svg><span class="tab-label">豆と在庫</span></a>
+    <a class="tab current" href="analysis.html" aria-current="page"><svg viewBox="0 0 24 24" class="tab-icon" aria-hidden="true"><path d="M4 20V4M4 20h16M8 16v-4M12 16V8M16 16v-6"></path></svg><span class="tab-label">分析</span></a>
+    <a class="tab" href="more.html"><svg viewBox="0 0 24 24" class="tab-icon" aria-hidden="true"><path d="M5 12h.01M12 12h.01M19 12h.01"></path></svg><span class="tab-label">その他</span></a>
+  </nav>
+  <!-- /tabbar -->
+  <script type="module" src="js/wrapped-page.js"></script>
+  <script type="module" src="js/tabbar.js"></script>
+</body>
+</html>

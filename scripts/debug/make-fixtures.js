@@ -4,6 +4,7 @@
 // 日付を省くと今日を基準にする（焙煎日からの日数や「1年前」が今日に合うように）。
 // 本物の保存処理（js/db.js）を fake-indexeddb の上で動かして作るので、在庫の履歴などのつながりはアプリと同じになる。
 import { writeFile, mkdir } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { IDBFactory, IDBKeyRange } from 'fake-indexeddb';
@@ -230,6 +231,21 @@ async function nasty() {
   // 申し送り（X32）：1年前の袋に長い一言、同じ銘柄の新しい袋（未開封）
   await setHandoverNote(db, old.id, '<b>次は</b>'.concat('焙煎10日からが良い。'.repeat(20)).slice(0, 200), ago(360));
   await bean(db, { name: '1年前のケニア', actualWeightG: '100', roastLevel: 'シティ', roastDate: ymdAgo(3) }, ago(1));
+
+  // 年間まとめ（X5）：年の境目の2杯（去年の12月31日 23:30 と今年の1月1日 0:30）、地図にない産地、
+  // 提案どおりに淹れたがあとの杯に★がない回（数えない）と、★がある回
+  const jan1 = new Date(NOW.getFullYear(), 0, 1, 8);
+  const toJan1 = Math.round((new Date(NOW.getFullYear(), NOW.getMonth(), NOW.getDate(), 8) - jan1) / 86400000);
+  const atlantis = await bean(db, { name: '地図にない産地の豆', actualWeightG: '100', roastLevel: 'シティ', country: 'アトランティス（架空の国）' }, ago(toJan1 + 5));
+  const brDec31 = await brew(db, { recipe: r, bean: atlantis, at: ago(toJan1 + 1, 23, 30) });
+  await rate(db, brDec31.id, { stars: 5 }, ago(toJan1 + 1, 23, 45));
+  const brJan1 = await brew(db, { recipe: r, bean: atlantis, at: ago(toJan1, 0, 30) });
+  await rate(db, brJan1.id, { stars: 1 }, ago(toJan1, 0, 45));
+  const sugAt = ago(2).toISOString();
+  const sug = (brewId, nextBrewId) => ({ id: randomUUID(), createdAt: sugAt, updatedAt: sugAt, deletedAt: null, kind: 'dialin', brewId, nextBrewId, adopted: true, action: { kind: 'finer', short: '挽き目を細かく', text: '挽き目を1目盛り細かく' }, jarBefore: {}, tagsBefore: [] });
+  await db.table('suggestions').put(sug(brNoRoast.id, brEmpty.id));
+  await db.table('suggestions').put(sug(brNoBean.id, brIce.id));
+  await db.table('suggestions').put(sug(brDec31.id, brJan1.id));
 
   // 在庫のつじつまを手で確かめる用のメモ（コンソールに出す）
   const { txs } = await getBeanWithTx(db, minus.id);

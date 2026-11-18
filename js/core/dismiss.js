@@ -24,6 +24,7 @@ export const DISMISS_RULES = Object.freeze({
   handover: { days: null, label: 'この豆ではもう出しません' },
   hot: { days: null, label: '今日はもう出しません' },
   season: { days: null, label: 'この季節はもう出しません' },
+  wrapped: { days: null, label: 'この年はもう出しません' },
 });
 
 /**
