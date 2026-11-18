@@ -6,6 +6,7 @@ import { TABLES, SETTINGS_ID, createRecord, updateRecord, markDeleted } from './
 import { initialStockG } from './core/roast.js';
 import { remainingG, adjustDelta } from './core/inventory.js';
 import { makeBackup, mergeRecords } from './core/backup.js';
+import { buildTasting, pickTasting, pickUnratedBrew } from './core/tastings.js';
 
 /** 本番のデータベース名（保存テストの pourfolio-storage-test とは別） */
 export const DB_NAME = 'pourfolio';
@@ -395,4 +396,35 @@ export async function listBrews(db) {
 export async function getLastBrew(db) {
   const list = await db.table('brews').orderBy('at').reverse().toArray();
   return list.find(alive) ?? null;
+}
+
+// ---- 味の評価（B1・B2） ----
+
+/** その抽出の「自分・温かいうち」の評価。なければ null */
+export async function getTastingForBrew(db, brewId) {
+  return pickTasting(await db.table('tastings').where('brewId').equals(brewId).toArray(), brewId);
+}
+
+/**
+ * 抽出の評価を保存する。すでにあればその1件を直す（1杯につき1件のまま）。
+ * @param {object} value normalizeTastingInput の value
+ * @returns {Promise<object>} 保存した評価
+ */
+export async function saveTasting(db, brewId, value, now = new Date()) {
+  let saved;
+  await db.transaction('rw', db.table('brews'), db.table('tastings'), async () => {
+    const brew = await db.table('brews').get(brewId);
+    if (!brew || !alive(brew)) throw new Error('抽出の記録が見つかりません');
+    const fields = buildTasting({ brewId, value });
+    const cur = pickTasting(await db.table('tastings').where('brewId').equals(brewId).toArray(), brewId);
+    saved = cur ? updateRecord(cur, fields, now) : createRecord(fields, now);
+    await db.table('tastings').put(saved);
+  });
+  return saved;
+}
+
+/** 評価がまだの抽出のうち、直近24時間でいちばん新しいもの。なければ null */
+export async function getUnratedBrew(db, now = new Date()) {
+  const [brews, tastings] = await Promise.all([db.table('brews').toArray(), db.table('tastings').toArray()]);
+  return pickUnratedBrew(brews, tastings, now);
 }
