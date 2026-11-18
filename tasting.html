@@ -72,7 +72,19 @@
         <p id="doneBrew" class="muted"></p>
         <p id="doneSummary"></p>
       </div>
-      <p class="muted">次の1杯の直し方は、ステップ1-6で作ります。</p>
+      <!-- 次の1杯の直し方（ダイヤルイン提案、F1） -->
+      <div class="card suggest-card" id="suggestCard" hidden>
+        <h2>次の1杯</h2>
+        <p class="muted" id="sCell"></p>
+        <p class="suggest-action" id="sAction"></p>
+        <p class="muted" id="sNext"></p>
+        <div class="row">
+          <a class="btn" id="sBrew">この提案で淹れる</a>
+        </div>
+        <h3 class="suggest-why">根拠</h3>
+        <ol class="reasons" id="sReasons"></ol>
+      </div>
+      <p class="muted" id="noSuggest" hidden>ちょうど良さの「濃さ」「酸味」「苦味」「渋み」か、一言の「薄い」「濃い」「酸っぱい」「苦い」「渋い」を入れると、次の1杯の直し方が出ます。</p>
       <div class="row">
         <a class="btn" href="index.html">トップへ</a>
         <button class="btn secondary" type="button" id="edit">評価を直す</button>
