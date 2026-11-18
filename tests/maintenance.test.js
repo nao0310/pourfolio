@@ -39,7 +39,9 @@ test('設定のない器具（3-5 より前）は種類ごとの初期値で読�
 test('時期：日数か杯数のどちらかに届いたら。前回がなければ登録した日から', () => {
   const s = maintenanceStatus(grinder({ createdAt: daysAgo(31) }), [], NOW);
   assert.equal(s.due, true);
-  assert.equal(s.why, '登録から31日');
+  assert.equal(s.why, '登録から31日・0杯');
+  // 杯数で数えないケトルは日数だけ
+  assert.equal(maintenanceStatus(kettle({ createdAt: daysAgo(61) }), [brewAt(1)], NOW).why, '登録から61日');
   const few = maintenanceStatus(grinder(), [brewAt(1), brewAt(2)], NOW);
   assert.deepEqual([few.due, few.daysLeft, few.cupsLeft, few.cups], [false, 20, 48, 2]);
   assert.equal(maintenanceLine(few), '刃の掃除：あと20日か48杯');

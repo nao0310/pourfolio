@@ -94,6 +94,11 @@ export function makeDemoData(now = new Date()) {
     { kind: 'water', name: 'デモ 水道水＋浄水器', attrs: { tdsMgL: 90, hardnessMgL: 55, alkalinityMgL: 35, ph: 7.3, sodiumMgL: 9 }, isDefault: false, memo: '' },
     first,
   );
+  // お手入れ（D4）：手挽きミルは前回から33日（ホームに出る）、電動ミルとケトルは最近済ませた
+  const doneAt = (d) => ({ lastDoneAt: at(d, 20, 0).toISOString(), snoozedUntil: null, log: [at(d, 20, 0).toISOString()] });
+  grinder.maintenance = { enabled: true, everyDays: 30, everyCups: 50, ...doneAt(33) };
+  grinder2.maintenance = { enabled: true, everyDays: 30, everyCups: 50, ...doneAt(9) };
+  kettle.maintenance = { enabled: true, everyDays: 60, everyCups: null, ...doneAt(20) };
   const equipment = [dripper, filter, grinder, grinder2, kettle, water];
 
   const recipe = createRecord(
@@ -305,6 +310,19 @@ export function makeDemoData(now = new Date()) {
       if (i === 4 && rnd() < 0.3) g += 1; // 途中で戻すこともある
     });
   });
+
+  // おすそ分け（X34）と次の自分への一言（X32）：古い袋に少し
+  const giftOf = (bean, g, recipient, memo, feedback, daysAfter) => {
+    const when = new Date(`${bean.arrivalDate}T19:00:00`);
+    when.setDate(when.getDate() + daysAfter);
+    inventoryTx.push(createRecord({ beanId: bean.id, at: when.toISOString(), deltaG: -g, kind: 'gift', brewId: null, recipient, memo, feedback, feedbackAt: feedback ? when.toISOString() : null }, when));
+  };
+  if (beans[0]) {
+    giftOf(beans[0], 10, '母', '豆のまま', '香りが華やかでおいしかったって', 6);
+    beans[0].handoverNote = '焙煎10日目からが良い。挽き目は22くらいで、92℃がちょうど良かった';
+    beans[0].handoverNoteAt = beans[0].updatedAt;
+  }
+  if (beans[2]) giftOf(beans[2], 12, '職場の同僚', '挽いて渡した', '', 4);
 
   return {
     beans,

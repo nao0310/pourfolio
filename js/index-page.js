@@ -2,7 +2,10 @@
 import { isStandalone, registerServiceWorker, requestPersistentStorage } from './pwa.js';
 import { installAdvice } from './core/install.js';
 import { loadDraft } from './brew-draft.js';
-import { openDb, readAll, getSettings, setDeviceSettings, getUnratedBrew, getCoolPromptBrew } from './db.js';
+import { openDb, readAll, getSettings, setDeviceSettings, getUnratedBrew, getCoolPromptBrew, markMaintenanceDone, snoozeMaintenance, listEquipment, listBrews } from './db.js';
+import { dueMaintenance, SNOOZE_DAYS } from './core/maintenance.js';
+import { EQUIPMENT_KINDS } from './core/equipment.js';
+import { singleFlight } from './core/once.js';
 import { APP_VERSION, versionLabel, whatsNew } from './core/version.js';
 import { restockPlan, restockText } from './core/restock.js';
 import { brewLine, tastingSummary } from './core/tastings.js';
@@ -307,6 +310,62 @@ function renderRestock(all, settings) {
   showCard($('restockCard'), 'restock', `${t.title}|${t.text}`);
 }
 
+/**
+ * 器具のお手入れ（D4）：時期が来たものを並べ、「済んだ」「3日後に」を出す。
+ * グラインダーを済みにしたら、ゼロ点を確かめる案内に置き換える（分解・清掃で目盛りがずれることがあるため、spec 4章）
+ */
+function renderMaintenance(equipment, brews) {
+  const due = dueMaintenance(equipment, brews, new Date());
+  $('mtCard').hidden = due.length === 0;
+  $('mtList').replaceChildren(...due.map(mtItem));
+}
+
+function mtItem(s) {
+  const eq = s.eq;
+  const li = el('li', { class: 'mt-item' });
+  const act = (fn) =>
+    singleFlight(async () => {
+      try {
+        await fn();
+      } catch (err) {
+        console.error(err);
+        li.append(el('p', { class: 'error' }, 'できませんでした。もう一度押してください'));
+        return;
+      }
+      await refreshMaintenance(li, eq, s.label);
+    });
+  li.append(
+    el('p', {}, el('strong', {}, `${EQUIPMENT_KINDS[eq.kind]}「${eq.name}」の${s.label}`), el('span', { class: 'muted' }, `（${s.why}）`)),
+    el('p', { class: 'muted small' }, s.how),
+    el(
+      'div',
+      { class: 'row' },
+      el('button', { type: 'button', class: 'btn', onclick: act(() => markMaintenanceDone(db, eq.id)) }, '済んだ'),
+      el('button', { type: 'button', class: 'btn secondary', onclick: act(() => snoozeMaintenance(db, eq.id)) }, `${SNOOZE_DAYS}日後に`),
+    ),
+  );
+  return li;
+}
+
+/** 押したあと：グラインダーを済みにしたならゼロ点の案内、それ以外は行を消す */
+async function refreshMaintenance(li, eq, label) {
+  const [equipment, brews] = await Promise.all([listEquipment(db), listBrews(db)]);
+  const now = equipment.find((e) => e.id === eq.id);
+  const done = now?.maintenance?.lastDoneAt && Date.now() - Date.parse(now.maintenance.lastDoneAt) < 60000;
+  if (done && eq.kind === 'grinder') {
+    const zero = String(eq.attrs?.zeroPoint ?? '').trim();
+    li.replaceChildren(
+      el('p', {}, `「${eq.name}」の${label}を済みにしました。`),
+      el('p', { class: 'muted' }, zero ? `刃を外したなら、ゼロ点（${zero}）がずれていないか確かめましょう。` : '刃を外したなら、ゼロ点（刃が触れる目盛り）を確かめて、器具に記録しておきましょう。'),
+      el('p', {}, el('a', { class: 'btn secondary', href: `equipment-edit.html?id=${encodeURIComponent(eq.id)}` }, 'ゼロ点を見る')),
+    );
+    return;
+  }
+  li.remove();
+  const rest = dueMaintenance(equipment, brews, new Date());
+  if (!rest.length && !$('mtList').querySelector('li')) $('mtCard').hidden = true;
+}
+
 /** 自動ファイル保存（X1）が止まっていれば、再開のボタン（許可を聞くのでボタンで） */
 async function renderAutosave() {
   if (!autosaveSupported()) return;
@@ -334,6 +393,7 @@ async function init() {
   renderBeans(beanRows({ beans: all.beans, txs: all.inventoryTx, portions: all.frozenPortions, doseG: doseFromSettings(settings), today: localYmd() }));
   renderRecent(all, beanName);
   renderRestock(all, settings);
+  renderMaintenance(all.equipment, all.brews);
   renderSeason(all);
   await renderUnrated(beanName);
   await renderCool(beanName);

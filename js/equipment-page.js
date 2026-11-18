@@ -1,5 +1,6 @@
 // 器具と水の一覧（D1・D3）と、グラインダーの目盛りの換算（D2）
-import { openDb, listEquipment } from './db.js';
+import { openDb, listEquipment, listBrews } from './db.js';
+import { maintenanceStatus, maintenanceLine } from './core/maintenance.js';
 import { EQUIPMENT_KINDS, groupEquipmentByKind, equipmentSummary } from './core/equipment.js';
 import { scaleOf, convertSetting, grindSizeText } from './core/grinder-scale.js';
 import { $, el } from './ui.js';
@@ -7,8 +8,12 @@ import { registerServiceWorker } from './pwa.js';
 
 const db = openDb();
 
+/** お手入れ（D4）の状態を出すための抽出の一覧 */
+let brews = [];
+
 function itemRow(eq) {
   const summary = equipmentSummary(eq);
+  const mt = maintenanceStatus(eq, brews);
   return el(
     'a',
     { class: 'list-row', href: `equipment-edit.html?id=${encodeURIComponent(eq.id)}` },
@@ -17,6 +22,7 @@ function itemRow(eq) {
       { class: 'list-row-main' },
       el('span', { class: 'list-row-title' }, eq.name),
       summary && el('span', { class: 'muted' }, summary),
+      mt && el('span', { class: mt.reached ? 'mt-due' : 'muted' }, maintenanceLine(mt)),
     ),
     eq.isDefault && el('span', { class: 'pill tag' }, 'いつも使う'),
   );
@@ -60,7 +66,8 @@ $('convFrom').addEventListener('change', renderConvert);
 $('convSetting').addEventListener('input', renderConvert);
 
 async function render() {
-  const all = await listEquipment(db);
+  const [all, list] = await Promise.all([listEquipment(db), listBrews(db)]);
+  brews = list;
   setupConvert(all);
   const groups = groupEquipmentByKind(all);
   const cards = Object.entries(EQUIPMENT_KINDS).map(([kind, label]) => {

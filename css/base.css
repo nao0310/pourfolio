@@ -462,6 +462,14 @@ body.timer-on { overflow: hidden; }
 .today-suggest { font-weight: 700; }
 .sec-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .sec-head a { color: var(--accent); display: inline-block; padding: 10px 0; }
+/* 器具のお手入れ（D4） */
+.mt-list { list-style: none; margin: 8px 0 0; padding: 0; }
+.mt-item { padding: 8px 0; border-top: 1px solid var(--line); }
+.mt-item:first-child { border-top: 0; }
+.mt-item p { margin: 4px 0; }
+.mt-due { color: var(--danger); font-weight: 600; }
+.field-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.field-pair .with-unit input { min-width: 0; }
 .plain-list { list-style: none; margin: 8px 0 0; padding: 0; }
 .plain-list li { border-top: 1px solid var(--line); }
 .plain-list li:first-child { border-top: 0; }

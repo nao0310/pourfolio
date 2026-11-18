@@ -115,15 +115,15 @@ export function maintenanceStatus(eq, brews = [], now = new Date()) {
     snoozed: reached && snoozed,
     daysLeft,
     cupsLeft,
-    why: reached ? dueWhy({ sinceDone: m.lastDoneAt != null, days, cups, byDays, byCups }) : '',
+    why: reached ? dueWhy({ sinceDone: m.lastDoneAt != null, days, cups, withCups: m.everyCups != null }) : '',
   };
 }
 
-function dueWhy({ sinceDone, days, cups, byDays, byCups }) {
+function dueWhy({ sinceDone, days, cups, withCups }) {
   const from = sinceDone ? '前回から' : '登録から';
   const parts = [];
-  if (byDays || days != null) parts.push(`${days}日`);
-  if (byCups || cups > 0) parts.push(`${cups}杯`);
+  if (days != null) parts.push(`${days}日`);
+  if (withCups) parts.push(`${cups}杯`);
   return `${from}${parts.join('・')}`;
 }
 
