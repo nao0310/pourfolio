@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>豆と在庫 - Pourfolio</title>
+  <meta name="theme-color" content="#5a371f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Pourfolio">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/base.css">
+</head>
+<body>
+  <main class="with-bottom-bar">
+    <p class="crumb"><a href="./">トップ</a></p>
+    <h1>豆と在庫</h1>
+
+    <div id="list" aria-live="polite"><p class="muted">読み込み中…</p></div>
+
+    <label class="check-row">
+      <input type="checkbox" id="showFinished">
+      <span>飲み切りの豆も表示する <span class="muted" id="finishedCount"></span></span>
+    </label>
+
+    <div class="card">
+      <h2>残り杯数の計算</h2>
+      <p class="muted">1杯に使う粉の量です。残り杯数と「1杯淹れた」の初期値に使います。</p>
+      <form id="doseForm" class="inline-form">
+        <label class="field compact">
+          <span class="label">1杯の粉の量</span>
+          <span class="with-unit"><input type="text" inputmode="decimal" id="dose" autocomplete="off"><span>g</span></span>
+        </label>
+        <button class="btn secondary" type="submit">保存</button>
+      </form>
+      <p id="doseMsg" role="status"></p>
+    </div>
+
+    <div class="bottom-bar">
+      <a class="btn block" href="bean-edit.html">＋ 豆を登録</a>
+    </div>
+  </main>
+  <script type="module" src="js/beans-page.js"></script>
+</body>
+</html>
