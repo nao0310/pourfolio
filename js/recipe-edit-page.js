@@ -7,6 +7,9 @@ import {
   STRENGTHS_46,
   POUR_STYLES,
   DEFAULT_RATIO,
+  DEFAULT_FLOW_GPS,
+  fillPourSecs,
+  flowOf,
   newRecipeState,
   recipeToState,
   normalizeRecipeInput,
@@ -50,6 +53,18 @@ const grind = stepperField({
   hint: '数字の目盛りなら±で動かせます。文字でも入れられます',
   onValue: (_n, raw) => (state.grindSetting = raw),
 });
+const flow = stepperField({
+  id: 'flowGps',
+  label: '目安の流速',
+  unit: 'g/秒',
+  step: 0.5,
+  decimals: 1,
+  min: 0.5,
+  max: 100,
+  hint: '注ぐ量÷流速で、各投の注ぐ秒数を計算します（秒数を手で直した投はそのまま）',
+  onValue: onFlow,
+});
+$('flowField').append(flow.node);
 $('doseField').append(dose.node);
 $('ratioField').append(ratioF.node);
 $('waterField').append(water.node);
@@ -62,28 +77,58 @@ function syncNumbers() {
   ratioF.set(ratio);
   water.set(state.waterG);
   temp.set(state.tempC);
+  flow.set(state.flowGps);
   if (document.activeElement !== $('targetTotalSec')) $('targetTotalSec').value = formatSec(state.targetTotalSec);
+}
+
+const flowNow = () => (valid(state.flowGps, 0.5, 100) ? state.flowGps : DEFAULT_FLOW_GPS);
+
+/** 注湯を作り直したあと、手で直した注ぐ秒数を同じ投に戻し、ほかは流速から計算し直す */
+function refillSecs(pours, old = state.pours) {
+  const kept = pours.map((p, i) =>
+    old[i]?.pourSecManual && typeof old[i].pourSec === 'number' ? { ...p, pourSec: old[i].pourSec, pourSecManual: true } : { ...p, pourSecManual: false },
+  );
+  return fillPourSecs(kept, flowNow());
 }
 
 /** 雛形があれば作り直す。なければ注湯を湯量に合わせて比例で直す */
 function rebuild({ keepWater = false } = {}) {
   if (state.template) {
     state.template.ratio = ratio;
-    const made = applyTemplate(state.template, state.doseG);
+    const made = applyTemplate(state.template, state.doseG, flowNow());
     if (made) {
       const targetWater = keepWater ? state.waterG : made.waterG;
       state.waterG = targetWater;
-      state.pours = keepWater ? scalePoursToWater(made.pours, targetWater) : made.pours;
+      state.pours = refillSecs(keepWater ? scalePoursToWater(made.pours, targetWater) : made.pours);
       state.targetTotalSec = made.targetTotalSec;
     }
   } else if (valid(state.waterG, 10, 3000) && state.pours.length && state.pours.every((p) => toNum(p.toG) > 0)) {
-    state.pours = scalePoursToWater(
-      state.pours.map((p) => ({ ...p, toG: toNum(p.toG) })),
-      state.waterG,
+    state.pours = refillSecs(
+      scalePoursToWater(
+        state.pours.map((p) => ({ ...p, toG: toNum(p.toG) })),
+        state.waterG,
+      ),
     );
   }
   renderPours();
   syncNumbers();
+}
+
+function onFlow(n) {
+  if (!valid(n, 0.5, 100)) return;
+  state.flowGps = n;
+  recalcAutoSecs();
+}
+
+/** 手で直していない投の注ぐ秒数を計算し直し、欄に入れる（入力中の欄は作り直さない） */
+function recalcAutoSecs() {
+  const numeric = state.pours.map((p) => ({ ...p, toG: toNum(p.toG), atSec: typeof p.atSec === 'number' ? p.atSec : parseSec(p.atSec) }));
+  const filled = fillPourSecs(numeric, flowNow());
+  state.pours.forEach((p, i) => {
+    if (!p.pourSecManual) p.pourSec = filled[i].pourSec ?? '';
+    secFields[i]?.set(p.pourSec);
+  });
+  updateFlows();
 }
 
 function onDose(n) {
@@ -165,6 +210,8 @@ function syncTemplate() {
 $('name').addEventListener('input', () => (nameTouched = true));
 
 // ---- 注湯の表 ----
+let secFields = []; // 各投の「注ぐ秒数」の欄
+
 function pourRow(p, i, prevToG) {
   const toG = toNum(p.toG);
   const amount = toG > 0 && prevToG != null ? Math.round((toG - prevToG) * 10) / 10 : null;
@@ -211,6 +258,21 @@ function pourRow(p, i, prevToG) {
     el('option', { value: '' }, '注ぎ方'),
     ...Object.entries(POUR_STYLES).map(([v, label]) => el('option', { value: v, selected: p.style === v }, label)),
   );
+  const secField = stepperField({
+    id: `pourSec${i}`,
+    label: '注ぐ秒数',
+    unit: '秒',
+    step: 1,
+    min: 1,
+    max: 600,
+    onValue: (n, raw) => {
+      state.pours[i].pourSec = n == null || Number.isNaN(n) ? raw : n;
+      state.pours[i].pourSecManual = true;
+      updateFlows();
+    },
+  });
+  secField.set(p.pourSec);
+  secFields[i] = secField;
   return el(
     'div',
     { class: 'pour-row' },
@@ -237,10 +299,12 @@ function pourRow(p, i, prevToG) {
           '×',
         ),
     ),
+    el('div', { class: 'pour-sec' }, secField.node, el('span', { class: 'muted flow num', data: { i } })),
   );
 }
 
 function renderPours() {
+  secFields = [];
   let prev = 0;
   const rows = state.pours.map((p, i) => {
     const row = pourRow(p, i, prev);
@@ -261,14 +325,27 @@ function updatePourChecks() {
     if (box) box.textContent = g > 0 && prev != null ? `${Math.round((g - prev) * 10) / 10}g注ぐ` : '';
     prev = g > 0 ? g : null;
   });
+  recalcAutoSecs();
   const last = toNum(state.pours.at(-1)?.toG);
   $('fitPours').hidden = !(last > 0 && valid(state.waterG, 10, 3000) && Math.abs(last - state.waterG) > 0.5);
+}
+
+/** 各投の流速を表示し直す */
+function updateFlows() {
+  let prev = 0;
+  state.pours.forEach((p, i) => {
+    const g = toNum(p.toG);
+    const box = $('pours').querySelector(`.flow[data-i="${i}"]`);
+    const f = g > 0 && prev != null ? flowOf(g - prev, toNum(p.pourSec)) : null;
+    if (box) box.textContent = f != null ? `流速 ${f}g/秒${p.pourSecManual ? '' : '（自動）'}` : '';
+    prev = g > 0 ? g : null;
+  });
 }
 
 $('addPour').addEventListener('click', () => {
   const last = state.pours.at(-1);
   const at = typeof last?.atSec === 'number' ? last.atSec + 30 : '';
-  state.pours.push({ atSec: at, toG: '', style: last?.style ?? '' });
+  state.pours.push({ atSec: at, toG: '', style: last?.style ?? '', pourSec: '', pourSecManual: false });
   if (state.template) {
     state.template = null;
     syncTemplate();
@@ -278,9 +355,11 @@ $('addPour').addEventListener('click', () => {
 });
 
 $('fitPours').addEventListener('click', () => {
-  state.pours = scalePoursToWater(
-    state.pours.map((p) => ({ ...p, toG: toNum(p.toG) })),
-    state.waterG,
+  state.pours = refillSecs(
+    scalePoursToWater(
+      state.pours.map((p) => ({ ...p, toG: toNum(p.toG) })),
+      state.waterG,
+    ),
   );
   renderPours();
 });

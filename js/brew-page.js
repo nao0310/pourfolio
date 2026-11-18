@@ -5,7 +5,7 @@ import { planFromRecipe, planFromBrew, formatSec, POUR_STYLES } from './core/rec
 import { sortBeansForList } from './core/beans.js';
 import { remainingG, cupsLeft, doseFromSettings } from './core/inventory.js';
 import { formatG } from './core/format.js';
-import { timerView, cuesBetween, addLap, autoAdvance, pourName } from './core/timer.js';
+import { timerView, cuesBetween, addLap, autoAdvance, pourName, pourEndSec } from './core/timer.js';
 import {
   newDraft,
   elapsedSec,
@@ -106,7 +106,13 @@ async function showPlan(loaded, lastBeanId) {
         el('td', {}, pourName(i).replace('投目', '')),
         el('td', { class: 'num' }, formatSec(p.atSec)),
         el('td', { class: 'num' }, formatG(p.toG)),
-        el('td', {}, el('span', { class: 'num' }, `+${formatG(amount)}`), p.style ? el('span', { class: 'muted' }, ` ${POUR_STYLES[p.style] ?? ''}`) : ''),
+        el(
+          'td',
+          {},
+          el('span', { class: 'num' }, `+${formatG(amount)}`),
+          p.style ? el('span', { class: 'muted' }, ` ${POUR_STYLES[p.style] ?? ''}`) : '',
+          el('div', { class: 'muted small num' }, `${pourEndSec(plan, i) - p.atSec}秒で注ぐ`),
+        ),
       );
     }),
   );
@@ -181,7 +187,7 @@ function tick() {
   const sec = elapsedSec(draft, Date.now());
   // 合図：前回の更新から今までに来た合図を鳴らす（スタート直後は0秒の合図から）
   const from = prevSec ?? (sec < 1 ? -0.001 : sec);
-  for (const c of cuesBetween(plan, from, sec)) cue.playCue(c, { speech: speechOn });
+  for (const c of cuesBetween(plan, from, sec, draft.laps)) cue.playCue(c, { speech: speechOn });
   prevSec = sec;
 
   const laps = autoAdvance(plan.pours, draft.laps, sec);
@@ -196,40 +202,63 @@ function renderTimer(v, sec) {
   $('tElapsed').textContent = formatSec(Math.floor(sec));
   const count = $('tCount');
   count.classList.remove('soon');
+  const screen = $('timerView');
+  screen.dataset.phase = v.phase;
   const tap = $('tap');
   tap.classList.toggle('drawdown', v.phase === 'drawdown');
+  tap.classList.toggle('idle', v.phase === 'wait' && !v.canTap);
   const plan = draft.plan;
+  const styleOf = (x) => (x.style ? `（${POUR_STYLES[x.style] ?? ''}）` : '');
+  const toTarget = (s) => (s == null ? '' : s >= 0 ? `目標まで あと${s}秒` : `目標を${-s}秒 超過`);
 
   if (v.phase === 'drawdown') {
-    $('tLabel').textContent = '落ち切り待ち';
+    $('tPhase').textContent = '落ち切り待ち';
+    $('tLabel').textContent = '';
     $('tTarget').textContent = `累計 ${formatG(plan.waterG)}`;
     $('tAdd').textContent = '';
-    count.textContent =
-      v.secsToTarget == null ? '' : v.secsToTarget >= 0 ? `目標まで あと${v.secsToTarget}秒` : `目標を${-v.secsToTarget}秒 超過`;
+    count.textContent = toTarget(v.secsToTarget);
     $('tNext').textContent = plan.targetTotalSec ? `目標 ${formatSec(plan.targetTotalSec)}` : '';
     $('tapLabel').textContent = '落ち切った';
     $('tapSub').textContent = '押すとタイマーを止めて記録に進みます';
     return;
   }
 
-  const style = v.style ? `（${POUR_STYLES[v.style] ?? ''}）` : '';
-  $('tTarget').textContent = `累計 ${formatG(v.toG)}`;
-  $('tAdd').textContent = `+${formatG(v.addG)}${style}`;
-  const next = plan.pours[v.index + 1];
-  $('tNext').textContent = next ? `その次：${pourName(v.index + 1)} ${formatG(next.toG)}（${formatSec(next.atSec)}）` : '最後の注湯です';
-
-  if (v.phase === 'wait') {
-    $('tLabel').textContent = `次：${v.name}`;
-    count.textContent = `あと${v.secsLeft}秒`;
+  if (v.phase === 'pour') {
+    $('tPhase').textContent = '注ぐ';
+    $('tLabel').textContent = v.name;
+    $('tTarget').textContent = `累計 ${formatG(v.toG)}`;
+    $('tAdd').textContent = `+${formatG(v.addG)}${styleOf(v)}`;
+    count.textContent = `注ぎ終わりまで あと${v.secsLeft}秒`;
     if (v.secsLeft <= 3) count.classList.add('soon');
-    $('tapLabel').textContent = '注湯完了';
-    $('tapSub').textContent = '早めに注ぎ終えたときに押します';
-  } else {
-    $('tLabel').textContent = `${v.name}を注ぐ`;
-    count.textContent = v.secsToNext != null ? `次の注湯まで ${v.secsToNext}秒` : '';
-    if (v.secsToNext != null && v.secsToNext <= 3) count.classList.add('soon');
+    $('tNext').textContent = v.flowGps != null ? `${v.pourSec}秒で注ぐ（流速 ${v.flowGps}g/秒）` : '';
     $('tapLabel').textContent = v.isLast ? '注ぎ終えた' : '注湯完了';
-    $('tapSub').textContent = '画面の下半分のどこを押してもよい';
+    $('tapSub').textContent = '注ぎ終えたら押します（画面の下半分のどこでもよい）';
+    return;
+  }
+
+  // 待つ
+  $('tPhase').textContent = '待つ';
+  const n = v.next;
+  if (n) {
+    $('tLabel').textContent = `次：${n.name}`;
+    $('tTarget').textContent = `累計 ${formatG(n.toG)}`;
+    $('tAdd').textContent = `+${formatG(n.addG)}${styleOf(n)}　${n.pourSec}秒で注ぐ`;
+    count.textContent = `次の注湯まで あと${v.secsLeft}秒`;
+    if (v.secsLeft <= 3) count.classList.add('soon');
+  } else {
+    $('tLabel').textContent = '注ぎ終わりの目安です';
+    $('tTarget').textContent = `累計 ${formatG(plan.waterG)}`;
+    $('tAdd').textContent = '';
+    count.textContent = toTarget(v.secsToTarget);
+  }
+  if (v.canTap) {
+    $('tNext').textContent = `${v.name}を注ぎ終えたら押してください`;
+    $('tapLabel').textContent = v.isLast ? '注ぎ終えた' : '注湯完了';
+    $('tapSub').textContent = v.isLast ? '押すと落ち切り待ちになります' : '押さなくても、次の注湯の時刻に進みます';
+  } else {
+    $('tNext').textContent = '';
+    $('tapLabel').textContent = '待っています';
+    $('tapSub').textContent = '注湯の時刻になると合図が鳴ります';
   }
 }
 

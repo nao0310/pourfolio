@@ -75,12 +75,17 @@ function vibrate(pattern) {
 
 /**
  * 合図を1つ鳴らす（js/core/timer.js の cueSchedule の1件）
- * @param {{kind:'count'|'go'|'target', speech?:string}} cue
+ * @param {{kind:'count'|'go'|'pourEnd'|'target', speech?:string}} cue
  * @param {{speech:boolean}} opts 読み上げるか
  */
 export function playCue(cue, { speech }) {
   if (cue.kind === 'count') {
     tone(880, 0.08);
+    return;
+  }
+  if (cue.kind === 'pourEnd') {
+    // 注ぎ終わりの目安：低めの短い音を1回（読み上げなし）
+    tone(660, 0.15);
     return;
   }
   if (cue.kind === 'go') {

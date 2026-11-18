@@ -98,7 +98,7 @@ test('計画との差：実績−計画。差がない項目は書かない', ()
 test('抽出の記録：計画の写しと実績を並べ、差と焙煎後日数を残す', () => {
   const draft = finishDraft({ ...newDraft(plan, 'b1', T0), laps: [9, 50, 94, 139, 183] }, T0 + 215_000);
   const { value } = normalizeActualInput({ ...initialActualInput(draft), doseG: '20.1', waterG: '302', beverageG: '258' });
-  const brew = buildBrew({ draft, value, at: '2026-11-18T07:45:35+09:00', bean: { roastDate: '2026-11-09' } });
+  const brew = buildBrew({ draft, value, at: '2026-11-18T12:45:35+09:00', bean: { roastDate: '2026-11-09' } });
 
   assert.equal(brew.beanId, 'b1');
   assert.equal(brew.recipeId, 'r1');
