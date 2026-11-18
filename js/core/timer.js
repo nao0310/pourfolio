@@ -69,6 +69,17 @@ export function addLap(pours, laps, elapsedSec) {
 }
 
 /**
+ * 落ち切り待ちで「落ち切った」を押したとき、終わりにしてよいか（2-8 の5番）。
+ * 最後の投の「注ぎ終えた」を押してから LAP_GUARD_SEC 以内は、2度押しとして無視する（D-036 を終わりにも当てる）
+ * @param {(number|null)[]} laps
+ * @param {number} elapsedSec
+ */
+export function canFinish(laps, elapsedSec) {
+  const lastTap = [...(laps ?? [])].reverse().find((x) => x != null);
+  return lastTap == null || elapsedSec - lastTap >= LAP_GUARD_SEC;
+}
+
+/**
  * 今の画面に出す内容。
  * - phase 'pour'：注ぐ（累計何gまで、注ぎ終わりまであと何秒、流速）
  * - phase 'wait'：待つ（次の注湯まであと何秒）。次の投は next に入る

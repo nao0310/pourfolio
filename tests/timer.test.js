@@ -1,7 +1,7 @@
 // ガイド付きタイマーの計算（A2）
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { autoAdvance, addLap, timerView, cueSchedule, cuesBetween, speechFor, pourName, pourEndSec } from '../js/core/timer.js';
+import { autoAdvance, addLap, timerView, cueSchedule, cuesBetween, speechFor, pourName, pourEndSec, canFinish, LAP_GUARD_SEC } from '../js/core/timer.js';
 import { make46 } from '../js/core/recipes.js';
 
 // 4:6の標準（20g・300g）：0・45・90・135・180秒に 60・120・180・240・300g。流速10g/秒で各6秒注ぐ
@@ -156,4 +156,11 @@ test('注湯完了の2度押しは無視する。全部終わったらそれ以�
   all = addLap(plan.pours, all, 185);
   assert.deepEqual(all, [10, 50, 95, 140, 185]);
   assert.deepEqual(addLap(plan.pours, all, 200), all);
+});
+
+test('落ち切った：最後の「注ぎ終えた」から1.5秒以内の2度押しでは終わらない（2-8 の5番）', () => {
+  assert.equal(canFinish([9, 50, 94, 139, 183], 183.3), false);
+  assert.equal(canFinish([9, 50, 94, 139, 183], 183 + LAP_GUARD_SEC), true);
+  assert.equal(canFinish([9, 50, null, null, null], 200), true); // 押さずに進んだ投は数えない
+  assert.equal(canFinish([], 0), true);
 });

@@ -30,7 +30,7 @@ import { basePlanForNext, applyAction, pickPendingSuggestion } from './core/dial
 import { planFromRecipe, planFromBrew, formatSec, POUR_STYLES, ratioOf } from './core/recipes.js';
 import { sortBeansForList } from './core/beans.js';
 import { formatG } from './core/format.js';
-import { timerView, cuesBetween, addLap, autoAdvance, pourName, pourEndSec } from './core/timer.js';
+import { timerView, cuesBetween, addLap, autoAdvance, pourName, pourEndSec, canFinish } from './core/timer.js';
 import {
   newDraft,
   elapsedSec,
@@ -49,6 +49,7 @@ import { createWakeLock } from './wake-lock.js';
 import { bestBrewForBean } from './core/today.js';
 import { autosaveAfterChange } from './autosave-file.js';
 import { $, el, queryParam, showMessage, stepperField } from './ui.js';
+import { singleFlight } from './core/once.js';
 import { registerServiceWorker, blockUpdatePrompt, recheckUpdatePrompt } from './pwa.js';
 
 const db = openDb();
@@ -526,6 +527,7 @@ function onTap() {
   const sec = elapsedSec(draft, now);
   const v = timerView(draft.plan, draft.laps, sec);
   if (v.phase === 'drawdown') {
+    if (!canFinish(draft.laps, sec)) return; // 「注ぎ終えた」の2度押し（2-8 の5番）
     draft = finishDraft(draft, now);
     saveDraft(draft);
     stopTimer();
@@ -676,8 +678,10 @@ function showErrors(errors) {
   for (const node of document.querySelectorAll('#resultView .field-error')) node.textContent = errors[node.dataset.for] ?? '';
 }
 
-async function onSave(e) {
+// 2度押しで抽出が2件でき、在庫も2回減らないように、保存中は受け付けない（2-8 の4番）
+const onSave = singleFlight(async (e) => {
   e.preventDefault();
+  if (!draft) return; // 保存が済んで画面を移る途中
   const { value, errors } = normalizeActualInput(readForm());
   showErrors(errors);
   if (Object.keys(errors).length) {
@@ -689,8 +693,12 @@ async function onSave(e) {
   const at = new Date(draft.startedAtMs ?? Date.now()).toISOString();
   // 冷凍の袋を使う：保存すると袋を取り出したことになる（C4）
   const portion = readForm().useFrozen ? frozenChoice({ portions, beanId: value.beanId, roomG: 0, doseG: 0 }).portion : null;
+  const submit = $('resultView').querySelector('button[type="submit"]');
+  submit.disabled = true;
+  let saved = null;
   try {
     const { brew } = await saveBrew(db, buildBrew({ draft, value, at, bean, portion }));
+    saved = brew;
     const { compareId, compareBeanId } = draft;
     clearDraft();
     draft = null;
@@ -707,9 +715,15 @@ async function onSave(e) {
     location.replace(`tasting.html?brew=${encodeURIComponent(brew.id)}&saved=1`);
   } catch (err) {
     console.error(err);
+    if (saved) {
+      // 抽出は保存できた（そのあとの飲み比べへのつなぎや自動保存で失敗）。押し直すと2件になるので、評価の画面へ進む
+      location.replace(`tasting.html?brew=${encodeURIComponent(saved.id)}&saved=1`);
+      return;
+    }
+    submit.disabled = false;
     showMessage('保存できませんでした。もう一度押してください', 'error', 'rMsg');
   }
-}
+});
 
 function discard() {
   if (!confirm('記録せずにやめますか？入れた内容は消えます')) return;
