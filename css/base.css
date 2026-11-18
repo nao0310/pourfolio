@@ -767,6 +767,7 @@ p > a:not(.btn):only-child { display: inline-block; padding: 11px 0; }
   background: var(--card);
   border-top: 1px solid var(--line);
   padding-bottom: env(safe-area-inset-bottom);
+  view-transition-name: tabbar; /* 画面を移るとき、タブは動かさずにそのまま残す（2-8 の3番） */
 }
 .tab {
   flex: 1 1 0;
@@ -786,9 +787,9 @@ p > a:not(.btn):only-child { display: inline-block; padding: 11px 0; }
 .tab.current { color: var(--accent); }
 .tab-icon { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .tab.current .tab-icon { stroke-width: 2.4; }
-body.has-tabbar main { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
-body.has-tabbar main.with-bottom-bar { padding-bottom: calc(176px + env(safe-area-inset-bottom)); }
-body.has-tabbar .bottom-bar { bottom: calc(59px + env(safe-area-inset-bottom)); padding-bottom: 10px; }
+body.has-tabbar main, body:has(> nav.tabbar) main { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+body.has-tabbar main.with-bottom-bar, body:has(> nav.tabbar) main.with-bottom-bar { padding-bottom: calc(176px + env(safe-area-inset-bottom)); }
+body.has-tabbar .bottom-bar, body:has(> nav.tabbar) .bottom-bar { bottom: calc(59px + env(safe-area-inset-bottom)); padding-bottom: 10px; }
 body.timer-on .tabbar { display: none; }
 
 /* 前回のベストのペース（ゴースト、D-041） */
@@ -873,3 +874,12 @@ textarea#link { width: 100%; box-sizing: border-box; font-size: 0.85rem; }
 }
 .card-close:hover, .card-close:focus-visible { background: var(--line); color: var(--fg); }
 .dismiss-note { margin: 8px 0; }
+
+/* 画面の移り方（2-8 の3番）：同じアプリの画面どうしは、白く光らずにふわっと切り替える。
+   対応していないブラウザ（iOS 18.2 より前など）は今までどおり。動きを減らす設定のときは切り替えない */
+@view-transition { navigation: auto; }
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: 160ms; animation-timing-function: ease-out; }
+::view-transition-group(tabbar) { animation-duration: 0s; }
+@media (prefers-reduced-motion: reduce) {
+  @view-transition { navigation: none; }
+}
