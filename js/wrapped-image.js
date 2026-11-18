@@ -1,6 +1,6 @@
 // 年間まとめ（X5）の1枚画像を canvas に描く（中身は js/core/wrapped.js の wrappedImageContent）
 // 抽出レポートの画像（X3）と同じく、ダーク表示に関係なく明るい紙の色で描く。
-import { C, roundRect, text } from './brew-image.js';
+import { C, roundRect, text, setJa } from './brew-image.js';
 import { IMAGE_W, IMAGE_H } from './core/report-image.js';
 
 /**
@@ -11,7 +11,7 @@ export function drawWrappedImage(c) {
   const cv = document.createElement('canvas');
   cv.width = IMAGE_W;
   cv.height = IMAGE_H;
-  const ctx = cv.getContext('2d');
+  const ctx = setJa(cv.getContext('2d'));
   const M = 64;
   const W = IMAGE_W - M * 2;
   ctx.fillStyle = C.bg;

@@ -9,7 +9,7 @@
 // <manifest> npm run sw が書き込む（手で直さない）
 const MANIFEST = {
   "label": "3.6",
-  "version": "60c9e088c82a",
+  "version": "06a980843bfd",
   "files": {
     "aging.html": "e375c2c6820a60f3",
     "ai.html": "34607ec38ddc5690",
@@ -22,7 +22,7 @@ const MANIFEST = {
     "calendar.html": "add01bf22879b657",
     "compare.html": "63315ff50a7788c8",
     "cost.html": "2c834b6cf3df809b",
-    "css/base.css": "9a82874f84c2d555",
+    "css/base.css": "47f10079cd2285a1",
     "css/print.css": "8c007c2e176a70f2",
     "data.html": "db703c97881020e1",
     "dialin-history.html": "0d8a41cb504c8b0d",
@@ -45,7 +45,7 @@ const MANIFEST = {
     "js/beans-page.js": "35b915c707586108",
     "js/brew-chart-page.js": "15e4c428c1fd9d8b",
     "js/brew-draft.js": "d7586b9a8f874516",
-    "js/brew-image.js": "77d69d320a01e190",
+    "js/brew-image.js": "87041b34649c1ccf",
     "js/brew-page.js": "a7b8d4c0ec66b46d",
     "js/calendar-page.js": "498481f8d95cf1e8",
     "js/chart.js": "bfe7bcfbcfd6aa36",
@@ -75,6 +75,7 @@ const MANIFEST = {
     "js/core/extraction.js": "442b41f0a73c8ecd",
     "js/core/factors.js": "92927016f74b9670",
     "js/core/flavors.js": "89fe07c6a438754f",
+    "js/core/fonts.js": "434bc1cbc04d16c4",
     "js/core/format.js": "b4c9a5e24af6cbe4",
     "js/core/freshness.js": "4d56dabbc6fc23b5",
     "js/core/frozen.js": "4426f1550cb5a9e2",
@@ -160,7 +161,7 @@ const MANIFEST = {
     "js/weather-page.js": "fefb36d00d8ba3f0",
     "js/weather-sync.js": "2554aae27880a823",
     "js/wishlist-page.js": "a76f89120d2d3446",
-    "js/wrapped-image.js": "ccd61e683d4c38fb",
+    "js/wrapped-image.js": "96ef271959544280",
     "js/wrapped-page.js": "065d53f32bed4c98",
     "life.html": "142745f2678a3b4d",
     "manifest.webmanifest": "6ba74664b83078e8",
