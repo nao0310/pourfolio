@@ -32,6 +32,9 @@ import {
   putAll,
   exportAll,
   getBeanWithTx,
+  addGift,
+  setGiftFeedback,
+  setHandoverNote,
 } from '../../js/db.js';
 import { normalizeBeanInput } from '../../js/core/beans.js';
 import { normalizeRecipeInput, newRecipeState, planFromRecipe } from '../../js/core/recipes.js';
@@ -214,6 +217,19 @@ async function nasty() {
 
   // 設定：カフェインの区切りと、いつもの粉量。天気の地点は長い名前の手入力（通信できないときの様子も見る）
   await updateSettings(db, { caffeineCutoff: '15:00', defaultDoseG: 15, weatherPlace: { key: 'custom', name: 'とても長い地点の名前'.repeat(3).slice(0, 30), lat: 35.68, lon: 139.76 }, hotDayC: 20 }, ago(30));
+
+  // おすそ分け（X34）：長い名前と感想、相手なし（3-5 より前の形）
+  const g1 = await addGift(db, { beanId: long.id, g: 50, recipient: 'とても長い名前の職場のとなりの席の先輩さん<b>'.slice(0, 30), memo: '挽いて渡した。'.repeat(20).slice(0, 200) }, ago(1, 19));
+  await setGiftFeedback(db, g1.id, '<script>感想</script>\n' + 'おいしかった。'.repeat(50).slice(0, 380), ago(0, 7));
+  await addInventoryTx(db, { beanId: zero.id, deltaG: -5, kind: 'gift', memo: '' }, ago(9, 20));
+  // お手入れ（D4）：壊れた設定のケトル（手で書き換えたファイルを想定）と、知らせないにしたミル
+  const kettle = await addEquipment(db, ok(normalizeEquipmentInput({ kind: 'kettle', name: '壊れた設定のケトル' }), 'ケトル'), ago(200));
+  await db.table('equipment').put({ ...kettle, maintenance: { enabled: 'yes', everyDays: 'abc', everyCups: -3, lastDoneAt: 'きのう', snoozedUntil: 12, log: 'x' } });
+  const mill = await addEquipment(db, ok(normalizeEquipmentInput({ kind: 'grinder', name: '知らせないミル' }), 'ミル'), ago(300));
+  await db.table('equipment').put({ ...mill, maintenance: { enabled: false, everyDays: 30, everyCups: 50 } });
+  // 申し送り（X32）：1年前の袋に長い一言、同じ銘柄の新しい袋（未開封）
+  await setHandoverNote(db, old.id, '<b>次は</b>'.concat('焙煎10日からが良い。'.repeat(20)).slice(0, 200), ago(360));
+  await bean(db, { name: '1年前のケニア', actualWeightG: '100', roastLevel: 'シティ', roastDate: ymdAgo(3) }, ago(1));
 
   // 在庫のつじつまを手で確かめる用のメモ（コンソールに出す）
   const { txs } = await getBeanWithTx(db, minus.id);

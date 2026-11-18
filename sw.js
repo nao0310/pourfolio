@@ -8,8 +8,8 @@
 
 // <manifest> npm run sw が書き込む（手で直さない）
 const MANIFEST = {
-  "label": "3.4",
-  "version": "60d9749f51b8",
+  "label": "3.5",
+  "version": "8eeb82536439",
   "files": {
     "aging.html": "e375c2c6820a60f3",
     "ai.html": "34607ec38ddc5690",
@@ -116,7 +116,7 @@ const MANIFEST = {
     "js/core/today.js": "1814a6c90e899543",
     "js/core/tonya.js": "faac59308d2b0ca5",
     "js/core/usual.js": "306c68f4420764a8",
-    "js/core/version.js": "afdfbe0f97dc3373",
+    "js/core/version.js": "8df12eaa4d2dedaa",
     "js/core/water.js": "26dace0c46b908b4",
     "js/core/weather.js": "c179c2e62f69cb9e",
     "js/core/wishlist.js": "6bf3695085913224",
