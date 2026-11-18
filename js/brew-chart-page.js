@@ -5,7 +5,7 @@ import { chartPoints, favoriteZone, CLASSIC_ZONE, RATIO_LINES, ratioLineTds, zon
 import { starLevel } from './core/chart-scale.js';
 import { formatYmdJa } from './core/format.js';
 import { plot, chartBox, starLegend } from './chart.js';
-import { $, el } from './ui.js';
+import { $, el, termHelp, withTerm } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
 
 async function render() {
@@ -56,7 +56,7 @@ async function render() {
   const zoneCard = el(
     'section',
     { class: 'card' },
-    el('h2', {}, '自分の好きゾーン'),
+    el('h2', {}, withTerm('自分の好きゾーン', 'zone')),
     fz.zone
       ? el('p', {}, `★${GOOD_STARS}以上の${fz.goodN}杯の真ん中：TDS ${fz.zone.y0}〜${fz.zone.y1}%、抽出収率 ${fz.zone.x0}〜${fz.zone.x1}%`)
       : el('p', { class: 'muted' }, fz.ready ? `★${GOOD_STARS}以上の杯が3杯たまると表示します（いま${fz.goodN}杯）` : readinessText(fz)),
@@ -78,7 +78,7 @@ async function render() {
         ),
         '中が白い点は、抽出液を量らず「湯量−2×粉量」（ドリッパーごとに量った杯があればその値）で見積もった杯。斜めの線は比率です。',
       ),
-      el('p', { class: 'muted small' }, `TDS付き ${pts.length}杯`),
+      el('p', { class: 'muted small' }, `TDS付き ${pts.length}杯。`, withTerm('TDS', 'tds'), '・', withTerm('抽出収率', 'ey'), '・', withTerm('比率', 'ratio')),
     ),
     zoneCard,
   );

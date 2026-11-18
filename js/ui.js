@@ -1,6 +1,7 @@
 // 画面づくりの小さな共通部品（DOMを使うので js/core/ には置かない）
 // 利用者の入力は必ず textContent で入れる（innerHTML は使わない）
 import { splitPhrases } from './core/phrases.js';
+import { termById, termHref } from './core/glossary.js';
 
 export const $ = (id) => document.getElementById(id);
 
@@ -194,3 +195,16 @@ export async function copyText(text) {
 export function svgElement(svgText) {
   return document.importNode(new DOMParser().parseFromString(svgText, 'image/svg+xml').documentElement, true);
 }
+
+/**
+ * 言葉の横の小さな「？」。押すと用語辞典のその項目を開く（X25）。押せる大きさは44px四方
+ * @param {string} id js/core/glossary.js の用語の id
+ */
+export function termHelp(id) {
+  const t = termById(id);
+  if (!t) throw new Error(`用語がありません：${id}`);
+  return el('a', { class: 'term-help', href: termHref(id), 'aria-label': `${t.word}とは（用語辞典）` }, el('span', { class: 'term-help-mark', 'aria-hidden': 'true' }, '?'));
+}
+
+/** 「TDS ？」のように、言葉と「？」を並べる */
+export const withTerm = (text, id) => el('span', { class: 'term' }, text, termHelp(id));

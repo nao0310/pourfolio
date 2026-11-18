@@ -21,6 +21,7 @@ const PAGES = [
   'factors.html', 'profile.html', 'dialin-history.html', 'cost.html', 'shopping.html', 'wishlist.html', 'shops.html', 'order-import.html',
   'compare.html', 'optimize.html', 'ai.html', 'report.html', 'share.html', 'scan.html', 'recipe-card.html', 'more.html', 'data.html',
   'storage-test.html', 'tasting.html', 'weather.html', 'life.html', 'life.html?demo=1',
+  'repro.html', 'repro.html?demo=1', 'aging.html', 'aging.html?demo=1', 'aging.html?bean=no-such-id', 'glossary.html', 'glossary.html#t-tds',
 ];
 
 /** 記録があれば、IDの要る画面も足す（いちばん新しい豆・レシピ・抽出・器具・飲み比べ） */
@@ -37,6 +38,7 @@ async function pagesWithIds({ every = false } = {}) {
   const brew = newest(alive('brews'), 'at');
   const eq = newest(alive('equipment'));
   const exp = newest(alive('experiments').filter((e) => e.kind !== 'optimize'));
+  if (bean) out.push(`aging.html?bean=${bean.id}`);
   if (bean) out.push(`bean.html?id=${bean.id}`, `bean-edit.html?id=${bean.id}`, `dialin-history.html?bean=${bean.id}`, `brew.html?bean=${bean.id}`, `ai.html?bean=${bean.id}`, `share.html?bean=${bean.id}`, `recipe-card.html?bean=${bean.id}&canister=1`);
   if (recipe) out.push(`recipe-edit.html?id=${recipe.id}`, `recipe-card.html?recipe=${recipe.id}`, `share.html?recipe=${recipe.id}`, `brew.html?recipe=${recipe.id}`);
   if (brew) out.push(`tasting.html?brew=${brew.id}`, `brew.html?brew=${brew.id}`);
@@ -54,6 +56,7 @@ async function pagesWithIds({ every = false } = {}) {
   out.push('bean.html?id=no-such-id', 'tasting.html?brew=no-such-id', 'brew.html?bean=no-such-id', 'recipe-edit.html?id=no-such-id', 'compare.html?id=no-such-id', 'optimize.html?id=no-such-id');
   // every：全部の豆・抽出・レシピ・飲み比べのページ（意地悪のデータ用。削除済みも含む）
   if (every) {
+    for (const b of all.beans ?? []) out.push(`aging.html?bean=${b.id}`);
     for (const b of all.beans ?? []) out.push(`bean.html?id=${b.id}`, `brew.html?bean=${b.id}`, `dialin-history.html?bean=${b.id}`);
     for (const b of all.brews ?? []) out.push(`tasting.html?brew=${b.id}`);
     for (const r of all.recipes ?? []) out.push(`recipe-edit.html?id=${r.id}`, `recipe-card.html?recipe=${r.id}`);

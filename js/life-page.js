@@ -3,7 +3,7 @@ import { loadAnalysisData, setupAnalysisPage, showLoadError, isDemo } from './an
 import { analysisRows, ratedRows, readinessText } from './core/analysis.js';
 import { LIFE_DIMENSIONS, MIN_GROUP, lifeBy, lifeLine, roastByBand, seasonSummary, seasonLine, lifeReadiness, weatherCount, LIFE_NEED } from './core/life.js';
 import { WEATHER_CREDIT, WEATHER_CREDIT_URL } from './core/weather.js';
-import { $, el } from './ui.js';
+import { $, el, termHelp, withTerm } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
 
 const pct = (score) => `${Math.max(0, Math.min(100, ((score - 1) / 4) * 100))}%`;
@@ -96,7 +96,7 @@ async function render() {
       'section',
       { class: 'card' },
       el('p', {}, `★のある${ratedRows(rows).length}杯から。天気の付いた杯は${wCount}杯です。`),
-      el('p', { class: 'muted small' }, '数字は嗜好スコア（区分の杯が少ないほど全体の平均に寄せた★）。棒は★1〜5の幅です。'),
+      el('p', { class: 'muted small' }, '数字は嗜好スコア（区分の杯が少ないほど全体の平均に寄せた★）。棒は★1〜5の幅です。', termHelp('preference-score')),
     ),
     ...LIFE_DIMENSIONS.filter((d) => d.key !== 'season').map((d) => dimCard(rows, d, wCount > 0)),
     bandRoastCard(rows),

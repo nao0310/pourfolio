@@ -2,7 +2,7 @@
 import { loadAnalysisData, setupAnalysisPage, showLoadError } from './analysis-data.js';
 import { analysisRows, ratedRows, readiness, readinessText, THRESHOLDS } from './core/analysis.js';
 import { DIMENSIONS, preferenceBy, heatmap, likingPeaks } from './core/preference.js';
-import { $, el } from './ui.js';
+import { $, el, termHelp, withTerm } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
 
 const pct = (score) => `${Math.max(0, Math.min(100, ((score - 1) / 4) * 100))}%`;
@@ -77,7 +77,7 @@ function likingCard(tastings) {
   const card = el(
     'section',
     { class: 'card' },
-    el('h2', {}, '味の好みの位置'),
+    el('h2', {}, withTerm('味の好みの位置', 'cva')),
     el('p', { class: 'muted small' }, '詳しい評価（強さ0〜15と好み1〜9）から、項目ごとに好みがいちばん高い強さの区切りです。'),
   );
   if (!lp.ready.ready) {
@@ -115,7 +115,7 @@ async function render() {
     heatCard(rows, 'origin', '産地×焙煎度'),
     heatCard(rows, 'process', '精製×焙煎度'),
     likingCard(tastings),
-    el('p', { class: 'muted small' }, `嗜好スコア＝（杯数×その区分の平均★＋5×全体の平均★）÷（杯数＋5）。信頼度は杯数で決めています（5杯未満は低、15杯未満は中）。`),
+    el('p', { class: 'muted small' }, `嗜好スコア＝（杯数×その区分の平均★＋5×全体の平均★）÷（杯数＋5）。信頼度は杯数で決めています（5杯未満は低、15杯未満は中）。`, termHelp('preference-score')),
   );
 }
 
