@@ -6,8 +6,8 @@ import { ROAST_LEVELS } from './roast.js';
 import { DEFAULT_SHOP } from './beans.js';
 import { daysBetween } from './freshness.js';
 
-/** お届け日数の初期値（注文から到着まで。実績が貯まると置き換わる） */
-export const DEFAULT_DELIVERY_DAYS = 5;
+/** お届け日数の初期値（注文から到着まで。ユーザーの回答「7日以内」の上限。実績が貯まると置き換わる） */
+export const DEFAULT_DELIVERY_DAYS = 7;
 /** 実績からお届け日数を出すのに必要な注文の数 */
 export const DELIVERY_MIN_ORDERS = 2;
 /** 1回の注文で登録できる袋の数の上限（読み間違いで大量に作らないため） */

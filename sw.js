@@ -9,7 +9,7 @@
 // <manifest> npm run sw が書き込む（手で直さない）
 const MANIFEST = {
   "label": "2.1",
-  "version": "de4a0cbe8767",
+  "version": "7f817c97df87",
   "files": {
     "bean-edit.html": "b4ab5c1cb88b2a27",
     "bean.html": "45cda9d0efff36cb",
@@ -40,7 +40,7 @@ const MANIFEST = {
     "js/core/install.js": "1ce19201bb995ac2",
     "js/core/inventory.js": "cd8183b99b1482b3",
     "js/core/offline.js": "907135ce0abe78fb",
-    "js/core/orders.js": "ce5e1aa3317b4a8b",
+    "js/core/orders.js": "029a40c611f71c86",
     "js/core/recipes.js": "55ddfa6fcd9cd3f0",
     "js/core/records.js": "7e3ae938eae5411a",
     "js/core/restock.js": "67fb0c7bcd6f227d",

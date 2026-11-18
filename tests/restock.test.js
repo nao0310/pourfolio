@@ -52,7 +52,7 @@ test('なくなる日と注文の目安日：在庫÷ペースから、お届け
   // 手元 300g − 14杯×15g = 90g、ペース 15g/日 → あと6日。お届け5日＋休ませ1日（シティ）→ 今日が目安
   const beans = [bean('a')];
   const txs = [tx('a', 300), ...dailyBrews('a')];
-  const plan = restockPlan({ beans, txs, today: TODAY, now: NOW });
+  const plan = restockPlan({ beans, txs, settings: { deliveryDays: 5 }, today: TODAY, now: NOW });
   assert.equal(plan.gPerDay, 15);
   assert.equal(plan.daysLeft, 6);
   assert.equal(plan.runoutYmd, '2026-11-24');
@@ -65,7 +65,8 @@ test('なくなる日と注文の目安日：在庫÷ペースから、お届け
 });
 
 test('境目：目安日まで3日以内は「そろそろ」、それより先は ok', () => {
-  const at = (onHand) => restockPlan({ beans: [bean('a')], txs: [tx('a', onHand + 210), ...dailyBrews('a')], today: TODAY, now: NOW });
+  const at = (onHand) =>
+    restockPlan({ beans: [bean('a')], txs: [tx('a', onHand + 210), ...dailyBrews('a')], settings: { deliveryDays: 5 }, today: TODAY, now: NOW });
   // daysLeft − 6 = daysUntilOrder
   const soon = at(15 * (6 + RESTOCK_SOON_DAYS));
   assert.equal(soon.daysUntilOrder, RESTOCK_SOON_DAYS);
@@ -77,6 +78,14 @@ test('境目：目安日まで3日以内は「そろそろ」、それより先�
   const late = at(0);
   assert.equal(late.status, 'now');
   assert.equal(late.orderByYmd, TODAY, '過ぎていても今日にする');
+});
+
+test('お届け日数の初期値は7日（設定も実績もないとき）', () => {
+  const plan = restockPlan({ beans: [bean('a')], txs: [tx('a', 300), ...dailyBrews('a')], today: TODAY, now: NOW });
+  assert.equal(plan.deliveryDays, 7);
+  assert.equal(plan.deliveryLearned, false);
+  assert.equal(plan.status, 'now', 'あと6日分では、7日のお届けに間に合わない');
+  assert.match(restockText(plan).text, /お届け7日/);
 });
 
 test('入荷待ちの豆も在庫に含める。設定のお届け日数と、実績のお届け日数', () => {
