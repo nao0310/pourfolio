@@ -254,6 +254,9 @@ label.label { display: block; font-weight: 600; margin-bottom: 4px; }
 .pour-row { border-top: 1px solid var(--line); padding: 10px 0; }
 .pour-row:first-child { border-top: 0; }
 .pour-head { display: flex; justify-content: space-between; gap: 8px; font-weight: 600; }
+.pour-sec { margin-top: 6px; max-width: 22rem; }
+.pour-sec .label { font-size: 0.85rem; }
+.pour-sec .flow { display: block; margin-top: 2px; font-size: 0.9rem; }
 .pour-inputs { display: grid; grid-template-columns: 1fr 1fr 1.2fr auto; gap: 6px; align-items: end; margin-top: 4px; }
 .mini { display: flex; flex-direction: column; min-width: 0; font-size: 0.8rem; color: var(--muted); }
 .mini input, .mini select { min-height: 48px; padding: 6px 8px; font-size: 1rem; text-align: center; font-variant-numeric: tabular-nums; }
@@ -318,6 +321,22 @@ body.timer-on { overflow: hidden; }
 .timer-top p { margin: 2px 0; }
 .timer-elapsed { font-size: clamp(2.2rem, 11vw, 3.6rem); line-height: 1.1; }
 .timer-label { font-size: 1.3rem; font-weight: 700; }
+/* 注ぐ・待つの見分け（色と大きな札） */
+.timer-top p.timer-head { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px 12px; margin: 4px 0; }
+.timer-phase {
+  display: inline-block;
+  padding: 2px 16px;
+  border-radius: 999px;
+  font-size: 1.4rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+.timer-phase:empty { display: none; }
+.timer-screen[data-phase="wait"] .timer-phase { background: var(--stage-resting); color: var(--stage-fg); }
+.timer-screen[data-phase="wait"] .timer-target { color: var(--stage-resting); }
+.timer-screen[data-phase="drawdown"] .timer-phase { background: var(--stage-peak); color: var(--stage-fg); }
 .timer-target { font-size: clamp(2.6rem, 15vw, 5rem); line-height: 1.05; color: var(--accent); }
 .timer-add { font-size: 1.2rem; font-weight: 600; }
 .timer-count { font-size: 1.6rem; min-height: 1.4em; }
@@ -349,6 +368,7 @@ body.timer-on { overflow: hidden; }
 }
 .timer-tap:active { opacity: 0.75; }
 .timer-tap.drawdown { background: var(--stage-peak); color: var(--stage-fg); }
+.timer-tap.idle { background: var(--card); color: var(--muted); border-top: 1px solid var(--line); font-size: 1.6rem; }
 .timer-tap-sub { font-size: 0.95rem; font-weight: 500; opacity: 0.9; }
 .timer-tap:focus-visible { outline: 3px solid var(--fg); outline-offset: -6px; }
 
@@ -356,3 +376,4 @@ body.timer-on { overflow: hidden; }
 .diff-list { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
 .diff-list li { padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; }
 .diff-list li.muted { border: 0; padding: 0; }
+.small { font-size: 0.85rem; }

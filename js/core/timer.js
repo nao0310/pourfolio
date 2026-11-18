@@ -2,6 +2,9 @@
 // - 時間はスタートした時刻との差（経過秒）で計算する。画面の更新が止まってもずれない（spec 8.1）
 // - laps は「何投目まで注ぎ終えたか」の記録。laps[i] は i投目（0＝蒸らし）の注湯完了を押した経過秒。
 //   押さずに次の投の時刻が来たら null で埋めて先へ進む（押し忘れても止まらない）
+// - 1投は「注ぐ」（注湯の時刻から注ぐ秒数のあいだ）と「待つ」（次の注湯の時刻まで）に分けて表示する
+
+import { pourSecOf, flowOf } from './recipes.js';
 
 /** 注湯の何秒前からカウント音を鳴らすか */
 export const COUNTDOWN_SEC = 3;
@@ -38,12 +41,28 @@ export function autoAdvance(pours, laps, elapsedSec) {
 }
 
 /**
+ * i投目の注ぎ終わりの目安（経過秒）。注ぐ秒数のない古い計画は注ぐ量÷流速で計算する。
+ * 次の注湯の時刻は越えない
+ * @param {{pours:object[], flowGps?:number}} plan
+ * @param {number} i
+ */
+export function pourEndSec(plan, i) {
+  const pours = plan.pours ?? [];
+  const p = pours[i];
+  if (!p) return null;
+  const end = p.atSec + (pourSecOf(pours, i, plan.flowGps) ?? 0);
+  const next = pours[i + 1];
+  return next ? Math.min(end, next.atSec) : end;
+}
+
+/**
  * 注湯完了を押したときの laps。直前に押してから LAP_GUARD_SEC 以内なら押し間違いとして無視する。
- * 全部の投が終わっていたら変えない。
+ * 全部の投が終わっていたら変えない。次の投の時刻より前（待っているあいだ）に押しても変えない。
  */
 export function addLap(pours, laps, elapsedSec) {
   const cur = autoAdvance(pours, laps, elapsedSec);
   if (cur.length >= pours.length) return cur;
+  if (elapsedSec < pours[cur.length].atSec) return cur;
   const lastTap = [...cur].reverse().find((x) => x != null);
   if (lastTap != null && elapsedSec - lastTap < LAP_GUARD_SEC) return cur;
   return [...cur, round1(elapsedSec)];
@@ -51,10 +70,13 @@ export function addLap(pours, laps, elapsedSec) {
 
 /**
  * 今の画面に出す内容。
- * - phase 'wait'：次の投の時刻待ち（あと何秒）
- * - phase 'pour'：注ぐ時間（累計何gまで）。次の投があれば、それまであと何秒
+ * - phase 'pour'：注ぐ（累計何gまで、注ぎ終わりまであと何秒、流速）
+ * - phase 'wait'：待つ（次の注湯まであと何秒）。次の投は next に入る
+ *     - 注湯完了を押したあと、または最初の投の前：index は次の投、canTap=false（押しても何も起きない）
+ *     - 注ぐ秒数が過ぎたが注湯完了を押していない：index は今の投のまま、canTap=true（押すとこの投の完了を記録）
+ *       最後の投なら next は null
  * - phase 'drawdown'：全部注ぎ終えて落ち切り待ち（目標時間まであと何秒、マイナスは超過）
- * @param {{pours:{atSec:number,toG:number}[], targetTotalSec?:number|null}} plan
+ * @param {{pours:{atSec:number,toG:number,pourSec?:number}[], targetTotalSec?:number|null, flowGps?:number}} plan
  * @param {(number|null)[]} laps
  * @param {number} elapsedSec
  */
@@ -63,32 +85,44 @@ export function timerView(plan, laps, elapsedSec) {
   const done = autoAdvance(pours, laps, elapsedSec);
   const index = done.length;
   const target = plan.targetTotalSec ?? null;
+  const secsToTarget = target != null ? Math.ceil(target - elapsedSec) : null;
   if (index >= pours.length) {
-    return {
-      phase: 'drawdown',
-      index,
-      laps: done,
-      secsToTarget: target != null ? Math.ceil(target - elapsedSec) : null,
-    };
+    return { phase: 'drawdown', index, laps: done, secsToTarget };
   }
-  const p = pours[index];
-  const prevG = index > 0 ? pours[index - 1].toG : 0;
-  const next = pours[index + 1] ?? null;
-  const base = {
-    index,
-    laps: done,
-    name: pourName(index),
-    toG: p.toG,
-    addG: round1(p.toG - prevG),
-    style: p.style ?? '',
-    isLast: index === pours.length - 1,
+  const info = (i) => {
+    const p = pours[i];
+    const prevG = i > 0 ? pours[i - 1].toG : 0;
+    const addG = round1(p.toG - prevG);
+    const pourSec = pourEndSec(plan, i) - p.atSec;
+    return {
+      index: i,
+      name: pourName(i),
+      toG: p.toG,
+      addG,
+      style: p.style ?? '',
+      atSec: p.atSec,
+      pourSec,
+      flowGps: flowOf(addG, pourSec),
+      isLast: i === pours.length - 1,
+    };
   };
-  if (elapsedSec < p.atSec) return { ...base, phase: 'wait', secsLeft: Math.ceil(p.atSec - elapsedSec) };
+  const cur = info(index);
+  if (elapsedSec < cur.atSec) {
+    return { phase: 'wait', index, laps: done, canTap: false, next: cur, secsLeft: Math.ceil(cur.atSec - elapsedSec), secsToTarget };
+  }
+  const endSec = cur.atSec + cur.pourSec;
+  if (elapsedSec < endSec) {
+    return { ...cur, phase: 'pour', laps: done, secsLeft: Math.ceil(endSec - elapsedSec), secsToTarget };
+  }
+  const next = cur.isLast ? null : info(index + 1);
   return {
-    ...base,
-    phase: 'pour',
-    secsToNext: next ? Math.ceil(next.atSec - elapsedSec) : null,
-    secsToTarget: target != null ? Math.ceil(target - elapsedSec) : null,
+    ...cur,
+    phase: 'wait',
+    laps: done,
+    canTap: true,
+    next,
+    secsLeft: next ? Math.ceil(next.atSec - elapsedSec) : null,
+    secsToTarget,
   };
 }
 
@@ -102,6 +136,10 @@ export function cueSchedule(plan) {
       if (sec > 0) cues.push({ sec, kind: 'count', index: i, n: k });
     }
     cues.push({ sec: p.atSec, kind: 'go', index: i, speech: speechFor(pours, i) });
+    const end = pourEndSec(plan, i);
+    const next = pours[i + 1];
+    // 注ぎ終わりの目安。次の注湯のカウントと重なる（3秒前より後）ときは鳴らさない
+    if (end > p.atSec && (!next || end <= next.atSec - COUNTDOWN_SEC - 1)) cues.push({ sec: end, kind: 'pourEnd', index: i });
   });
   const target = plan.targetTotalSec;
   if (target != null && pours.length && target > pours[pours.length - 1].atSec) {
@@ -114,9 +152,13 @@ export function cueSchedule(plan) {
  * fromSec より後で toSec まで（fromSec < sec ≦ toSec）に来た合図。
  * 画面の更新が MAX_CUE_GAP_SEC より長く止まっていたら（別のアプリから戻ったときなど）、
  * まとめて鳴らさず、1秒以内に来た最新の1つだけ返す。
+ * 注湯完了を押した投（laps に秒がある投）の注ぎ終わりの合図は鳴らさない。
+ * @param {(number|null)[]} [laps]
  */
-export function cuesBetween(plan, fromSec, toSec) {
-  const hits = cueSchedule(plan).filter((c) => c.sec > fromSec && c.sec <= toSec);
+export function cuesBetween(plan, fromSec, toSec, laps = []) {
+  const hits = cueSchedule(plan).filter(
+    (c) => c.sec > fromSec && c.sec <= toSec && !(c.kind === 'pourEnd' && laps[c.index] != null),
+  );
   if (toSec - fromSec <= MAX_CUE_GAP_SEC) return hits;
   const recent = hits.filter((c) => c.sec >= toSec - 1);
   return recent.length ? [recent[recent.length - 1]] : [];

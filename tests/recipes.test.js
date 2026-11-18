@@ -1,6 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  DEFAULT_FLOW_GPS,
+  flowOf,
+  pourSecFromFlow,
+  pourSecOf,
+  fillPourSecs,
   ratioOf,
   waterFromRatio,
   parseSec,
@@ -226,4 +231,74 @@ test('元のレシピが削除されていても、前回の抽出の計画か�
   assert.equal(plan.ratio, 16);
   assert.equal(plan.grind.setting, '20');
   assert.equal(plan.pours.length, 2);
+});
+
+test('注ぐ秒数：流速の初期値は10g/秒。注ぐ量÷流速（1秒以上の整数）', () => {
+  assert.equal(DEFAULT_FLOW_GPS, 10);
+  assert.equal(pourSecFromFlow(60), 6);
+  assert.equal(pourSecFromFlow(45, 4), 11);
+  assert.equal(pourSecFromFlow(3), 1);
+  assert.equal(flowOf(60, 6), 10);
+  assert.equal(flowOf(45, 11), 4.1);
+  assert.equal(flowOf(45, 0), null);
+});
+
+test('雛形の注湯には注ぐ秒数が入る。流速を変えると計算し直す', () => {
+  assert.deepEqual(make46({ doseG: 20 }).pours.map((p) => p.pourSec), [6, 6, 6, 6, 6]);
+  assert.deepEqual(make46({ doseG: 20, flowGps: 5 }).pours.map((p) => p.pourSec), [12, 12, 12, 12, 12]);
+  assert.deepEqual(makeBasic({ doseG: 20 }).pours.map((p) => p.pourSec), [4, 9, 9, 9]);
+  assert.equal(newRecipeState().flowGps, 10);
+});
+
+test('手で直した注ぐ秒数は、流速を変えても残る', () => {
+  const pours = [
+    { atSec: 0, toG: 60, pourSec: 15, pourSecManual: true },
+    { atSec: 45, toG: 120, pourSec: 6 },
+  ];
+  const out = fillPourSecs(pours, 5);
+  assert.equal(out[0].pourSec, 15);
+  assert.equal(out[1].pourSec, 12);
+});
+
+test('注ぐ秒数のない古いレシピ：計算した秒数で読み、そのまま保存し直せる', () => {
+  const old = {
+    id: 'r1',
+    name: '古いレシピ',
+    doseG: 20,
+    waterG: 300,
+    tempC: 92,
+    pours: [
+      { atSec: 0, toG: 60, style: 'circle' },
+      { atSec: 45, toG: 300, style: 'circle' },
+    ],
+    targetTotalSec: 210,
+    template: null,
+  };
+  assert.equal(pourSecOf(old.pours, 0), 6);
+  const plan = planFromRecipe(old);
+  assert.deepEqual(plan.pours.map((p) => p.pourSec), [6, 24]);
+  assert.equal(plan.flowGps, 10);
+  const state = recipeToState(old);
+  assert.deepEqual(state.pours.map((p) => [p.pourSec, p.pourSecManual]), [[6, false], [24, false]]);
+  const { value, errors } = normalizeRecipeInput(state);
+  assert.deepEqual(errors, {});
+  assert.deepEqual(value.pours.map((p) => p.pourSec), [6, 24]);
+  assert.equal(value.flowGps, 10);
+});
+
+test('注ぐ秒数が次の注湯の時刻を越えるとエラー。空なら流速から入れる', () => {
+  const s = newRecipeState();
+  s.name = 'テスト';
+  s.pours[0] = { ...s.pours[0], pourSec: 50, pourSecManual: true };
+  let r = normalizeRecipeInput(s);
+  assert.match(r.errors.pours, /1投目は次の注湯までに注ぎ終わりません。注ぐ秒数を45秒以下に/);
+  s.pours[0] = { ...s.pours[0], pourSec: 45 };
+  r = normalizeRecipeInput(s);
+  assert.equal(r.errors.pours, undefined);
+  assert.equal(r.value.pours[0].pourSecManual, true);
+  s.pours[1] = { ...s.pours[1], pourSec: '' };
+  r = normalizeRecipeInput(s);
+  assert.equal(r.value.pours[1].pourSec, 6);
+  s.pours[2] = { ...s.pours[2], pourSec: 'abc' };
+  assert.match(normalizeRecipeInput(s).errors.pours, /3投目の注ぐ秒数/);
 });

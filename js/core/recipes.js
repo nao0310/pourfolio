@@ -19,6 +19,8 @@ export const TEMPLATE_KINDS = Object.freeze({ '46': '4:6メソッド', basic: '�
 
 export const DEFAULT_RATIO = 15;
 export const DEFAULT_TEMP_C = 92;
+/** 目安の流速（g/秒）の初期値。注ぐ秒数の自動計算に使う */
+export const DEFAULT_FLOW_GPS = 10;
 
 const round1 = (n) => Math.round(n * 10) / 10;
 const clean = (v) => String(v ?? '').normalize('NFKC').trim();
@@ -49,6 +51,56 @@ export function parseSec(v) {
   return Number.isInteger(n) && n >= 0 ? n : NaN;
 }
 
+/** 流速（g/秒）。小数1桁。計算できなければ null */
+export function flowOf(addG, pourSec) {
+  if (!(addG > 0) || !(pourSec > 0)) return null;
+  return round1(addG / pourSec);
+}
+
+/** 注ぐ量と流速から、注ぐ秒数（整数・1秒以上） */
+export function pourSecFromFlow(addG, flowGps = DEFAULT_FLOW_GPS) {
+  if (!(addG > 0)) return null;
+  const f = flowGps > 0 ? flowGps : DEFAULT_FLOW_GPS;
+  return Math.max(1, Math.round(addG / f));
+}
+
+/**
+ * i投目の注ぐ秒数。保存された値があればそれ、なければ（古いレシピ・抽出）注ぐ量÷流速で計算する。
+ * 次の注湯の時刻を越える分は切り詰める（自動の値だけ。手で入れた値は入力チェックで止める）
+ * @param {{atSec:number,toG:number,pourSec?:number}[]} pours
+ * @param {number} i
+ * @param {number} [flowGps]
+ */
+export function pourSecOf(pours, i, flowGps = DEFAULT_FLOW_GPS) {
+  const p = pours[i];
+  if (!p) return null;
+  if (typeof p.pourSec === 'number' && p.pourSec > 0) return p.pourSec;
+  const prevG = i > 0 ? pours[i - 1].toG : 0;
+  const sec = pourSecFromFlow(p.toG - prevG, flowGps);
+  if (sec == null) return null;
+  const next = pours[i + 1];
+  return next && typeof next.atSec === 'number' && typeof p.atSec === 'number' ? Math.max(1, Math.min(sec, next.atSec - p.atSec)) : sec;
+}
+
+/**
+ * 手で直していない投（pourSecManual でない）の注ぐ秒数を、注ぐ量÷流速で入れ直す
+ * @param {object[]} pours 累計 toG が数の並び（数でない行はそのまま）
+ * @param {number} [flowGps]
+ */
+export function fillPourSecs(pours, flowGps = DEFAULT_FLOW_GPS) {
+  const base = pours.map((p) => {
+    if (p.pourSecManual) return { ...p };
+    const { pourSec, ...rest } = p;
+    return rest;
+  });
+  return base.map((p, i) => {
+    if (p.pourSecManual) return p;
+    const ok = typeof p.toG === 'number' && (i === 0 || typeof base[i - 1].toG === 'number');
+    const sec = ok ? pourSecOf(base, i, flowGps) : null;
+    return sec == null ? p : { ...p, pourSec: sec };
+  });
+}
+
 /** 累計の湯量を、最後がちょうど waterG になるように丸める */
 function cumulative(amounts, waterG) {
   const out = [];
@@ -63,9 +115,9 @@ function cumulative(amounts, waterG) {
 /**
  * 4:6メソッドの注湯を計算する。
  * 前半40%を2投（味で配分を変える）、後半60%を2〜4投（濃さで投数を変える）に分け、45秒ごとに注ぐ。
- * @param {{doseG:number, ratio?:number, taste?:string, strength?:string, intervalSec?:number}} p
+ * @param {{doseG:number, ratio?:number, taste?:string, strength?:string, intervalSec?:number, flowGps?:number}} p
  */
-export function make46({ doseG, ratio = DEFAULT_RATIO, taste = 'standard', strength = 'standard', intervalSec = 45 }) {
+export function make46({ doseG, ratio = DEFAULT_RATIO, taste = 'standard', strength = 'standard', intervalSec = 45, flowGps = DEFAULT_FLOW_GPS }) {
   const waterG = waterFromRatio(doseG, ratio);
   if (waterG == null) return null;
   const first = Math.round(waterG * 0.4);
@@ -73,7 +125,7 @@ export function make46({ doseG, ratio = DEFAULT_RATIO, taste = 'standard', stren
   const n = LATER_POUR_COUNT[strength] ?? LATER_POUR_COUNT.standard;
   const later = Array.from({ length: n }, () => (waterG - first) / n);
   const toGs = [p1, first, ...cumulative(later, waterG - first).map((g) => first + g)];
-  const pours = toGs.map((toG, i) => ({ atSec: i * intervalSec, toG, style: 'circle' }));
+  const pours = fillPourSecs(toGs.map((toG, i) => ({ atSec: i * intervalSec, toG, style: 'circle' })), flowGps);
   return {
     waterG,
     pours,
@@ -83,16 +135,19 @@ export function make46({ doseG, ratio = DEFAULT_RATIO, taste = 'standard', stren
 
 /**
  * 基本形：粉量の2倍で蒸らし、残りを2〜3回に等分して注ぐ。
- * @param {{doseG:number, ratio?:number, pourCount?:number, bloomSec?:number, intervalSec?:number}} p
+ * @param {{doseG:number, ratio?:number, pourCount?:number, bloomSec?:number, intervalSec?:number, flowGps?:number}} p
  */
-export function makeBasic({ doseG, ratio = DEFAULT_RATIO, pourCount = 3, bloomSec = 40, intervalSec = 35 }) {
+export function makeBasic({ doseG, ratio = DEFAULT_RATIO, pourCount = 3, bloomSec = 40, intervalSec = 35, flowGps = DEFAULT_FLOW_GPS }) {
   const waterG = waterFromRatio(doseG, ratio);
   if (waterG == null) return null;
   const n = pourCount === 2 ? 2 : 3;
   const bloomG = Math.min(Math.round(doseG * 2), waterG);
   const rest = Array.from({ length: n }, () => (waterG - bloomG) / n);
   const toGs = [bloomG, ...cumulative(rest, waterG - bloomG).map((g) => bloomG + g)];
-  const pours = toGs.map((toG, i) => ({ atSec: i === 0 ? 0 : bloomSec + (i - 1) * intervalSec, toG, style: i === 0 ? 'center' : 'noji' }));
+  const pours = fillPourSecs(
+    toGs.map((toG, i) => ({ atSec: i === 0 ? 0 : bloomSec + (i - 1) * intervalSec, toG, style: i === 0 ? 'center' : 'noji' })),
+    flowGps,
+  );
   return {
     waterG,
     pours,
@@ -104,11 +159,12 @@ export function makeBasic({ doseG, ratio = DEFAULT_RATIO, pourCount = 3, bloomSe
  * 雛形の設定と粉量から、湯量・注湯・目標時間を作る。
  * @param {{kind:'46'|'basic', ratio?:number, taste?:string, strength?:string, pourCount?:number}} template
  * @param {number} doseG
+ * @param {number} [flowGps] 目安の流速（注ぐ秒数の計算に使う）
  */
-export function applyTemplate(template, doseG) {
+export function applyTemplate(template, doseG, flowGps = DEFAULT_FLOW_GPS) {
   if (!template) return null;
-  if (template.kind === '46') return make46({ doseG, ...template });
-  if (template.kind === 'basic') return makeBasic({ doseG, ...template });
+  if (template.kind === '46') return make46({ doseG, ...template, flowGps });
+  if (template.kind === 'basic') return makeBasic({ doseG, ...template, flowGps });
   return null;
 }
 
@@ -139,6 +195,7 @@ export function newRecipeState(defaults = {}) {
     pours: made.pours,
     bloomStir: false,
     targetTotalSec: made.targetTotalSec,
+    flowGps: DEFAULT_FLOW_GPS,
     template,
     favorite: false,
     memo: '',
@@ -157,9 +214,16 @@ export function recipeToState(recipe) {
     dripperId: recipe.equipment?.dripperId ?? '',
     filterId: recipe.equipment?.filterId ?? '',
     kettleId: recipe.equipment?.kettleId ?? '',
-    pours: (recipe.pours ?? []).map((p) => ({ atSec: p.atSec, toG: p.toG, style: p.style ?? '' })),
+    pours: (recipe.pours ?? []).map((p, i, all) => ({
+      atSec: p.atSec,
+      toG: p.toG,
+      style: p.style ?? '',
+      pourSec: pourSecOf(all, i, recipe.flowGps ?? DEFAULT_FLOW_GPS),
+      pourSecManual: Boolean(p.pourSecManual),
+    })),
     bloomStir: Boolean(recipe.bloom?.stir),
     targetTotalSec: recipe.targetTotalSec ?? null,
+    flowGps: recipe.flowGps ?? DEFAULT_FLOW_GPS,
     template: recipe.template ? { ...recipe.template } : null,
     favorite: Boolean(recipe.favorite),
     memo: recipe.memo ?? '',
@@ -207,7 +271,15 @@ export function normalizeRecipeInput(input) {
     }
     if (toG == null || Number.isNaN(toG) || toG <= 0) errors.pours ??= `${i + 1}投目の累計湯量を入れてください`;
     const style = Object.hasOwn(POUR_STYLES, p.style) ? p.style : '';
-    pours.push({ atSec, toG: toG == null || Number.isNaN(toG) ? toG : round1(toG), style });
+    let pourSec = typeof p.pourSec === 'number' ? p.pourSec : parseSec(p.pourSec);
+    if (pourSec != null && (Number.isNaN(pourSec) || pourSec <= 0 || pourSec > 600)) {
+      errors.pours ??= `${i + 1}投目の注ぐ秒数は1〜600の数字で入れてください`;
+      pourSec = null;
+    }
+    const pour = { atSec, toG: toG == null || Number.isNaN(toG) ? toG : round1(toG), style };
+    if (pourSec != null) pour.pourSec = Math.round(pourSec);
+    if (p.pourSecManual && pourSec != null) pour.pourSecManual = true;
+    pours.push(pour);
   });
   if (!errors.pours) {
     for (let i = 1; i < pours.length; i++) {
@@ -221,6 +293,14 @@ export function normalizeRecipeInput(input) {
       }
     }
   }
+  if (!errors.pours) {
+    for (let i = 0; i < pours.length - 1; i++) {
+      if (pours[i].pourSec != null && pours[i].atSec + pours[i].pourSec > pours[i + 1].atSec) {
+        errors.pours = `${i + 1}投目は次の注湯までに注ぎ終わりません。注ぐ秒数を${pours[i + 1].atSec - pours[i].atSec}秒以下にしてください`;
+        break;
+      }
+    }
+  }
   if (!errors.pours && waterG != null && Math.abs(pours[pours.length - 1].toG - waterG) > 0.5) {
     errors.pours = `最後の注湯の累計（${pours[pours.length - 1].toG}g）を湯量（${waterG}g）に合わせてください`;
   }
@@ -229,6 +309,17 @@ export function normalizeRecipeInput(input) {
   if (targetTotalSec != null && (Number.isNaN(targetTotalSec) || targetTotalSec <= 0 || targetTotalSec > 3600)) {
     errors.targetTotalSec = '目標時間を「3:30」のように入れてください';
     targetTotalSec = null;
+  }
+
+  let flowGps = num(input.flowGps);
+  if (flowGps == null || Number.isNaN(flowGps) || flowGps <= 0 || flowGps > 100) flowGps = DEFAULT_FLOW_GPS;
+  else flowGps = round1(flowGps);
+
+  // 注ぐ秒数が空の投は、注ぐ量÷流速で入れる
+  if (!errors.pours) {
+    pours.forEach((p, i) => {
+      if (p.pourSec == null) p.pourSec = pourSecOf(pours, i, flowGps);
+    });
   }
 
   const id = (v) => clean(v) || null;
@@ -249,6 +340,7 @@ export function normalizeRecipeInput(input) {
       },
       pours,
       targetTotalSec,
+      flowGps,
       template,
       favorite: Boolean(input.favorite),
       memo: clean(input.memo),
@@ -353,10 +445,16 @@ export function planFromRecipe(recipe) {
     grind: { grinderId: recipe.grind?.grinderId ?? null, setting: recipe.grind?.setting ?? '' },
     equipment: { ...(recipe.equipment ?? {}) },
     bloom: { ...(recipe.bloom ?? {}) },
-    pours: (recipe.pours ?? []).map((p) => ({ ...p })),
+    pours: withPourSecs(recipe.pours ?? [], recipe.flowGps),
     targetTotalSec: recipe.targetTotalSec ?? null,
+    flowGps: recipe.flowGps ?? DEFAULT_FLOW_GPS,
     template: recipe.template ? { ...recipe.template } : null,
   };
+}
+
+/** 注湯の写し。注ぐ秒数のない投（古いデータ）には計算した秒数を入れる */
+function withPourSecs(pours, flowGps = DEFAULT_FLOW_GPS) {
+  return pours.map((p, i) => ({ ...p, pourSec: pourSecOf(pours, i, flowGps ?? DEFAULT_FLOW_GPS) }));
 }
 
 /**
@@ -374,7 +472,7 @@ export function planFromBrew(brew, recipe = null) {
     ...Object.fromEntries(Object.entries(p).filter(([, v]) => v !== undefined)),
     grind: grind ? { ...base.grind, ...grind } : base.grind,
     equipment: { ...base.equipment, ...(brew.equipment ?? {}), ...(p.equipment ?? {}) },
-    pours: (p.pours ?? base.pours).map((x) => ({ ...x })),
+    pours: withPourSecs(p.pours ?? base.pours, p.flowGps ?? base.flowGps),
     source: 'lastBrew',
     fromBrewId: brew.id,
     beanId: brew.beanId ?? null,
