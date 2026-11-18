@@ -19,13 +19,14 @@ import {
   listBrews,
   listTastings,
   listRecipes,
+  setBeanStatus,
 } from './db.js';
 import { adjustPlan, adjustNotes, parseAdjustParams, adjustQuery, hotPlanOf, carryIce, isIced, cupsOf, perCupPlan, perCupIceG, MOODS, CUP_OPTIONS, cupsLabel } from './core/plan-adjust.js';
 import { initialRecipe, initialPlan, baseRecipe } from './core/initial-recipe.js';
 import { defaultEquipmentIds } from './core/equipment.js';
 import { doseFromSettings } from './core/inventory.js';
 import { frozenChoice, portionsOf, portionText } from './core/frozen.js';
-import { remainingG } from './core/inventory.js';
+import { remainingG, stockCheckForBrew } from './core/inventory.js';
 import { basePlanForNext, applyAction, pickPendingSuggestion } from './core/dialin.js';
 import { planFromRecipe, planFromBrew, formatSec, POUR_STYLES, ratioOf } from './core/recipes.js';
 import { sortBeansForList } from './core/beans.js';
@@ -710,12 +711,23 @@ const onSave = singleFlight(async (e) => {
   const at = new Date(draft.startedAtMs ?? Date.now()).toISOString();
   // 冷凍の袋を使う：保存すると袋を取り出したことになる（C4）
   const portion = readForm().useFrozen ? frozenChoice({ portions, beanId: value.beanId, roomG: 0, doseG: 0 }).portion : null;
+  // 残りが足りないときは、保存する前に知らせる（2-8の32番）
+  const beanTxs = value.beanId ? txs.filter((t) => t.beanId === value.beanId) : [];
+  const stock = stockCheckForBrew({ txCount: beanTxs.length, roomG: remainingG(beanTxs), doseG: value.doseG, usingPortion: !!portion });
+  if (
+    stock.short &&
+    !(await askConfirm(`この豆の残りは${formatG(remainingG(beanTxs))}で、粉${formatG(value.doseG)}に足りません。このまま保存すると、残りがマイナスになります（豆の画面の「量り直す」で直せます）。保存しますか？`, { ok: '保存する', cancel: '戻って直す' }))
+  ) return;
   const submit = $('resultView').querySelector('button[type="submit"]');
   submit.disabled = true;
   let saved = null;
   try {
     const { brew } = await saveBrew(db, buildBrew({ draft, value, at, bean, portion }));
     saved = brew;
+    // 残りが0gになったら、飲み切りにするか聞く（2-8の32番）
+    if (stock.empty && bean && bean.status !== 'finished' && (await askConfirm('この豆の残りが0gになりました。飲み切りにしますか？', { ok: '飲み切りにする', cancel: 'まだ残っている' }))) {
+      await setBeanStatus(db, bean.id, 'finished');
+    }
     const { compareId, compareBeanId } = draft;
     clearDraft();
     draft = null;

@@ -57,6 +57,22 @@ export function remainingG(txs) {
   return round1(txs.filter(alive).reduce((s, t) => s + (Number(t.deltaG) || 0), 0));
 }
 
+/** 残りが0gとみなす幅（g）。はかりの誤差 */
+export const EMPTY_TOLERANCE_G = 0.5;
+
+/**
+ * 抽出を保存する前の在庫の確かめ（2-8の32番）
+ * @param {{txCount:number, roomG:number, doseG:number, usingPortion?:boolean}} p
+ *   txCount はその豆の在庫履歴の数（0なら重さを入れていない豆なので確かめない）。冷凍の袋を使うときも確かめない
+ * @returns {{short:boolean, empty:boolean, afterG:number|null}}
+ *   short＝残りが足りない（保存すると残りがマイナス）、empty＝保存すると残りがほぼ0g（飲み切りにするか聞く）
+ */
+export function stockCheckForBrew({ txCount = 0, roomG = 0, doseG = 0, usingPortion = false }) {
+  if (usingPortion || !(txCount > 0) || !(doseG > 0)) return { short: false, empty: false, afterG: null };
+  const afterG = round1(roomG - doseG);
+  return { short: afterG < -EMPTY_TOLERANCE_G, empty: afterG <= EMPTY_TOLERANCE_G, afterG };
+}
+
 /** 残り杯数（端数は切り捨て。マイナスにはしない） */
 export function cupsLeft(remaining, doseG = DEFAULT_DOSE_G) {
   if (!(doseG > 0) || !(remaining > 0)) return 0;

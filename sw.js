@@ -9,7 +9,7 @@
 // <manifest> npm run sw が書き込む（手で直さない）
 const MANIFEST = {
   "label": "2.8",
-  "version": "7bd4c6aedf39",
+  "version": "54ec90cb146c",
   "files": {
     "ai.html": "3c8af042c22bb904",
     "analysis.html": "95edaebc90b88064",
@@ -42,7 +42,7 @@ const MANIFEST = {
     "js/brew-chart-page.js": "1b79f27da2a171bf",
     "js/brew-draft.js": "d7586b9a8f874516",
     "js/brew-image.js": "7271711ef411af36",
-    "js/brew-page.js": "c674d0fbddb4d9d0",
+    "js/brew-page.js": "11faa76881f39ba7",
     "js/calendar-page.js": "498481f8d95cf1e8",
     "js/chart.js": "bfe7bcfbcfd6aa36",
     "js/compare-page.js": "7a24d527e42655e8",
@@ -77,7 +77,7 @@ const MANIFEST = {
     "js/core/home.js": "9f8feb0bf29e19e5",
     "js/core/initial-recipe.js": "d9383e0e76c31245",
     "js/core/install.js": "1ce19201bb995ac2",
-    "js/core/inventory.js": "d5c50b6059b24e2c",
+    "js/core/inventory.js": "ded15007fcb42145",
     "js/core/monthly.js": "ad4ba1bfd7535622",
     "js/core/offline.js": "907135ce0abe78fb",
     "js/core/once.js": "65ced3a0a36e7800",
