@@ -19,7 +19,7 @@ const PAGES = [
   'index.html', 'today.html', 'beans.html', 'bean-edit.html', 'recipes.html', 'recipe-edit.html', 'brew.html',
   'equipment.html', 'equipment-edit.html', 'analysis.html', 'analysis.html?demo=1', 'brew-chart.html', 'calendar.html',
   'factors.html', 'profile.html', 'dialin-history.html', 'cost.html', 'shopping.html', 'shops.html', 'order-import.html',
-  'compare.html', 'ai.html', 'report.html', 'share.html', 'scan.html', 'recipe-card.html', 'more.html', 'data.html',
+  'compare.html', 'optimize.html', 'ai.html', 'report.html', 'share.html', 'scan.html', 'recipe-card.html', 'more.html', 'data.html',
   'storage-test.html', 'tasting.html',
 ];
 
@@ -36,16 +36,19 @@ async function pagesWithIds({ every = false } = {}) {
   const recipe = newest(alive('recipes'));
   const brew = newest(alive('brews'), 'at');
   const eq = newest(alive('equipment'));
-  const exp = newest(alive('experiments'));
+  const exp = newest(alive('experiments').filter((e) => e.kind !== 'optimize'));
   if (bean) out.push(`bean.html?id=${bean.id}`, `bean-edit.html?id=${bean.id}`, `dialin-history.html?bean=${bean.id}`, `brew.html?bean=${bean.id}`, `ai.html?bean=${bean.id}`, `share.html?bean=${bean.id}`, `recipe-card.html?bean=${bean.id}&canister=1`);
   if (recipe) out.push(`recipe-edit.html?id=${recipe.id}`, `recipe-card.html?recipe=${recipe.id}`, `share.html?recipe=${recipe.id}`, `brew.html?recipe=${recipe.id}`);
   if (brew) out.push(`tasting.html?brew=${brew.id}`, `brew.html?brew=${brew.id}`);
   if (eq) out.push(`equipment-edit.html?id=${eq.id}`);
   if (exp) out.push(`compare.html?id=${exp.id}`);
+  const opt = newest(alive('experiments').filter((e) => e.kind === 'optimize'));
+  if (opt) out.push(`optimize.html?id=${opt.id}`);
+  if (bean) out.push(`optimize.html?bean=${bean.id}`, `compare.html?bean=${bean.id}`, `compare.html?new=triangle`);
   // 削除した豆のページ（意地悪のデータ）
   const deadBean = (all.beans ?? []).find((b) => b.deletedAt != null);
   if (deadBean) out.push(`bean.html?id=${deadBean.id}`);
-  out.push('bean.html?id=no-such-id', 'tasting.html?brew=no-such-id', 'brew.html?bean=no-such-id', 'recipe-edit.html?id=no-such-id', 'compare.html?id=no-such-id');
+  out.push('bean.html?id=no-such-id', 'tasting.html?brew=no-such-id', 'brew.html?bean=no-such-id', 'recipe-edit.html?id=no-such-id', 'compare.html?id=no-such-id', 'optimize.html?id=no-such-id');
   // every：全部の豆・抽出・レシピ・飲み比べのページ（意地悪のデータ用。削除済みも含む）
   if (every) {
     for (const b of all.beans ?? []) out.push(`bean.html?id=${b.id}`, `brew.html?bean=${b.id}`, `dialin-history.html?bean=${b.id}`);

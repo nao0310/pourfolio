@@ -31,6 +31,7 @@ const PAGE_TAB = Object.freeze({
   'more.html': 'more',
   'equipment.html': 'more',
   'compare.html': 'more',
+  'optimize.html': 'more',
   'data.html': 'more',
   'ai.html': 'more',
   'scan.html': 'more',

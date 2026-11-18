@@ -5,11 +5,37 @@
 // 1人でもブラインドにできるよう、カップの底に焙煎度を書いて混ぜ、番号で評価してから底を見て答え合わせをする（D-109）。
 // 答え合わせが済むと、評価をそれぞれの抽出の「温かいうち」の評価として保存する（db 側）。
 // 結果を産地ごとに集め「この産地はハイが好き」を出す（spec 4.4）。
+//
+// 3-1 で実験（F7・B6）に広げた。種類（kind）：
+//   roast     豆の飲み比べ（袋2〜4。焙煎度違いでも、銘柄違いでもよい）
+//   variable  条件の飲み比べ（同じ豆・同じレシピで、挽き目・湯温・比率のどれか1つだけ変えた2杯。core/experiment-plan.js）
+//   triangle  トライアングルテスト（3杯から違う1杯を当てる。core/experiment-plan.js）
+//   optimize  最適化（core/optimize.js。カップはなく、ふつうに淹れて評価した杯から次の条件を出す）
+// カップ（entries）は鍵（key）で区別する。同じ豆で2杯淹れることがあるため。
+// 3-1 より前の記録には key がないので、読むときに key＝袋のID と読み替える（entryKey。DBは書き換えない）。
 
 import { ROAST_LEVELS } from './roast.js';
 import { STAR_MAX, QUICK_TAGS } from './tastings.js';
 
 export const COMPARE_KIND = 'roast';
+export const VARIABLE_KIND = 'variable';
+export const TRIANGLE_KIND = 'triangle';
+export const OPTIMIZE_KIND = 'optimize';
+/** カップを淹れて飲み比べる種類（最適化は除く） */
+export const CUP_KINDS = Object.freeze([COMPARE_KIND, VARIABLE_KIND, TRIANGLE_KIND]);
+/** 種類の呼び方 */
+export const KIND_LABELS = Object.freeze({
+  [COMPARE_KIND]: '豆の飲み比べ',
+  [VARIABLE_KIND]: '条件の飲み比べ',
+  [TRIANGLE_KIND]: 'トライアングルテスト',
+  [OPTIMIZE_KIND]: '最適化',
+});
+/** 種類（kind がない記録は豆の飲み比べ） */
+export const kindOf = (exp) => exp?.kind ?? COMPARE_KIND;
+/** カップの鍵（3-1 より前の記録は袋のID） */
+export const entryKey = (e) => e?.key ?? e?.beanId ?? null;
+/** 評価のカップの鍵（3-1 より前の記録は袋のID） */
+const ratingKey = (r) => r?.key ?? r?.beanId ?? null;
 export const MIN_ENTRIES = 2;
 export const MAX_ENTRIES = 4;
 
@@ -74,10 +100,10 @@ export function normalizeCompareInput(input, beans) {
   return { value: { beanIds: ids, recipeId: recipeId || null, blind: input?.blind !== false }, errors };
 }
 
-/** 飲み比べの名前「エチオピア 焙煎度比較」（銘柄が違う袋が混ざるときは「焙煎度比較（3袋）」） */
+/** 飲み比べの名前「エチオピア 焙煎度比較」（銘柄が違う袋が混ざるときは「豆の飲み比べ（3袋）」） */
 export function compareTitle(beans) {
   const names = [...new Set(beans.map((b) => clean(b.name)).filter(Boolean))];
-  return names.length === 1 ? `${names[0]} 焙煎度比較` : `焙煎度比較（${beans.length}袋）`;
+  return names.length === 1 ? `${names[0]} 焙煎度比較` : `豆の飲み比べ（${beans.length}袋）`;
 }
 
 /**
@@ -91,7 +117,7 @@ export function buildExperiment({ value, beans }) {
     title: compareTitle(picked),
     blind: value.blind,
     recipeId: value.recipeId,
-    entries: picked.map((b) => ({ beanId: b.id, brewId: null })),
+    entries: picked.map((b) => ({ key: b.id, beanId: b.id, brewId: null })),
     ratings: [],
     revealedAt: null,
   };
@@ -106,13 +132,17 @@ export function experimentStatus(exp) {
 export const STATUS_LABELS = Object.freeze({ brewing: '淹れている途中', tasting: '飲み比べの途中', done: '結果あり' });
 
 /**
- * 淹れた抽出をつなぐ。抽出の豆の袋があればその袋、なければ淹れようとした袋（targetBeanId）につなぐ。
- * 同じ袋で淹れ直したら新しい抽出に置き換える。どの袋にも当たらなければ変えない
+ * 淹れた抽出をつなぐ。カップの鍵（targetKey）が分かればそのカップ、なければ抽出の豆の袋、
+ * それもなければ淹れようとした袋（targetBeanId）につなぐ。
+ * 同じカップで淹れ直したら新しい抽出に置き換える。どのカップにも当たらなければ変えない
  * @returns {object} 新しい entries
  */
-export function attachBrew(exp, { brewId, beanId, targetBeanId = null }) {
+export function attachBrew(exp, { brewId, beanId, targetBeanId = null, targetKey = null }) {
   const entries = exp.entries ?? [];
-  const hit = entries.find((e) => e.beanId === beanId) ?? entries.find((e) => e.beanId === targetBeanId);
+  const hit =
+    (targetKey != null ? entries.find((e) => entryKey(e) === targetKey) : null) ??
+    entries.find((e) => e.beanId === beanId) ??
+    entries.find((e) => e.beanId === targetBeanId);
   if (!hit) return entries;
   return entries.map((e) => (e === hit ? { ...e, brewId } : e));
 }
@@ -130,13 +160,18 @@ export function normalizeRating(r) {
 
 /**
  * カップの評価を1件入れ替えた ratings を返す
- * ブラインドならカップの番号（cupNo）、ブラインドでなければ袋（beanId）で探す
+ * ブラインドならカップの番号（cupNo）、ブラインドでなければカップの鍵（entryKey）で探す
  */
 export function setRating(exp, key, rating) {
   const blind = exp.blind !== false;
   const list = [...(exp.ratings ?? [])];
-  const i = list.findIndex((r) => (blind ? r.cupNo === key : r.beanId === key));
-  const base = blind ? { cupNo: key, beanId: i >= 0 ? list[i].beanId ?? null : null } : { cupNo: (exp.entries ?? []).findIndex((e) => e.beanId === key) + 1, beanId: key };
+  const i = list.findIndex((r) => (blind ? r.cupNo === key : ratingKey(r) === key));
+  let base;
+  if (blind) base = { cupNo: key, key: i >= 0 ? ratingKey(list[i]) : null, beanId: i >= 0 ? list[i].beanId ?? null : null };
+  else {
+    const j = (exp.entries ?? []).findIndex((e) => entryKey(e) === key);
+    base = { cupNo: j + 1, key, beanId: exp.entries?.[j]?.beanId ?? null };
+  }
   const next = { ...base, ...normalizeRating(rating) };
   if (i >= 0) list[i] = next;
   else list.push(next);
@@ -146,33 +181,37 @@ export function setRating(exp, key, rating) {
 /** その番号（ブラインド）か袋のカップの評価。なければ空の評価 */
 export function ratingOf(exp, key) {
   const blind = exp.blind !== false;
-  const r = (exp.ratings ?? []).find((x) => (blind ? x.cupNo === key : x.beanId === key));
+  const r = (exp.ratings ?? []).find((x) => (blind ? x.cupNo === key : ratingKey(x) === key));
   return r ? normalizeRating(r) : { stars: null, tags: [], memo: '' };
 }
 
 /** 全部のカップに★が入っているか */
 export function allRated(exp) {
   const n = cupCount(exp);
-  const keys = exp.blind !== false ? Array.from({ length: n }, (_, i) => i + 1) : exp.entries.map((e) => e.beanId);
+  const keys = exp.blind !== false ? Array.from({ length: n }, (_, i) => i + 1) : exp.entries.map(entryKey);
   return n > 0 && keys.every((k) => ratingOf(exp, k).stars != null);
 }
 
 /**
- * 答え合わせ：カップの番号ごとに、底に書いてあった袋を選ぶ。どの袋もちょうど1回ずつ選ぶ
+ * 答え合わせ：カップの番号ごとに、底に書いてあったカップ（鍵）を選ぶ。どのカップもちょうど1回ずつ選ぶ
  * @param {object} exp
- * @param {Record<number,string>} answers { 1: beanId, 2: beanId, … }
+ * @param {Record<number,string>} answers { 1: key, 2: key, … }（3-1 より前の記録では key＝袋のID）
  * @returns {{ratings: object[]|null, errors: Record<string,string>}}
  */
 export function reveal(exp, answers) {
   const errors = {};
   const n = cupCount(exp);
-  const beanIds = exp.entries.map((e) => e.beanId);
+  const keys = exp.entries.map(entryKey);
   const chosen = Array.from({ length: n }, (_, i) => answers?.[i + 1] ?? answers?.[String(i + 1)] ?? null);
+  const what = kindOf(exp) === VARIABLE_KIND ? '条件' : '焙煎度';
   if (!allRated(exp)) errors.ratings = 'どのカップにも★を付けてください';
-  if (chosen.some((id) => !beanIds.includes(id))) errors.answers = 'どのカップも、底に書いた焙煎度を選んでください';
-  else if (new Set(chosen).size !== n) errors.answers = '同じ焙煎度を2つのカップに選んでいます';
+  if (chosen.some((k) => !keys.includes(k))) errors.answers = `どのカップも、底に書いた${what}を選んでください`;
+  else if (new Set(chosen).size !== n) errors.answers = `同じ${what}を2つのカップに選んでいます`;
   if (Object.keys(errors).length) return { ratings: null, errors };
-  const ratings = Array.from({ length: n }, (_, i) => ({ cupNo: i + 1, beanId: chosen[i], ...ratingOf(exp, i + 1) }));
+  const ratings = Array.from({ length: n }, (_, i) => {
+    const entry = exp.entries.find((e) => entryKey(e) === chosen[i]);
+    return { cupNo: i + 1, key: chosen[i], beanId: entry?.beanId ?? null, ...ratingOf(exp, i + 1) };
+  });
   return { ratings, errors };
 }
 
@@ -183,7 +222,7 @@ export function reveal(exp, answers) {
 export function tastingsToSave(exp) {
   const out = [];
   for (const r of exp.ratings ?? []) {
-    const entry = exp.entries.find((e) => e.beanId === r.beanId);
+    const entry = exp.entries.find((e) => entryKey(e) === ratingKey(r));
     if (!entry?.brewId) continue;
     out.push({ brewId: entry.brewId, beanId: r.beanId, value: { stars: r.stars, tags: r.tags, memo: r.memo } });
   }
@@ -191,15 +230,18 @@ export function tastingsToSave(exp) {
 }
 
 /**
- * 結果：袋ごとの★と順位（★の多い順。同じ★は同じ順位、★なしは最後）
- * @returns {{bean:object|null, beanId:string, roastLevel:string, stars:number|null, tags:string[], memo:string, cupNo:number|null, rank:number|null}[]}
+ * 結果：カップごとの★と順位（★の多い順。同じ★は同じ順位、★なしは最後）
+ * @returns {{key:string, label:string, brewId:string|null, bean:object|null, beanId:string, roastLevel:string, stars:number|null, tags:string[], memo:string, cupNo:number|null, rank:number|null}[]}
  */
 export function compareResults(exp, beans) {
   const byId = new Map((beans ?? []).map((b) => [b.id, b]));
   const rows = (exp.entries ?? []).map((e) => {
-    const r = (exp.ratings ?? []).find((x) => x.beanId === e.beanId);
+    const r = (exp.ratings ?? []).find((x) => ratingKey(x) === entryKey(e));
     const bean = byId.get(e.beanId) ?? null;
     return {
+      key: entryKey(e),
+      label: e.label ?? '',
+      brewId: e.brewId ?? null,
       bean,
       beanId: e.beanId,
       roastLevel: bean?.roastLevel ?? '',
@@ -277,9 +319,9 @@ export function preferenceText(pref) {
   return `${pref.label}は${pref.best}が好き（飲み比べ${pref.experiments}回）`;
 }
 
-/** 飲み比べの途中のもの（新しい順） */
+/** 飲み比べ・トライアングルの途中のもの（新しい順。最適化は「途中」がずっと続くので入れない） */
 export function openExperiments(experiments) {
   return (experiments ?? [])
-    .filter((e) => alive(e) && e.kind === COMPARE_KIND && experimentStatus(e) !== 'done')
+    .filter((e) => alive(e) && CUP_KINDS.includes(kindOf(e)) && experimentStatus(e) !== 'done')
     .sort((a, b) => String(b.updatedAt ?? '').localeCompare(String(a.updatedAt ?? '')));
 }

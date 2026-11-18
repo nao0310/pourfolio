@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="color-scheme" content="light dark">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>焙煎度の飲み比べ - Pourfolio</title>
+  <title>実験 - Pourfolio</title>
   <meta name="theme-color" content="#5a371f">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -18,52 +18,149 @@
   <main>
     <p class="crumb"><a href="beans.html" id="crumb">豆と在庫</a></p>
 
-    <!-- 一覧と、新しく始める（X27） -->
+    <!-- 一覧と、新しく始める（X27・F7・B6） -->
     <div id="listView" hidden>
-      <h1>焙煎度の飲み比べ</h1>
-      <p class="muted">同じ豆の焙煎度違いを、同じレシピで淹れて飲み比べます。結果を産地ごとにまとめ、好きな焙煎度がわかります。</p>
+      <h1>実験</h1>
+      <p class="muted">条件を1つだけ変えて飲み比べたり、豆を伏せて飲み比べたりして、好みを確かめます。</p>
 
       <div id="openList"></div>
 
-      <div class="card" id="prefCard" hidden>
-        <h2>わかった好み</h2>
-        <ul class="pref-list" id="prefList"></ul>
-      </div>
+      <section class="card suggest-card" id="ideasCard" hidden>
+        <h2>次に試す実験</h2>
+        <p class="muted small" id="ideasFor"></p>
+        <ul class="pref-list" id="ideas"></ul>
+      </section>
 
-      <form class="card" id="startForm" novalidate>
+      <section class="card" id="findCard" hidden>
+        <h2>わかったこと</h2>
+        <ul class="pref-list" id="findList"></ul>
+      </section>
+
+      <section class="card" id="startCard">
         <h2>新しく始める</h2>
-        <div id="groups"></div>
-        <fieldset class="field">
-          <legend class="label">比べる豆（2〜4袋）</legend>
-          <div id="beanChecks"></div>
-          <span class="field-error" data-for="beanIds"></span>
-        </fieldset>
-        <label class="field">
-          <span class="label">レシピ</span>
-          <select id="recipe"></select>
-          <span class="hint">1袋ずつ同じレシピで淹れます。量の少ないレシピ（粉10g前後）がおすすめです</span>
-          <span class="field-error" data-for="recipeId"></span>
-        </label>
-        <label class="check-row">
-          <input type="checkbox" id="blind" checked>
-          <span>ブラインドにする（どのカップか分からないまま評価する）</span>
-        </label>
-        <p id="msg" role="status"></p>
+        <p class="label">比べるもの</p>
+        <div class="seg3" id="kindSeg" role="group" aria-label="比べるもの"></div>
+
+        <!-- 豆の飲み比べ（X27・B6） -->
+        <form id="startForm" novalidate hidden>
+          <p class="muted small">豆の飲み比べ：袋を2〜4つ選び、同じレシピで淹れて飲み比べます。焙煎度違いでも、銘柄違いでも比べられます</p>
+          <div id="groups"></div>
+          <fieldset class="field">
+            <legend class="label">比べる豆（2〜4袋）</legend>
+            <div id="beanChecks"></div>
+            <span class="field-error" data-for="beanIds"></span>
+          </fieldset>
+          <label class="field">
+            <span class="label">レシピ</span>
+            <select id="recipe"></select>
+            <span class="hint">1袋ずつ同じレシピで淹れます。量の少ないレシピ（粉10g前後）がおすすめです</span>
+            <span class="field-error" data-for="recipeId"></span>
+          </label>
+          <label class="check-row">
+            <input type="checkbox" id="blind" checked>
+            <span>ブラインドにする（どのカップか分からないまま評価する）</span>
+          </label>
+          <p id="msg" role="status"></p>
+          <div class="row">
+            <button class="btn" type="submit" id="start">飲み比べを始める</button>
+          </div>
+        </form>
+
+        <!-- 条件の飲み比べ（F7） -->
+        <form id="varForm" novalidate hidden>
+          <p class="muted small">条件の飲み比べ：同じ豆・同じレシピで、条件を1つだけ変えた2杯を淹れて飲み比べます</p>
+          <label class="field">
+            <span class="label">豆</span>
+            <select id="vBean"></select>
+            <span class="field-error" data-for="beanId"></span>
+          </label>
+          <label class="field">
+            <span class="label">レシピ</span>
+            <select id="vRecipe"></select>
+            <span class="field-error" data-for="recipeId"></span>
+          </label>
+          <fieldset class="field">
+            <legend class="label">変える条件</legend>
+            <div class="seg3" id="vFactor" role="group" aria-label="変える条件"></div>
+          </fieldset>
+          <label class="field">
+            <span class="label">変える幅</span>
+            <select id="vDelta"></select>
+            <span class="hint" id="vPreview"></span>
+            <span class="field-error" data-for="factor"></span>
+          </label>
+          <label class="field">
+            <span class="label">予想（書かなくてもよい）</span>
+            <input type="text" id="vHypo" maxlength="80" placeholder="例：細かくすると甘くなる">
+          </label>
+          <label class="check-row">
+            <input type="checkbox" id="vBlind" checked>
+            <span>ブラインドにする（どのカップか分からないまま評価する）</span>
+          </label>
+          <p id="vMsg" role="status"></p>
+          <div class="row">
+            <button class="btn" type="submit" id="vStart">飲み比べを始める</button>
+          </div>
+        </form>
+
+        <!-- トライアングルテスト（B6） -->
+        <form id="triForm" novalidate hidden>
+          <p class="muted small">トライアングルテスト：AとBを1杯ずつ淹れて、それぞれ2つのカップに分けます。そのうち3つを並べ、1つだけ違うカップを当てます。違いが本当に分かるかを確かめられます</p>
+          <div class="seg5 seg2" id="tMode" role="group" aria-label="比べるもの"></div>
+          <fieldset class="field" id="tBeansBox">
+            <legend class="label">比べる豆（2袋）</legend>
+            <div id="tBeanChecks"></div>
+            <span class="field-error" data-for="beanIds"></span>
+          </fieldset>
+          <div id="tVarBox" hidden>
+            <label class="field">
+              <span class="label">豆</span>
+              <select id="tBean"></select>
+              <span class="field-error" data-for="beanId"></span>
+            </label>
+            <fieldset class="field">
+              <legend class="label">変える条件</legend>
+              <div class="seg3" id="tFactor" role="group" aria-label="変える条件"></div>
+            </fieldset>
+            <label class="field">
+              <span class="label">変える幅</span>
+              <select id="tDelta"></select>
+              <span class="hint" id="tPreview"></span>
+              <span class="field-error" data-for="factor"></span>
+            </label>
+          </div>
+          <label class="field">
+            <span class="label">レシピ</span>
+            <select id="tRecipe"></select>
+            <span class="field-error" data-for="recipeId"></span>
+          </label>
+          <p id="tMsg" role="status"></p>
+          <div class="row">
+            <button class="btn" type="submit" id="tStart">トライアングルを始める</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="card" id="optCard">
+        <h2>最適化</h2>
+        <p class="muted small">挽き目と比率の範囲を決めると、淹れて★を付けた杯から「次に試すと最も学べる条件」を出します。少ない杯数で好みの所に近づけます</p>
+        <ul class="link-list" id="optList"></ul>
         <div class="row">
-          <button class="btn" type="submit" id="start">飲み比べを始める</button>
+          <a class="btn secondary" href="optimize.html" id="optStart">最適化を始める</a>
         </div>
-      </form>
+      </section>
 
       <div class="card" id="doneCard" hidden>
-        <h2>これまでの飲み比べ</h2>
+        <h2>これまでの実験</h2>
         <ul class="link-list" id="doneList"></ul>
       </div>
     </div>
 
-    <!-- 飲み比べ1回 -->
+    <!-- 飲み比べ・トライアングル1回 -->
     <div id="expView" hidden>
       <h1 id="title"></h1>
       <p class="muted" id="sub"></p>
+      <p id="hypo" hidden></p>
 
       <section class="card" id="brewCard">
         <h2>1. 淹れる</h2>
@@ -89,22 +186,51 @@
         </div>
       </section>
 
+      <!-- トライアングルテスト：当てる → 答え合わせ -->
+      <section class="card" id="triCard" hidden>
+        <h2>2. 当てる</h2>
+        <p class="hint" id="triHint"></p>
+        <fieldset class="field">
+          <legend class="label">1つだけ違うと思うカップ</legend>
+          <div class="seg3" id="triPicked" role="group" aria-label="違うと思うカップ"></div>
+          <span class="field-error" data-for="picked"></span>
+        </fieldset>
+        <h2>3. 答え合わせ</h2>
+        <fieldset class="field">
+          <legend class="label" id="triOddLabel">カップの底を見て、1つだけのカップ</legend>
+          <div class="seg3" id="triOdd" role="group" aria-label="1つだけのカップ"></div>
+          <span class="field-error" data-for="odd"></span>
+        </fieldset>
+        <fieldset class="field">
+          <legend class="label">どちらが好きでしたか（選ばなくてもよい）</legend>
+          <div class="seg3" id="triLiked" role="group" aria-label="好きな方"></div>
+        </fieldset>
+        <p id="triMsg" role="status"></p>
+        <div class="row">
+          <button class="btn" type="button" id="triReveal">答え合わせをする</button>
+        </div>
+      </section>
+
       <section class="card suggest-card" id="resultCard" hidden>
         <h2>結果</h2>
+        <p class="suggest-action" id="outcome" hidden></p>
         <ol class="compare-results" id="results"></ol>
         <p class="suggest-action" id="prefText"></p>
-        <p class="muted small">評価はそれぞれの抽出の「温かいうち」の評価として保存しました。押すと評価の画面で詳しく直せます</p>
+        <p class="muted small" id="resultNote">評価はそれぞれの抽出の「温かいうち」の評価として保存しました。押すと評価の画面で詳しく直せます</p>
+        <div class="row" id="againRow" hidden>
+          <button class="btn" type="button" id="again">同じ組でもう1回</button>
+        </div>
       </section>
 
       <div class="row">
-        <a class="btn secondary" href="compare.html">飲み比べの一覧</a>
-        <button class="link-btn" type="button" id="remove">この飲み比べをやめる</button>
+        <a class="btn secondary" href="compare.html">実験の一覧</a>
+        <button class="link-btn" type="button" id="remove">この実験をやめる</button>
       </div>
     </div>
 
     <div id="notFound" hidden>
-      <h1>飲み比べが見つかりません</h1>
-      <p class="muted">やめたのかもしれません。<a href="compare.html">飲み比べの一覧</a>から選び直してください。</p>
+      <h1>実験が見つかりません</h1>
+      <p class="muted">やめたのかもしれません。<a href="compare.html">実験の一覧</a>から選び直してください。</p>
     </div>
   </main>
   <!-- tabbar：npm run sw が書き込む（手で直さない） -->

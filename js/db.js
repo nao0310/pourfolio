@@ -654,7 +654,7 @@ export async function getCoolPromptBrew(db, now = new Date()) {
   return pickCoolPrompt(brews, tastings, now);
 }
 
-// ---- 焙煎度比較（X27） ----
+// ---- 飲み比べ・実験（X27・F7・B6） ----
 
 /** 飲み比べの一覧（削除の印が付いたものは除く） */
 export async function listExperiments(db) {
@@ -724,6 +724,19 @@ export async function finishExperiment(db, id, ratings, now = new Date()) {
     }
   });
   return saved;
+}
+
+/**
+ * トライアングルテスト（B6）の答え合わせを残す。評価の記録は作らない（淹れた杯は、評価の画面でふつうに評価できる）
+ * @param {{picked:number, odd:number, correct:boolean, liked:string|null}} answer core/experiment-plan.js の judgeTriangle の answer
+ */
+export async function finishTriangle(db, id, answer, now = new Date()) {
+  return updateExperiment(db, id, { answer: { ...answer }, revealedAt: new Date(now).toISOString() }, now);
+}
+
+/** 最適化（F7）を終える／続ける（終えると一覧の「これまで」に移る） */
+export async function setOptimizeDone(db, id, done, now = new Date()) {
+  return updateExperiment(db, id, { revealedAt: done ? new Date(now).toISOString() : null }, now);
 }
 
 // ---- 写真（A7） ----

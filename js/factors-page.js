@@ -79,7 +79,14 @@ async function render() {
   const grinderName = data.equipment.find((e) => e.id === fa.grinderId)?.name ?? '';
   $('content').replaceChildren(
     fa.strongest
-      ? el('section', { class: 'card' }, el('h2', {}, 'いちばん一緒に動いている条件'), el('p', {}, `${fa.strongest.label}：${fa.strongest.word.text}`))
+      ? el(
+          'section',
+          { class: 'card' },
+          el('h2', {}, 'いちばん一緒に動いている条件'),
+          el('p', {}, `${fa.strongest.label}：${fa.strongest.word.text}`),
+          // 一緒に動いているだけかもしれないので、1つだけ変えた飲み比べで確かめる（spec 5.3、F7）
+          el('div', { class: 'row' }, el('a', { class: 'btn secondary', href: 'compare.html#ideasCard' }, '飲み比べで確かめる')),
+        )
       : el('section', { class: 'card' }, el('p', {}, 'どの条件も、★とはっきり一緒に動いてはいません。')),
     ...fa.factors.map((f) => factorCard(f, grinderName)),
     curveCard(curves),

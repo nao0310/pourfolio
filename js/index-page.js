@@ -11,7 +11,7 @@ import { pickPendingSuggestion } from './core/dialin.js';
 import { doseFromSettings } from './core/inventory.js';
 import { localYmd, formatG } from './core/format.js';
 import { STAGES } from './core/freshness.js';
-import { openExperiments, experimentStatus, STATUS_LABELS } from './core/compare.js';
+import { openExperiments, experimentStatus, STATUS_LABELS, KIND_LABELS, kindOf } from './core/compare.js';
 import { todayPicks, pickHref } from './core/today.js';
 import { MOODS, moodForHour } from './core/plan-adjust.js';
 import { analysisRows } from './core/analysis.js';
@@ -63,10 +63,11 @@ async function renderUnrated(beanName) {
   showCard($('unratedCard'), 'unrated', brew.id);
 }
 
-/** 焙煎度の飲み比べ（X27）の途中（いちばん新しい1つ） */
+/** 飲み比べ・トライアングル（X27・F7・B6）の途中（いちばん新しい1つ） */
 function renderCompare(all) {
   const e = openExperiments(all.experiments)[0];
   if (!e) return;
+  $('compareHead').textContent = `${KIND_LABELS[kindOf(e)]}の途中です`;
   $('compareText').textContent = `${e.title}（${STATUS_LABELS[experimentStatus(e)]}）`;
   $('compareLink').href = `compare.html?id=${enc(e.id)}`;
   showCard($('compareCard'), 'compare', e.id);

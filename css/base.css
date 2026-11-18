@@ -666,6 +666,11 @@ p > a:not(.btn):only-child { display: inline-block; padding: 11px 0; }
 .pref-list li { display: flex; flex-direction: column; padding: 6px 0; }
 .link-list { margin: 0; padding-left: 1.2em; }
 .link-list li { padding: 6px 0; }
+/* 実験（F7・B6） */
+.range-row { display: flex; align-items: center; gap: 8px; }
+.range-row input { width: 6.5em; }
+.pref-list .row { margin-top: 6px; }
+.heat.next { outline: 3px solid var(--accent); outline-offset: -3px; }
 .pref-note { color: var(--accent); font-size: 0.9rem; font-weight: 700; }
 
 /* TDS（A8）：評価の画面であとから入れる */

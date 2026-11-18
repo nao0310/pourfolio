@@ -34,6 +34,7 @@ import { freshness, FRESHNESS_WINDOWS, FALLBACK_GROUP, STAGES } from './core/fre
 import { roastGroup, ROAST_GROUPS } from './core/roast.js';
 import { localYmd, formatYmdJa, formatG, formatDateTimeJa, formatDateJa } from './core/format.js';
 import { roastPreferences, preferenceForBean, preferenceText } from './core/compare.js';
+import { variableFindings } from './core/experiment-plan.js';
 import { $, el, queryParam, showMessage as showBoxMessage, showToast, freshnessPill, frozenPill, stepperField, svgElement } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
 import { showCard } from './dismiss-card.js';
@@ -234,14 +235,20 @@ async function renderInitial(bean, allBeans) {
   $('initBrew').href = `brew.html?initial=${id}&bean=${id}`;
 }
 
-/** 焙煎度比較（X27）でわかった、この豆の産地の好きな焙煎度 */
+/** 焙煎度比較（X27）でわかった、この豆の産地の好きな焙煎度と、条件の飲み比べ（F7）でわかったこと */
 async function renderRoastPref(bean, allBeans) {
-  const pref = preferenceForBean(roastPreferences(await listExperiments(db), allBeans), bean);
+  const experiments = await listExperiments(db);
+  const pref = preferenceForBean(roastPreferences(experiments, allBeans), bean);
   const text = preferenceText(pref);
   $('roastPref').hidden = !text;
   $('roastPref').textContent = text ? `${text}。次の注文は「${pref.best}」がおすすめです` : '';
   $('roastPrefNote').hidden = Boolean(text);
   $('compareLink').href = `compare.html?bean=${encodeURIComponent(bean.id)}`;
+  $('optimizeLink').href = `optimize.html?bean=${encodeURIComponent(bean.id)}`;
+  // 条件の飲み比べ（F7）でわかったこと（この豆）
+  const found = variableFindings(experiments, allBeans, bean.id);
+  $('varFindings').hidden = found.length === 0;
+  $('varFindings').replaceChildren(...found.map((f) => el('li', {}, f.text)));
 }
 
 /** キャニスターの QR（X14）。開いたときだけ作る */
