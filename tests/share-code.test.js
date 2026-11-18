@@ -118,3 +118,15 @@ test('base64url の行き来と豆の1行', () => {
   assert.equal(beanLine({ name: 'A', roastLevel: 'ふつう' }), 'A');
   assert.equal(beanLine(null), '');
 });
+
+test('受け取る側：商品ページのURLが https:// か http:// でなければ消す（javascript: のリンクを開かない。2-8 の14番）', async () => {
+  const p = { app: 'pourfolio', v: 1, recipe: { name: 'r', doseG: 15, waterG: 225, pours: [] }, bean: { name: 'b', productUrl: 'javascript:alert(1)' } };
+  const code = `0.${toBase64Url(new TextEncoder().encode(JSON.stringify(p)))}`;
+  const res = await decodeShare(code);
+  assert.equal(res.ok, true);
+  assert.equal(res.payload.bean.productUrl, '');
+  assert.equal(res.payload.bean.name, 'b');
+  const ok = { ...p, bean: { name: 'b', productUrl: 'https://www.coffee-tonya.co.jp/x' } };
+  const r2 = await decodeShare(`0.${toBase64Url(new TextEncoder().encode(JSON.stringify(ok)))}`);
+  assert.equal(r2.payload.bean.productUrl, 'https://www.coffee-tonya.co.jp/x');
+});

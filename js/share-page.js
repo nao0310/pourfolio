@@ -86,7 +86,7 @@ function renderReceive(payload) {
   const grind = [r.grinderName, r.grindSetting].filter(Boolean).join(' ');
   $('rGrind').textContent = [grind ? `挽き目：${grind}` : '', r.dripperName ? `ドリッパー：${r.dripperName}` : ''].filter(Boolean).join('　');
   $('rBean').textContent = payload.bean ? `豆：${beanLine(payload.bean)}` : '';
-  if (payload.bean?.productUrl) {
+  if (/^https?:\/\//i.test(payload.bean?.productUrl ?? '')) {
     $('rProduct').hidden = false;
     $('rProductLink').href = payload.bean.productUrl;
   }
