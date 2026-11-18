@@ -76,7 +76,7 @@ import { DEFAULT_GRIND_STEP } from './core/dialin.js';
 import { orderRecipesForList, recipeSummary } from './core/recipes.js';
 import { tastingSummary } from './core/tastings.js';
 import { renderStars, renderTags } from './tasting-parts.js';
-import { $, el, queryParam, showMessage, showPageLoadError } from './ui.js';
+import { $, el, queryParam, showMessage, showPageLoadError, phrased, setPhrased, phraseStaticText } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
 import { singleFlight, serialQueue } from './core/once.js';
 import { askConfirm } from './confirm-box.js';
@@ -131,7 +131,7 @@ function expLink(e) {
           : 'はずれ'
         : STATUS_LABELS[status]
       : `${STATUS_LABELS[status]}・${kind === COMPARE_KIND ? `${e.entries.length}袋` : '2杯'}${e.blind !== false ? '・ブラインド' : ''}`;
-  return el('li', {}, el('a', { href: `compare.html?id=${enc(e.id)}` }, e.title || KIND_LABELS[kind]), el('span', { class: 'muted small' }, `　${KIND_LABELS[kind]}・${detail}`));
+  return el('li', {}, el('a', { href: `compare.html?id=${enc(e.id)}` }, ...phrased(e.title || KIND_LABELS[kind])), el('span', { class: 'muted small' }, ' ', ...phrased(`${KIND_LABELS[kind]}・${detail}`)));
 }
 
 function checkBeans(ids, box = '#beanChecks') {
@@ -174,7 +174,7 @@ function factorPicker({ factorBox, deltaSel, preview, beanSel, recipeSel, initia
       return;
     }
     const c = variableChange(recipe, { factor, delta: Number(deltaSel.value), grindStep: grindStepOf(recipe) });
-    preview.textContent = c.ok ? `いつもの1杯と、${c.text}の1杯を比べます` : c.error;
+    setPhrased(preview, c.ok ? `いつもの1杯と、${c.short}（${c.detail}）を比べます` : c.error);
   };
   const pick = (f, want) => {
     factor = f;
@@ -227,10 +227,10 @@ function setTriMode(mode) {
 function renderFindings(experiments) {
   const items = [];
   for (const p of roastPreferences(experiments, beans)) {
-    items.push(el('li', {}, el('strong', {}, preferenceText(p)), el('span', { class: 'muted small' }, p.levels.map((l) => `${l.level} ★${l.avgStars}（${l.n}杯）`).join('・'))));
+    items.push(el('li', {}, el('strong', {}, ...phrased(preferenceText(p))), el('span', { class: 'muted small' }, ...phrased(p.levels.map((l) => `${l.level} ★${l.avgStars}（${l.n}杯）`).join('・')))));
   }
   for (const f of variableFindings(experiments, beans)) {
-    items.push(el('li', {}, el('strong', {}, f.text), el('span', { class: 'muted small' }, '条件の飲み比べ（全部の豆）')));
+    items.push(el('li', {}, el('strong', {}, ...phrased(f.text)), el('span', { class: 'muted small' }, '条件の飲み比べ（全部の豆）')));
   }
   const seen = new Set();
   const tris = experiments
@@ -240,7 +240,7 @@ function renderFindings(experiments) {
     const k = triangleKey(e);
     if (seen.has(k)) continue;
     seen.add(k);
-    items.push(el('li', {}, el('strong', {}, e.title), el('span', { class: 'muted small' }, triangleStats(experiments, k).text)));
+    items.push(el('li', {}, el('strong', {}, ...phrased(e.title)), el('span', { class: 'muted small' }, ...phrased(triangleStats(experiments, k).text))));
   }
   $('findCard').hidden = items.length === 0;
   $('findList').replaceChildren(...items);
@@ -264,14 +264,15 @@ function renderIdeas({ brews, tastings, suggestions, experiments, last }) {
   }
   const ideas = nextExperimentIdeas({ beanId: bean.id, recipe, suggestions, brews, factorResult, experiments, grindStep: grindStepOf(recipe) });
   $('ideasCard').hidden = ideas.length === 0;
-  $('ideasFor').textContent = recipe ? `${beanLabel(bean)}・${recipe.name}で` : '';
+  setPhrased($('ideasFor'), recipe ? `${beanLabel(bean)}・${recipe.name}で` : '');
   $('ideas').replaceChildren(
     ...ideas.map((i) =>
       el(
         'li',
         {},
-        el('strong', {}, i.change.text),
-        el('span', { class: 'muted small' }, i.reason),
+        el('strong', {}, ...phrased(i.change.short)),
+        el('span', { class: 'muted small' }, ...phrased(i.change.detail)),
+        el('span', { class: 'small' }, ...phrased(i.reason)),
         el('div', { class: 'row' }, el('a', { class: 'btn small', href: i.href }, 'この飲み比べを始める')),
       ),
     ),
@@ -288,7 +289,7 @@ async function showList() {
       el(
         'div',
         { class: 'card resume-card' },
-        el('p', {}, el('strong', {}, `${STATUS_LABELS[experimentStatus(e)]}：${e.title}`)),
+        el('p', {}, el('strong', {}, ...phrased(`${STATUS_LABELS[experimentStatus(e)]}：${e.title}`))),
         el('div', { class: 'row' }, el('a', { class: 'btn', href: `compare.html?id=${enc(e.id)}` }, '続きに戻る')),
       ),
     ),
@@ -414,14 +415,14 @@ function brewHref(e) {
 function renderEntries() {
   const blind = exp.blind !== false;
   const kind = kindOf(exp);
-  $('brewHint').textContent =
+  setPhrased(
+    $('brewHint'),
     kind === TRIANGLE_KIND
-      ? 'AとBを1杯ずつ「淹れる」で淹れ、それぞれ2つのカップに分けます。カップの底（またはコースター）に、AかBを書いた付せんを貼っておきます'
+      ? 'AとBを1杯ずつ淹れ、2つのカップに分けます。カップの底に、AかBを書いた付せんを貼ります'
       : !blind
         ? '1杯ずつ「淹れる」で淹れます'
-        : kind === VARIABLE_KIND
-          ? '1杯ずつ「淹れる」で淹れます。淹れたカップの底（またはコースター）に、条件を書いた付せんを貼っておきます'
-          : '1袋ずつ「淹れる」で淹れます。淹れたカップの底（またはコースター）に、焙煎度を書いた付せんを貼っておきます';
+        : `1杯ずつ淹れて、カップの底に${kind === VARIABLE_KIND ? '条件' : '焙煎度'}を書いた付せんを貼ります`,
+  );
   const status = experimentStatus(exp);
   $('entries').replaceChildren(
     ...exp.entries.map((e) => {
@@ -429,7 +430,7 @@ function renderEntries() {
       return el(
         'li',
         {},
-        el('span', { class: 'compare-bean' }, cupLabel(e)),
+        el('span', { class: 'compare-bean' }, ...phrased(cupLabel(e))),
         e.brewId
           ? el('span', { class: 'compare-done' }, '淹れた', status !== 'done' ? el('a', { class: 'small', href }, '淹れ直す') : '')
           : el('a', { class: 'btn small', href }, '淹れる'),
@@ -469,9 +470,10 @@ async function flushRatings() {
 /** 2. 飲み比べる：ブラインドなら番号、そうでなければカップごとに★・一言・メモ */
 function renderCups() {
   const blind = exp.blind !== false;
-  $('tasteHint').textContent = blind
-    ? `底を見ないようにカップを混ぜて並べ、左から1〜${cupCount(exp)}番とします。番号ごとに★を付けます（一言・メモは入れなくてもよい）`
-    : 'カップごとに★を付けます（一言・メモは入れなくてもよい）';
+  setPhrased(
+    $('tasteHint'),
+    blind ? `底を見ずに混ぜて、左から1〜${cupCount(exp)}番にします。番号ごとに★を付けます（一言・メモはなくてもよい）` : 'カップごとに★を付けます（一言・メモはなくてもよい）',
+  );
   const keys = blind ? exp.entries.map((_, i) => i + 1) : exp.entries.map(entryKey);
   $('cups').replaceChildren(
     ...keys.map((key) => {
@@ -493,7 +495,7 @@ function renderCups() {
       });
       memo.value = state.memo;
       const title = blind ? `カップ ${key}` : cupLabel(exp.entries.find((e) => entryKey(e) === key));
-      return el('div', { class: 'cup-block' }, el('h3', {}, title), stars, tags, memo);
+      return el('div', { class: 'cup-block' }, el('h3', {}, ...phrased(title)), stars, tags, memo);
     }),
   );
 }
@@ -504,7 +506,7 @@ function renderReveal() {
   const what = kindOf(exp) === VARIABLE_KIND ? '条件' : '焙煎度';
   $('revealTitle').textContent = blind ? '3. 答え合わせ' : '3. 結果を見る';
   $('reveal').textContent = blind ? '答え合わせをする' : '結果を見る'; // 見出しとボタンの言葉をそろえる（2-8の25番）
-  $('revealHint').textContent = blind ? `全部に★を付けたら、カップの底を見て、番号ごとに${what}を選びます` : '全部に★を付けたら押します';
+  setPhrased($('revealHint'), blind ? `全部に★を付けたら、底を見て、番号ごとに${what}を選びます` : '全部に★を付けたら押します');
   $('answers').replaceChildren(
     ...(blind
       ? exp.entries.map((_, i) =>
@@ -561,12 +563,15 @@ async function onReveal() {
 
 const triState = { picked: null, odd: null, liked: null };
 function renderTriangle() {
-  const odd = exp.entries.find((e) => entryKey(e) === exp.oddKey);
-  const pair = exp.entries.find((e) => entryKey(e) === pairKey(exp));
-  $('triHint').textContent =
-    `${cupLabel(pair)}のカップを2つ、${cupLabel(odd)}のカップを1つ使います（残りの1つは、あとで飲んでください）。` +
-    `底を見ないように混ぜて、左から1〜${TRIANGLE_CUPS}番とします。3つとも飲んで、1つだけ違うと思うカップを選びます`;
-  $('triOddLabel').textContent = `選んだら、カップの底を見て、${letter(exp.oddKey)}だったカップ`;
+  // 長い1段落をやめ、3行の手順にする（3-1.1）
+  const pairL = letter(pairKey(exp));
+  const oddL = letter(exp.oddKey);
+  $('triHint').replaceChildren(
+    el('li', {}, ...phrased(`${pairL}を2つ、${oddL}を1つ並べます（残りの${oddL}はあとで）`)),
+    el('li', {}, ...phrased(`底を見ずに混ぜて、左から1〜${TRIANGLE_CUPS}番にします`)),
+    el('li', {}, ...phrased('3つとも飲んで、違う1つを選びます')),
+  );
+  $('triOddLabel').textContent = `底を見て、${oddL}だったカップ`;
   const cups = Array.from({ length: TRIANGLE_CUPS }, (_, i) => ({ value: i + 1, label: `カップ${i + 1}` }));
   const draw = () => {
     segButtons($('triPicked'), cups, triState.picked, (v) => ((triState.picked = v), draw()));
@@ -609,7 +614,7 @@ async function renderResults() {
     const a = exp.answer ?? {};
     const likedText = a.liked === 'same' ? '好みは同じくらい' : a.liked ? `${letter(a.liked)}の方が好き` : '';
     $('outcome').hidden = false;
-    $('outcome').textContent = a.correct ? `当たり！1つだけ違うカップ（カップ${a.odd}）を当てました` : `はずれ。1つだけ違ったのはカップ${a.odd}でした（選んだのはカップ${a.picked}）`;
+    setPhrased($('outcome'), a.correct ? `当たり！違うカップ（カップ${a.odd}）を当てました` : `はずれ。違ったのはカップ${a.odd}（選んだのはカップ${a.picked}）`);
     $('results').replaceChildren(
       ...exp.entries.map((e) =>
         el(
@@ -619,21 +624,21 @@ async function renderResults() {
           el(
             'span',
             { class: 'compare-result-body' },
-            e.brewId ? el('a', { href: `tasting.html?brew=${enc(e.brewId)}` }, e.label) : e.label,
+            e.brewId ? el('a', { href: `tasting.html?brew=${enc(e.brewId)}` }, ...phrased(e.label)) : el('span', {}, ...phrased(e.label)),
             el('span', { class: 'muted small' }, entryKey(e) === exp.oddKey ? '1つだけのカップ' : '2つのカップ'),
           ),
         ),
       ),
     );
-    $('prefText').textContent = [triangleStats(all, triangleKey(exp)).text, likedText].filter(Boolean).join('。');
-    $('resultNote').textContent = '淹れた杯は、押すと評価の画面で評価できます。続けると、違いが分かるかがはっきりします';
+    setPhrased($('prefText'), [triangleStats(all, triangleKey(exp)).text, likedText].filter(Boolean).join('。'));
+    $('resultNote').textContent = '淹れた杯は、名前を押すと評価できます';
     return;
   }
   const rows = compareResults(exp, beans);
   const tastings = (await db.table('tastings').toArray()).filter((t) => t.deletedAt == null && t.experimentId === exp.id);
   const outcome = variableOutcome(exp, beans);
   $('outcome').hidden = !outcome;
-  $('outcome').textContent = outcome?.text ?? '';
+  setPhrased($('outcome'), outcome?.text ?? '');
   $('results').replaceChildren(
     ...rows.map((r) => {
       const t = tastings.find((x) => x.brewId === r.brewId && (x.stage ?? 'warm') === 'warm');
@@ -645,7 +650,7 @@ async function renderResults() {
         el(
           'span',
           { class: 'compare-result-body' },
-          r.brewId ? el('a', { href: `tasting.html?brew=${enc(r.brewId)}` }, cupLabel(entry)) : cupLabel(entry),
+          r.brewId ? el('a', { href: `tasting.html?brew=${enc(r.brewId)}` }, ...phrased(cupLabel(entry))) : el('span', {}, ...phrased(cupLabel(entry))),
           el('span', { class: 'muted small' }, [r.cupNo != null ? `カップ${r.cupNo}` : '', tastingSummary(t ?? r)].filter(Boolean).join('　')),
         ),
       );
@@ -653,22 +658,22 @@ async function renderResults() {
   );
   if (kind === VARIABLE_KIND) {
     const f = variableFindings(all, beans, exp.beanId).find((x) => x.factor === exp.variable?.factor && x.dir === (exp.variable?.delta > 0 ? 'up' : 'down'));
-    $('prefText').textContent = f && f.n > 1 ? `この豆で${f.text}` : '';
+    setPhrased($('prefText'), f && f.n > 1 ? `この豆で${f.text}` : '');
   } else {
     const first = rows[0]?.bean;
-    $('prefText').textContent = first ? preferenceText(preferenceForBean(roastPreferences(all, beans), first)) : '';
+    setPhrased($('prefText'), first ? preferenceText(preferenceForBean(roastPreferences(all, beans), first)) : '');
   }
 }
 
 async function renderExp() {
   const status = experimentStatus(exp);
   const kind = kindOf(exp);
-  $('title').textContent = exp.title || KIND_LABELS[kind];
+  setPhrased($('title'), exp.title || KIND_LABELS[kind]);
   document.title = `${exp.title || KIND_LABELS[kind]} - Pourfolio`;
   const recipe = exp.recipeId ? await db.table('recipes').get(exp.recipeId) : null;
-  $('sub').textContent = [KIND_LABELS[kind], recipe ? `レシピ：${recipe.name}` : '', kind !== TRIANGLE_KIND && exp.blind !== false ? 'ブラインド' : '', STATUS_LABELS[status]].filter(Boolean).join('・');
+  setPhrased($('sub'), [KIND_LABELS[kind], recipe ? `レシピ：${recipe.name}` : '', kind !== TRIANGLE_KIND && exp.blind !== false ? 'ブラインド' : '', STATUS_LABELS[status]].filter(Boolean).join('・'));
   $('hypo').hidden = !exp.hypothesis;
-  $('hypo').textContent = exp.hypothesis ? `予想：${exp.hypothesis}` : '';
+  setPhrased($('hypo'), exp.hypothesis ? `予想：${exp.hypothesis}` : '');
   renderEntries();
   const tri = kind === TRIANGLE_KIND;
   $('tasteCard').hidden = tri || status !== 'tasting';
@@ -709,6 +714,7 @@ async function showExp(id) {
 // ---- はじまり ----
 
 async function init() {
+  phraseStaticText(document.querySelector('main'));
   [beans, recipes, equipment] = await Promise.all([listBeans(db), listRecipes(db), listEquipment(db)]);
   beans = beans.filter((b) => b.deletedAt == null);
   const id = queryParam('id');

@@ -102,7 +102,10 @@ test('トライアングル：豆2つ。1つにする方はアプリが決める
   assert.equal(exp.kind, 'triangle');
   assert.equal(exp.oddKey, 'b');
   assert.equal(pairKey(exp), 'a');
-  assert.equal(exp.title, 'トライアングル：シティ　エチオピア と ハイ　ケニア');
+  assert.equal(exp.title, 'エチオピア と ケニア のトライアングル');
+  // 同じ銘柄どうしは焙煎度で呼ぶ
+  const same = normalizeTriangleInput({ mode: 'beans', beanIds: ['e', 'e2'], recipeId: 'r1' }, { beans: [...beans, { id: 'e2', name: 'エチオピア', roastLevel: 'フルシティ', status: 'open' }], recipes: [recipe] });
+  assert.equal(buildTriangleExperiment(same).title, 'エチオピア シティ と フルシティ のトライアングル');
   assert.equal(buildTriangleExperiment(r, () => 0.1).oddKey, 'a');
   assert.deepEqual(judgeTriangle({ picked: 2, odd: 2, liked: 'b' }).answer, { picked: 2, odd: 2, correct: true, liked: 'b' });
   assert.equal(judgeTriangle({ picked: 1, odd: 3 }).answer.correct, false);
@@ -139,7 +142,7 @@ test('トライアングルの成績：回数と当たりから言葉を変え�
   assert.equal(triangleStats([]).text, '');
   const one = triangleStats([t(true, 1)]);
   assert.equal(one.level, 'none');
-  assert.match(one.text, /1回中1回当たり。今のところ偶然と見分けられません（5回ほど/);
+  assert.equal(one.text, '1回中1回当たり。まだ偶然と区別できません（5回ほど続けると分かります）');
   const many = triangleStats([1, 2, 3, 4, 5, 6].map((i) => t(i !== 3, i)));
   assert.equal(many.hits, 5);
   assert.equal(many.level, 'clear');
@@ -169,6 +172,8 @@ test('次の実験の提案：ダイヤルイン提案 → 条件と評価 → �
   const ideas = nextExperimentIdeas({ beanId: 'e', recipe, suggestions, factorResult });
   assert.deepEqual(ideas.map((i) => [i.factor, i.delta, i.source]), [['grind', -1, 'dialin'], ['tempC', 3, 'factors'], ['ratio', 1, 'untested']]);
   assert.match(ideas[0].reason, /挽き目 24 → 23/);
+  assert.equal(ideas[1].reason, '湯温が大きいほど★が高い傾向です。1つだけ変えて確かめます');
+  assert.deepEqual([ideas[2].change.short, ideas[2].change.detail], ['比率 1:15 → 1:16', '湯量 225g → 240g']);
   assert.match(ideas[0].href, /^compare\.html\?new=variable&factor=grind&delta=-1&recipe=r1&bean=e$/);
   // 提案がなく、もう確かめた条件は出さない
   const done = { id: 'v', kind: 'variable', beanId: 'e', variable: { factor: 'grind', delta: -2 }, revealedAt: 'x', entries: [] };

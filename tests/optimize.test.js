@@ -117,7 +117,7 @@ test('次の条件：記録が少ないうちは散らばった所、たまっ�
   const next = nextTrial(exp, pts);
   assert.equal(next.phase, 'ei');
   assert.ok(next.x.grind <= 22, `挽き目 ${next.x.grind}`);
-  assert.match(next.reason, /★を付けた3杯から/);
+  assert.match(next.reason, /^3杯の★から、いちばん良くなりそうな所（予想 ★[0-9.]+ ±[0-9.]+）$/);
   // 同じ記録なら同じ答え
   assert.deepEqual(nextTrial(exp, pts).x, next.x);
   assert.equal(bestKnown(exp, pts).x.grind, 22);

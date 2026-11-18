@@ -82,13 +82,13 @@ export function variableChange(recipe, { factor, delta, grindStep = DEFAULT_GRIN
     const step = grindStep > 0 ? grindStep : DEFAULT_GRIND_STEP;
     const to = roundTo(from + d * step, step);
     if (to < 0) return { ok: false, error: 'これ以上細かくできません' };
-    return { ok: true, from, to, overrides: { grind: String(to) }, label: valueText('grind', to), text: `挽き目 ${from} → ${to}（${deltaText(factor, d)}）` };
+    return { ok: true, from, to, overrides: { grind: String(to) }, label: valueText('grind', to), text: `挽き目 ${from} → ${to}（${deltaText(factor, d)}）`, short: `挽き目 ${from} → ${to}`, detail: deltaText(factor, d) };
   }
   if (factor === 'tempC') {
     if (from == null) return { ok: false, error: 'このレシピに湯温がないので、湯温は比べられません' };
     const to = Math.round(from + d);
     if (to < TEMP_RANGE[0] || to > TEMP_RANGE[1]) return { ok: false, error: `湯温は${TEMP_RANGE[0]}〜${TEMP_RANGE[1]}℃の間にしてください` };
-    return { ok: true, from, to, overrides: { tempC: to }, label: valueText('tempC', to), text: `湯温 ${from}℃ → ${to}℃（${deltaText(factor, d)}）` };
+    return { ok: true, from, to, overrides: { tempC: to }, label: valueText('tempC', to), text: `湯温 ${from}℃ → ${to}℃（${deltaText(factor, d)}）`, short: `湯温 ${from}℃ → ${to}℃`, detail: deltaText(factor, d) };
   }
   // 比率：粉量はそのまま、湯量で変える
   if (from == null || !(recipe?.doseG > 0)) return { ok: false, error: 'このレシピに粉量と湯量がないので、比率は比べられません' };
@@ -102,6 +102,8 @@ export function variableChange(recipe, { factor, delta, grindStep = DEFAULT_GRIN
     overrides: { waterG },
     label: `${valueText('ratio', ratioOf(recipe.doseG, waterG))}（湯量 ${waterG}g）`,
     text: `比率 1:${from} → 1:${ratioOf(recipe.doseG, waterG)}（湯量 ${recipe.waterG}g → ${waterG}g、${deltaText(factor, d)}）`,
+    short: `比率 1:${from} → 1:${ratioOf(recipe.doseG, waterG)}`,
+    detail: `湯量 ${recipe.waterG}g → ${waterG}g`,
   };
 }
 
@@ -199,7 +201,10 @@ export function buildTriangleExperiment(r, rand = Math.random) {
     variable = { factor: r.value.factor, delta: r.value.delta, from: r.change.from, to: r.change.to };
   } else {
     entries = r.beans.map((b, i) => ({ key: i === 0 ? 'a' : 'b', beanId: b.id, brewId: null, overrides: {}, label: [b.roastLevel, clean(b.name)].filter(Boolean).join('　') }));
-    title = `トライアングル：${entries.map((e) => e.label).join(' と ')}`;
+    // 題名は銘柄だけ（同じ銘柄どうしのときだけ焙煎度を付ける）。長いと読みにくいため（3-1.1）
+    const names = r.beans.map((b) => clean(b.name));
+    const parts = names[0] === names[1] ? r.beans.map((b) => b.roastLevel || clean(b.name)) : names;
+    title = `${names[0] === names[1] ? `${names[0]} ` : ''}${parts.join(' と ')} のトライアングル`;
   }
   return {
     kind: TRIANGLE_KIND,
@@ -266,9 +271,9 @@ export function triangleStats(experiments, matchKey = null) {
   if (n === 0) return { n, hits, pValue: null, level: 'none', text: '' };
   const pValue = binomialTail(n, hits, TRIANGLE_CHANCE);
   const base = `${n}回中${hits}回当たり`;
-  if (pValue < 0.05) return { n, hits, pValue, level: 'clear', text: `${base}。偶然（3回に1回）ではまず説明できません。違いが分かっています` };
-  if (pValue < 0.2) return { n, hits, pValue, level: 'maybe', text: `${base}。違いが分かっていそうです。回数を重ねるとはっきりします` };
-  return { n, hits, pValue, level: 'none', text: `${base}。今のところ偶然と見分けられません${n < 5 ? '（5回ほど続けると分かってきます）' : ''}` };
+  if (pValue < 0.05) return { n, hits, pValue, level: 'clear', text: `${base}。違いが分かっています（偶然ではまず起きません）` };
+  if (pValue < 0.2) return { n, hits, pValue, level: 'maybe', text: `${base}。違いが分かっていそうです` };
+  return { n, hits, pValue, level: 'none', text: `${base}。まだ偶然と区別できません${n < 5 ? '（5回ほど続けると分かります）' : ''}` };
 }
 
 /** 同じ組のトライアングルをまとめる鍵（豆2つなら豆の組、条件なら豆と条件と幅） */
@@ -392,23 +397,20 @@ export function nextExperimentIdeas({ beanId, recipe, suggestions = [], brews = 
   const pending = pickPendingSuggestion(suggestions, beanId, brews);
   if (pending) {
     const idea = ideaFromSuggestion(pending);
-    if (idea) push(idea, 'dialin', `前の1杯のダイヤルイン提案（${pending.action.short ?? pending.action.text ?? ''}）を、いつもの1杯と並べて確かめます`);
+    if (idea) push(idea, 'dialin', `前の1杯の提案（${pending.action.short ?? pending.action.text ?? ''}）を、いつもの1杯と比べて確かめます`);
   }
   // 2. 条件と評価で関係がありそうなのに、飲み比べで2回まで確かめていない条件
   for (const f of factorResult?.factors ?? []) {
     if (!VARIABLES[f.key] || !f.fit || Math.abs(f.fit.r) < 0.3 || testedCount(f.key) >= 2) continue;
     const towardBetter = f.fit.slope > 0 ? 1 : -1; // ★が上がる向き
     const delta = f.key === 'grind' ? 2 * towardBetter : f.key === 'tempC' ? 3 * towardBetter : towardBetter;
-    push(
-      { factor: f.key, delta },
-      'factors',
-      `条件と評価で「${f.label}」と★が一緒に動いています（${f.word?.text ?? ''}）。一緒に動いているだけかもしれないので、1つだけ変えて確かめます`,
-    );
+    // 一緒に動いているだけかもしれないので、1つだけ変えて確かめる（spec 5.3）。文は短く（3-1.1）
+    push({ factor: f.key, delta }, 'factors', `${f.label}が${f.fit.slope > 0 ? '大きい' : '小さい'}ほど★が高い傾向です。1つだけ変えて確かめます`);
   }
   // 3. まだ確かめていない条件
   for (const idea of DEFAULT_IDEAS) {
     if (tested.has(idea.factor)) continue;
-    push(idea, 'untested', `この豆では、まだ${VARIABLES[idea.factor].label}を飲み比べていません`);
+    push(idea, 'untested', `この豆では、まだ${VARIABLES[idea.factor].label}を比べていません`);
   }
   return out.slice(0, 3);
 }

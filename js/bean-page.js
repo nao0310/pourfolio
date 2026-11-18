@@ -35,7 +35,7 @@ import { roastGroup, ROAST_GROUPS } from './core/roast.js';
 import { localYmd, formatYmdJa, formatG, formatDateTimeJa, formatDateJa } from './core/format.js';
 import { roastPreferences, preferenceForBean, preferenceText } from './core/compare.js';
 import { variableFindings } from './core/experiment-plan.js';
-import { $, el, queryParam, showMessage as showBoxMessage, showToast, freshnessPill, frozenPill, stepperField, svgElement } from './ui.js';
+import { $, el, phrased, queryParam, showMessage as showBoxMessage, showToast, freshnessPill, frozenPill, stepperField, svgElement } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
 import { showCard } from './dismiss-card.js';
 import { singleFlight } from './core/once.js';
@@ -248,7 +248,7 @@ async function renderRoastPref(bean, allBeans) {
   // 条件の飲み比べ（F7）でわかったこと（この豆）
   const found = variableFindings(experiments, allBeans, bean.id);
   $('varFindings').hidden = found.length === 0;
-  $('varFindings').replaceChildren(...found.map((f) => el('li', {}, f.text)));
+  $('varFindings').replaceChildren(...found.map((f) => el('li', {}, ...phrased(f.text))));
 }
 
 /** キャニスターの QR（X14）。開いたときだけ作る */

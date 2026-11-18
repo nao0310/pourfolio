@@ -47,6 +47,8 @@
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
+/* 言葉のまとまり（js/ui.js の phrased）。途中で折らず、1行より長いときだけ中で折る（3-1.1） */
+.ph { display: inline-block; max-width: 100%; }
 html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
@@ -74,7 +76,13 @@ p { margin: 8px 0; }
 }
 .logo { width: 96px; height: 96px; border-radius: 22px; display: block; margin: 16px 0; }
 .btn {
-  display: inline-block;
+  /* 文字をボタンの上下左右の真ん中に置く（高さを最低値で決めているので、inline-block だと上に寄る。3-1.1） */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  line-height: 1.3;
+  box-sizing: border-box;
   min-height: 52px;
   padding: 12px 20px;
   border: 0;
@@ -120,7 +128,7 @@ dd { margin: 0; }
 a { color: var(--accent); }
 .crumb { margin: 0 0 4px; font-size: 0.95rem; }
 .crumb a::before { content: "‹ "; }
-.btn.block { display: block; width: 100%; text-align: center; }
+.btn.block { display: flex; width: 100%; text-align: center; }
 .btn:disabled { opacity: 0.5; }
 main.with-bottom-bar { padding-bottom: calc(110px + env(safe-area-inset-bottom)); }
 .bottom-bar {
@@ -446,7 +454,7 @@ body.timer-on { overflow: hidden; }
 .backup-card { border: 2px solid var(--stage-past); }
 .alert-card { border: 2px solid var(--stage-useSoon); }
 .stack { display: grid; gap: 10px; margin-top: 12px; }
-.btn.block { display: block; width: 100%; text-align: center; }
+.btn.block { display: flex; width: 100%; text-align: center; }
 .today-suggest { font-weight: 700; }
 .sec-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .sec-head a { color: var(--accent); display: inline-block; padding: 10px 0; }
@@ -647,7 +655,7 @@ p > a:not(.btn):only-child { display: inline-block; padding: 11px 0; }
 
 /* 焙煎度比較（X27） */
 .compare-groups { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin-bottom: 12px; }
-.compare-groups .btn { white-space: normal; text-align: left; }
+.compare-groups .btn { white-space: normal; text-align: left; justify-content: flex-start; }
 .compare-entries, .compare-results, .pref-list { list-style: none; margin: 0; padding: 0; }
 .compare-entries li { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 52px; border-top: 1px solid var(--line); }
 .compare-entries li:first-child { border-top: 0; }

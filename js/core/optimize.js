@@ -287,7 +287,7 @@ export function nextTrial(exp, points) {
     const near = (u) => U.some((p) => Math.hypot(...p.map((v, i) => v - u[i])) < 0.15);
     const design = INITIAL_DESIGN.map((d) => d.slice(0, dims.length)).find((d) => !near(d)) ?? INITIAL_DESIGN[0].slice(0, dims.length);
     const left = MIN_POINTS - points.length;
-    return { phase: 'explore', x: fromUnit(exp, design), mean: null, sd: null, ei: null, small: false, left, reason: `まず範囲の中を広く試します。★を付けた杯があと${left}杯たまると、記録から次の条件を選びます` };
+    return { phase: 'explore', x: fromUnit(exp, design), mean: null, sd: null, ei: null, small: false, left, reason: `まず範囲の中を広く試します（あと${left}杯で、★から選び始めます）` };
   }
   const gp = gpFit(U, points.map((p) => p.y));
   const best = Math.max(...points.map((p) => p.y));
@@ -299,8 +299,8 @@ export function nextTrial(exp, points) {
   }
   const small = pick.ei < EI_SMALL;
   const reason = small
-    ? `これ以上はあまり良くなりそうにありません（良くなる見込み ★${r1(pick.ei)}）。いちばん良かった条件で淹れるか、範囲を変えて続けます`
-    : `★を付けた${points.length}杯から、良くなる見込みがいちばん大きい所です（予想 ★${r1(pick.mean)}、幅 ±${r1(pick.sd)}）`;
+    ? 'これ以上はあまり良くなりそうにありません。「今のいちばん」で淹れるか、範囲を変えます'
+    : `${points.length}杯の★から、いちばん良くなりそうな所（予想 ★${r1(pick.mean)} ±${r1(pick.sd)}）`;
   return { ...pick, mean: r1(pick.mean), sd: r1(pick.sd), ei: Math.round(pick.ei * 100) / 100, phase: 'ei', small, left: 0, reason };
 }
 
