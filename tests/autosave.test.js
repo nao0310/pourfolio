@@ -23,3 +23,11 @@ test('フォルダを選ぶ前・保存中・止まっている・許可がな�
   assert.match(denied.text, /選び直して/);
   assert.match(autosaveStatus({ supported: true, folderName: 'P', permission: 'granted', lastError: '書き込みに失敗' }).text, /保存できませんでした/);
 });
+
+test('記録が空（設定だけ・削除済みだけ）なら、フォルダのファイルを上書きしない（2-8 の18番）', async () => {
+  const { hasRecordsToSave } = await import('../js/core/autosave.js');
+  assert.equal(hasRecordsToSave({ beans: [], brews: [], settings: [{ id: 'app', deletedAt: null }] }), false);
+  assert.equal(hasRecordsToSave({ beans: [{ id: 'b', deletedAt: '2026-11-18T00:00:00Z' }] }), false);
+  assert.equal(hasRecordsToSave({ beans: [{ id: 'b', deletedAt: null }] }), true);
+  assert.equal(hasRecordsToSave({}), false);
+});
