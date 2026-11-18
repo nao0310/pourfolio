@@ -2,6 +2,12 @@
 
 書き方：日付とステップ番号の見出しの下に「やったこと／確認結果／未解決／次の一手」を書く。
 
+## 2026-11-18 ステップ0-1・0-2 開発の土台と公開テスト
+- やったこと：Gitリポジトリ化とGitHubの公開リポジトリ（nao0310/pourfolio）の作成、package.json（npm test／npm run serve／npm run icons）、テストの雛形（js/core/format.js）、仮トップ画面、manifest、最小のservice worker、仮アイコン、IndexedDBの保存テスト画面、GitHub Pages（mainのルート）の有効化、手順書「はじめに」
+- 確認結果：npm test 3件成功。PCのBrowserペインでトップ画面と保存テストを表示し、保存した値が再読み込み後も残ることを確認。manifestとアイコンの配信もOK
+- 未解決：Browserペインではservice workerの登録が失敗する（ペイン側の制限とみられる。サーバーはsw.jsを正しく返している）。iPhoneのSafariでの表示確認と、ホーム画面アプリを閉じても値が残るかの確認はユーザー待ち
+- 次の一手：iPhoneで確認できたら、ステップ1-1（データの土台）を始める
+
 ## 2026-11-18 設計完了・スターターキット作成
 - やったこと：設計草案（`docs/spec.md`）、進め方、スターターキット（このリポジトリの初期ファイル）を作成
 - 確認結果：—

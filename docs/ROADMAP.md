@@ -3,9 +3,9 @@
 1セッション＝1ステップ。機能IDは `docs/spec.md` の3章・7章を参照。終わったら [ ] を [x] にする。
 
 ## 段階0 準備と公開テスト
-- [ ] 0-1 開発の土台：Gitリポジトリ化、GitHubの公開リポジトリ作成とpush、package.json（npm test ／ npm run serve）、テストの雛形
+- [x] 0-1 開発の土台：Gitリポジトリ化、GitHubの公開リポジトリ作成とpush、package.json（npm test ／ npm run serve）、テストの雛形
   - 完了の確認：npm test が通り、GitHubにファイルが見える
-- [ ] 0-2 公開とiPhone確認：仮のトップ画面、manifest、service worker、仮アイコン、IndexedDBの保存テスト、GitHub Pagesの有効化
+- [x] 0-2 公開とiPhone確認：仮のトップ画面、manifest、service worker、仮アイコン、IndexedDBの保存テスト、GitHub Pagesの有効化
   - 完了の確認：iPhoneでホーム画面に追加して開け、保存テストの値がアプリを閉じても残る
 
 ## 段階1 MVP（毎日記録できる）
