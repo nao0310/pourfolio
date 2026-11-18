@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { IDBFactory, IDBKeyRange } from 'fake-indexeddb';
-import { openDb, readAll, exportAll, restoreBackup, clearAll, putAll, countAlive, getSettings, updateSettings } from '../js/db.js';
+import { openDb, readAll, exportAll, restoreBackup, clearAll, putAll, countAlive, getSettings, updateSettings, setDeviceSettings } from '../js/db.js';
 import { parseBackup } from '../js/core/backup.js';
 import { makeSampleData } from '../js/core/sample-data.js';
 import { TABLES, markDeleted, SETTINGS_ID } from '../js/core/records.js';
@@ -85,5 +85,35 @@ test('設定は固定IDの1件。なければ作り、一部だけ変えられ�
   assert.equal(u.lastBackupAt, '2026-11-20T00:00:00.000Z');
   assert.equal(u.createdAt, s.createdAt);
   assert.equal(await db.table('settings').count(), 1);
+  db.close();
+});
+
+test('新しい端末で、ホームを開いてから復元しても、ファイルの設定が入る。最後に見た版は今の端末の値を残す（2-8 の6番）', async () => {
+  // 古い端末：粉量とカフェインの時刻を決めて書き出す
+  const oldDb = freshDb();
+  await updateSettings(oldDb, { defaultDoseG: 18, caffeineCutoff: '15:00' }, NOW);
+  await setDeviceSettings(oldDb, { lastSeenVersion: '2.6' });
+  const file = parseBackup(JSON.stringify(await exportAll(oldDb, NOW)));
+  oldDb.close();
+  // 新しい端末：ホームを開く（設定ができ、最後に見た版を覚える）→ 復元
+  const db = freshDb();
+  await getSettings(db, new Date('2026-11-25T00:00:00Z'));
+  await setDeviceSettings(db, { lastSeenVersion: '2.8' });
+  const result = await restoreBackup(db, file);
+  assert.equal(result.settings.updated, 1);
+  const s = await getSettings(db);
+  assert.equal(s.defaultDoseG, 18);
+  assert.equal(s.caffeineCutoff, '15:00');
+  assert.equal(s.lastSeenVersion, '2.8');
+  db.close();
+});
+
+test('端末だけの設定を変えても updatedAt は進まない。それ以外の項目は端末だけの設定として変えられない', async () => {
+  const db = freshDb();
+  const s = await getSettings(db, NOW);
+  assert.equal(s.updatedAt, new Date(0).toISOString());
+  const n = await setDeviceSettings(db, { lastSeenVersion: '2.8' });
+  assert.equal(n.updatedAt, s.updatedAt);
+  await assert.rejects(setDeviceSettings(db, { defaultDoseG: 20 }));
   db.close();
 });

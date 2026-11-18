@@ -2,7 +2,7 @@
 import { isStandalone, registerServiceWorker, requestPersistentStorage } from './pwa.js';
 import { installAdvice } from './core/install.js';
 import { loadDraft } from './brew-draft.js';
-import { openDb, readAll, getSettings, updateSettings, getUnratedBrew, getCoolPromptBrew } from './db.js';
+import { openDb, readAll, getSettings, setDeviceSettings, getUnratedBrew, getCoolPromptBrew } from './db.js';
 import { APP_VERSION, versionLabel, whatsNew } from './core/version.js';
 import { restockPlan, restockText } from './core/restock.js';
 import { brewLine, tastingSummary } from './core/tastings.js';
@@ -248,7 +248,7 @@ async function renderWhatsNew(settings, all) {
     $('whatsNewList').replaceChildren(...news.items.map((t) => el('li', {}, t)));
     $('whatsNewCard').hidden = false;
   }
-  if (settings.lastSeenVersion !== APP_VERSION) await updateSettings(db, { lastSeenVersion: APP_VERSION });
+  if (settings.lastSeenVersion !== APP_VERSION) await setDeviceSettings(db, { lastSeenVersion: APP_VERSION });
 }
 
 $('appVersion').textContent = versionLabel();
