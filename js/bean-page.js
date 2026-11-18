@@ -260,6 +260,7 @@ async function render() {
   $('name').textContent = bean.name;
   $('sub').textContent = [bean.roastLevel, originText(bean)].filter(Boolean).join('　');
   $('editLink').href = `bean-edit.html?id=${encodeURIComponent(bean.id)}`;
+  renderMainAction(bean);
   $('toggleFinished').textContent = bean.status === 'finished' ? '飲み切りを取り消す' : '飲み切りにする';
   $('toggleFinished').dataset.status = bean.status;
   // 入荷待ちの豆は、届くまで飲み頃・残量・在庫の操作を出さず「届いた」の入力だけにする
@@ -376,6 +377,39 @@ $('freezeForm').addEventListener('submit', guarded(async (event) => {
   fz.count.input.value = '';
   await render();
 }, 'fzMsg'));
+
+/**
+ * 画面の下に固定するボタン（2-8 の20番）：その豆でいちばん使う操作
+ * - 入荷待ち：「届いた」（入力欄へ移って重さを入れる）
+ * - 手元にある豆：「この豆で淹れる」（★がいちばん高かった淹れ方。まだなければ最初のレシピ）
+ * - 飲み切り：出さない
+ */
+function renderMainAction(bean) {
+  const btn = $('mainAction');
+  const show = bean.status !== 'finished';
+  $('bottomBar').hidden = !show;
+  document.querySelector('main').classList.toggle('with-bottom-bar', show);
+  if (!show) return;
+  if (bean.status === 'ordered') {
+    btn.textContent = '届いた';
+    btn.removeAttribute('href');
+    btn.setAttribute('role', 'button');
+    // 重さが入っていれば「届いた」を送る。まだなら重さの欄へ移る
+    btn.onclick = () => {
+      if ($('arrivalWeight').value.trim()) {
+        $('arrivalForm').requestSubmit();
+        return;
+      }
+      $('arrivalCard').scrollIntoView({ block: 'start', behavior: 'smooth' });
+      $('arrivalWeight').focus({ preventScroll: true });
+    };
+  } else {
+    btn.textContent = 'この豆で淹れる';
+    btn.removeAttribute('role');
+    btn.onclick = null;
+    btn.href = `brew.html?best=${encodeURIComponent(bean.id)}`;
+  }
+}
 
 /** 入荷待ち：注文日と、届く重さの目安 */
 async function renderArrival(bean) {

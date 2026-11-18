@@ -886,3 +886,11 @@ textarea#link { width: 100%; box-sizing: border-box; font-size: 0.85rem; }
 
 /* 画面の読み込みに失敗したとき（2-8 の15番） */
 .load-error { border: 2px solid var(--stage-useSoon); }
+
+/* 好み1〜9のボタン（2-8 の21番）：スマホの幅では1〜5と6〜9の2段にし、どのボタンも44px以上にする */
+@media (max-width: 480px) {
+  .seg9 { grid-template-columns: repeat(5, 1fr); gap: 4px; }
+}
+/* 強さのつまみ：未回答のときはつまみを出さず、答えたように見えないようにする（触ると出る） */
+.intensity-line input[type="range"].unset::-webkit-slider-thumb { opacity: 0; }
+.intensity-line input[type="range"].unset::-moz-range-thumb { opacity: 0; }

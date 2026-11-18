@@ -182,12 +182,14 @@
       </div>
 
       <div class="row">
+        <a class="btn secondary" id="editLink">編集</a>
         <button class="btn secondary" type="button" id="toggleFinished"></button>
         <button class="btn danger" type="button" id="delete">削除</button>
       </div>
 
-      <div class="bottom-bar">
-        <a class="btn block secondary" id="editLink">編集</a>
+      <!-- 画面の下に固定するのは、そのとき一番使うボタン（2-8 の20番）：入荷待ちは「届いた」、手元の豆は「この豆で淹れる」 -->
+      <div class="bottom-bar" id="bottomBar" hidden>
+        <a class="btn block" id="mainAction"></a>
       </div>
     </div>
   </main>
