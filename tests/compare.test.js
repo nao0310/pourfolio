@@ -84,8 +84,8 @@ test('始める：2〜4袋とレシピが要る。ブラインドが初期値。
   const exp = buildExperiment({ value, beans });
   assert.equal(exp.title, 'エチオピア イルガチェフェ 焙煎度比較');
   assert.deepEqual(exp.entries, [
-    { beanId: 'm', brewId: null },
-    { beanId: 'c', brewId: null },
+    { key: 'm', beanId: 'm', brewId: null },
+    { key: 'c', beanId: 'c', brewId: null },
   ]);
   assert.equal(experimentStatus(exp), 'brewing');
 });

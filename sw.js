@@ -9,7 +9,7 @@
 // <manifest> npm run sw が書き込む（手で直さない）
 const MANIFEST = {
   "label": "2.8.1",
-  "version": "fa4fe7766069",
+  "version": "f159f4ce8bd4",
   "files": {
     "ai.html": "34607ec38ddc5690",
     "analysis.html": "97fad6697d25fa7e",
@@ -58,7 +58,7 @@ const MANIFEST = {
     "js/core/calendar.js": "99f0de2ac4d7ba16",
     "js/core/card-text.js": "13a930be2c76b5f9",
     "js/core/chart-scale.js": "b7cfe06796a7ccc0",
-    "js/core/compare.js": "2e3ea884c75c2aaa",
+    "js/core/compare.js": "eab7c0d5d459cadb",
     "js/core/cost.js": "814376caa01c3338",
     "js/core/csv.js": "d2fd0bb947db08aa",
     "js/core/demo-data.js": "479bf74cf59b3439",
@@ -66,6 +66,7 @@ const MANIFEST = {
     "js/core/dialin.js": "ec3ef172c6b415e5",
     "js/core/dismiss.js": "86c5e0174d04574b",
     "js/core/equipment.js": "5d20a6b6f7763514",
+    "js/core/experiment-plan.js": "3e15349e3f0e7164",
     "js/core/extraction.js": "442b41f0a73c8ecd",
     "js/core/factors.js": "92927016f74b9670",
     "js/core/flavors.js": "89fe07c6a438754f",
@@ -81,6 +82,7 @@ const MANIFEST = {
     "js/core/monthly.js": "ad4ba1bfd7535622",
     "js/core/offline.js": "907135ce0abe78fb",
     "js/core/once.js": "65ced3a0a36e7800",
+    "js/core/optimize.js": "ed0608987bf44a3b",
     "js/core/orders.js": "029a40c611f71c86",
     "js/core/photos.js": "92c3236ca612f895",
     "js/core/plan-adjust.js": "94fe652d301b93f5",
