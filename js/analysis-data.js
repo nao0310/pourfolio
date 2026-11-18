@@ -50,5 +50,5 @@ export function setupAnalysisPage() {
 /** 読み込みに失敗したとき */
 export function showLoadError(err, id = 'content') {
   console.error(err);
-  $(id)?.replaceChildren(el('p', { class: 'error' }, '読み込みに失敗しました'));
+  $(id)?.replaceChildren(el('p', { class: 'error' }, '読み込めませんでした。開き直してください'));
 }

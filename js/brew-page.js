@@ -19,13 +19,15 @@ import {
   listBrews,
   listTastings,
   listRecipes,
+  setBeanStatus,
 } from './db.js';
 import { adjustPlan, adjustNotes, parseAdjustParams, adjustQuery, hotPlanOf, carryIce, isIced, cupsOf, perCupPlan, perCupIceG, MOODS, CUP_OPTIONS, cupsLabel } from './core/plan-adjust.js';
 import { initialRecipe, initialPlan, baseRecipe } from './core/initial-recipe.js';
 import { defaultEquipmentIds } from './core/equipment.js';
 import { doseFromSettings } from './core/inventory.js';
 import { frozenChoice, portionsOf, portionText } from './core/frozen.js';
-import { remainingG } from './core/inventory.js';
+import { remainingG, stockCheckForBrew } from './core/inventory.js';
+import { experimentStatus } from './core/compare.js';
 import { basePlanForNext, applyAction, pickPendingSuggestion } from './core/dialin.js';
 import { planFromRecipe, planFromBrew, formatSec, POUR_STYLES, ratioOf } from './core/recipes.js';
 import { sortBeansForList } from './core/beans.js';
@@ -48,9 +50,10 @@ import * as cue from './cue.js';
 import { createWakeLock } from './wake-lock.js';
 import { bestBrewForBean } from './core/today.js';
 import { autosaveAfterChange } from './autosave-file.js';
-import { $, el, queryParam, showMessage, stepperField, showPageLoadError } from './ui.js';
+import { $, el, queryParam, showMessage, stepperField, showPageLoadError, showToast } from './ui.js';
 import { singleFlight } from './core/once.js';
 import { registerServiceWorker, blockUpdatePrompt, recheckUpdatePrompt } from './pwa.js';
+import { askConfirm } from './confirm-box.js';
 
 const db = openDb();
 let draft = null;
@@ -129,7 +132,7 @@ async function loadPlan() {
   }
   const brewId = queryParam('brew');
   if (brewId) {
-    // 今日の一杯（F3）：その豆で★がいちばん高かった杯の淹れ方（挽き目は実際に挽いた目盛り）
+    // 今日の1杯（F3）：その豆で★がいちばん高かった杯の淹れ方（挽き目は実際に挽いた目盛り）
     const src = await getBrew(db, brewId);
     return src ? loadFromBrew(src) : null;
   }
@@ -293,7 +296,7 @@ async function showPlan(loaded, lastBeanId) {
   const missing = askedBean && !usable.some((b) => b.id === askedBean);
   if (!$('bean').value && usable[0] && !missing) $('bean').value = usable[0].id;
   renderBeanNote(preferred);
-  if (missing) $('beanNote').textContent = '指定された豆が見つかりません（削除した豆です）。淹れる豆を選んでください';
+  if (missing) $('beanNote').textContent = '指定した豆が見つかりません。削除したのかもしれません。淹れる豆を選んでください';
   renderSuggestCard();
   renderAdjust();
   renderPlanBody();
@@ -387,9 +390,9 @@ function findGhost(recipeId, beanId) {
 }
 
 /** 新しく始める。途中の抽出があれば、捨ててよいか確かめる */
-function beginNew(withTimer) {
+async function beginNew(withTimer) {
   if (!loadedPlan) return;
-  if (loadDraft() && !confirm('途中の抽出を捨てて、新しく始めますか？')) return;
+  if (loadDraft() && !(await askConfirm('淹れている途中の1杯を捨てて、新しく始めますか？', { ok: '新しく始める', danger: true }))) return;
   draft = {
     ...newDraft(loadedPlan.plan, $('bean').value || null, withTimer ? Date.now() : null, precheck),
     returnSearch: location.search,
@@ -505,8 +508,8 @@ function renderTimer(v, sec) {
     count.textContent = `注ぎ終わりまで あと${v.secsLeft}秒`;
     if (v.secsLeft <= 3) count.classList.add('soon');
     $('tNext').textContent = v.flowGps != null ? `${v.pourSec}秒で注ぐ（流速 ${v.flowGps}g/秒）` : '';
-    $('tapLabel').textContent = v.isLast ? '注ぎ終えた' : '注湯完了';
-    $('tapSub').textContent = '注ぎ終えたら押します（画面の下半分のどこでもよい）';
+    $('tapLabel').textContent = '注湯完了';
+    $('tapSub').textContent = v.isLast ? '最後の注湯です。注ぎ終えたら押すと、落ち切り待ちになります' : '注ぎ終えたら押します（画面の下半分のどこでもよい）';
     return;
   }
 
@@ -527,8 +530,8 @@ function renderTimer(v, sec) {
   }
   if (v.canTap) {
     $('tNext').textContent = `${v.name}を注ぎ終えたら押してください`;
-    $('tapLabel').textContent = v.isLast ? '注ぎ終えた' : '注湯完了';
-    $('tapSub').textContent = v.isLast ? '押すと落ち切り待ちになります' : '押さなくても、次の注湯の時刻に進みます';
+    $('tapLabel').textContent = '注湯完了';
+    $('tapSub').textContent = v.isLast ? '最後の注湯です。押すと落ち切り待ちになります' : '押さなくても、次の注湯の時刻に進みます';
   } else {
     $('tNext').textContent = '';
     $('tapLabel').textContent = '待っています';
@@ -543,7 +546,7 @@ function onTap() {
   const sec = elapsedSec(draft, now);
   const v = timerView(draft.plan, draft.laps, sec);
   if (v.phase === 'drawdown') {
-    if (!canFinish(draft.laps, sec)) return; // 「注ぎ終えた」の2度押し（2-8 の5番）
+    if (!canFinish(draft.laps, sec)) return; // 最後の「注湯完了」の2度押し（2-8 の5番）
     draft = finishDraft(draft, now);
     saveDraft(draft);
     stopTimer();
@@ -556,8 +559,8 @@ function onTap() {
   tick();
 }
 
-function cancelBrew() {
-  if (!confirm('この抽出をやめますか？記録は残りません')) return;
+async function cancelBrew() {
+  if (!(await askConfirm('この抽出をやめますか？記録は残りません', { ok: 'やめる', danger: true }))) return;
   stopTimer();
   const back = draft?.returnSearch ?? '';
   clearDraft();
@@ -709,12 +712,23 @@ const onSave = singleFlight(async (e) => {
   const at = new Date(draft.startedAtMs ?? Date.now()).toISOString();
   // 冷凍の袋を使う：保存すると袋を取り出したことになる（C4）
   const portion = readForm().useFrozen ? frozenChoice({ portions, beanId: value.beanId, roomG: 0, doseG: 0 }).portion : null;
+  // 残りが足りないときは、保存する前に知らせる（2-8の32番）
+  const beanTxs = value.beanId ? txs.filter((t) => t.beanId === value.beanId) : [];
+  const stock = stockCheckForBrew({ txCount: beanTxs.length, roomG: remainingG(beanTxs), doseG: value.doseG, usingPortion: !!portion });
+  if (
+    stock.short &&
+    !(await askConfirm(`この豆の残りは${formatG(remainingG(beanTxs))}で、粉${formatG(value.doseG)}に足りません。このまま保存すると、残りがマイナスになります（豆の画面の「量り直す」で直せます）。保存しますか？`, { ok: '保存する', cancel: '戻って直す' }))
+  ) return;
   const submit = $('resultView').querySelector('button[type="submit"]');
   submit.disabled = true;
   let saved = null;
   try {
     const { brew } = await saveBrew(db, buildBrew({ draft, value, at, bean, portion }));
     saved = brew;
+    // 残りが0gになったら、飲み切りにするか聞く（2-8の32番）
+    if (stock.empty && bean && bean.status !== 'finished' && (await askConfirm('この豆の残りがなくなりました。飲み切りにしますか？', { ok: '飲み切りにする', cancel: 'まだ残っている' }))) {
+      await setBeanStatus(db, bean.id, 'finished');
+    }
     const { compareId, compareBeanId } = draft;
     clearDraft();
     draft = null;
@@ -746,8 +760,8 @@ const onSave = singleFlight(async (e) => {
   }
 });
 
-function discard() {
-  if (!confirm('記録せずにやめますか？入れた内容は消えます')) return;
+async function discard() {
+  if (!(await askConfirm('記録せずにやめますか？入れた内容は消えます', { ok: 'やめる', danger: true }))) return;
   const back = draft?.returnSearch ?? '';
   clearDraft();
   draft = null;
@@ -774,6 +788,8 @@ async function init() {
 
   [suggestions, suggestBrews] = await Promise.all([listSuggestions(db), listBrews(db)]);
   compare = queryParam('compare') ? await getExperiment(db, queryParam('compare')) : null;
+  // 結果を出した飲み比べ（古い画面から開いた）は、ふつうの1杯として淹れる（2-8の50番）
+  if (compare && experimentStatus(compare) === 'done') compare = null;
   if (compare) {
     $('crumb').textContent = '飲み比べ';
     $('crumb').href = `compare.html?id=${encodeURIComponent(compare.id)}`;
@@ -786,14 +802,21 @@ async function init() {
     applyAdjust();
   }
   if (!loadedPlan) {
-    if (queryParam('initial') || queryParam('brew') || queryParam('best')) {
-      $('notFound').querySelector('h1').textContent = '豆か記録が見つかりません';
-      $('notFound').querySelector('p').textContent = '豆か抽出の記録が削除されています。トップに戻って選び直してください。';
+    const n = $('notFound');
+    if (!['recipe', 'initial', 'brew', 'best', 'suggestion', 'from'].some((k) => queryParam(k))) {
+      // レシピを選ばずに開いた（豆だけ・下書きを消したあとの「続きに戻る」など、2-8の29番）
+      n.querySelector('h1').textContent = '淹れるレシピを選んでください';
+      n.querySelector('p').textContent = 'レシピの一覧から、淹れるレシピを選んでください。';
+    } else if (queryParam('initial') || queryParam('brew') || queryParam('best')) {
+      n.querySelector('h1').textContent = '豆か記録が見つかりません';
+      n.querySelector('p').textContent = '削除したのかもしれません。トップに戻って選び直してください。';
+      $('notFoundBtn').textContent = 'トップへ';
+      $('notFoundBtn').href = './';
     } else if (queryParam('suggestion')) {
-      $('notFound').querySelector('h1').textContent = '提案が見つかりません';
-      $('notFound').querySelector('p').textContent = '提案を出した抽出が削除されています。「淹れる」の一覧から選び直してください。';
+      n.querySelector('h1').textContent = '提案が見つかりません';
+      n.querySelector('p').textContent = '提案を出した抽出を削除したのかもしれません。レシピの一覧から選び直してください。';
     }
-    $('notFound').hidden = false;
+    n.hidden = false;
     return;
   }
   const last = await getLastBrew(db);
@@ -827,19 +850,27 @@ $('speechToggle').addEventListener('click', async () => {
   speechOn = !speechOn;
   renderSpeechToggle();
   if (!speechOn) cue.stopSpeaking();
-  await updateSettings(db, { speechOn });
+  try {
+    await updateSettings(db, { speechOn });
+  } catch (err) {
+    // 今の抽出では切り替わっている。次に開いたときに戻るだけなので、知らせるだけにする（2-8の45番）
+    console.error(err);
+    showToast('読み上げの設定を保存できませんでした。次に開いたときは前の設定に戻ります', 'error');
+  }
 });
 $('resultView').addEventListener('submit', (e) => {
   e.preventDefault(); // 保存中の2回目でも、ブラウザの送信は止める
   onSave(e);
 });
 $('discard').addEventListener('click', discard);
-$('crumb').addEventListener('click', (e) => {
-  if (draft && !confirm('記録せずに戻りますか？途中の内容は消えます')) {
-    e.preventDefault();
-    return;
-  }
-  if (draft) clearDraft();
+$('crumb').addEventListener('click', async (e) => {
+  if (!draft) return;
+  // 確かめてから移る（確認の箱は待つので、いったん移るのを止める）
+  e.preventDefault();
+  const href = e.currentTarget.href;
+  if (!(await askConfirm('記録せずに戻りますか？途中の内容は消えます', { ok: '戻る', danger: true }))) return;
+  clearDraft();
+  location.href = href;
 });
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') cue.resume();

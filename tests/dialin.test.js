@@ -335,3 +335,14 @@ test('代わりの案で淹れる：挽き目が数字でなく「細かく」�
   assert.equal(altBrewLink({ ...s, cell: { strength: 'ok', extraction: 'over' } }, brew), null);
   assert.equal(altBrewLink(s, { id: 'b1', actual: {} }), null);
 });
+
+test('2-8の39番：挽き目0で「細かく」でも「0 → -1」と出さない（計画も変えない）', () => {
+  const a = makeAction('finer', { grind: { setting: '0' } }, 1);
+  assert.equal(a.to ?? null, null);
+  assert.doesNotMatch(a.text, /-1/);
+  assert.match(a.text, /手で合わせて/);
+  assert.equal(makeAction('finer', { grind: { setting: '1' } }, 1).to, '0');
+  assert.equal(makeAction('coarser', { grind: { setting: '0' } }, 1).to, '1');
+  const plan = { grind: { setting: '0' }, doseG: 15, waterG: 225 };
+  assert.deepEqual(applyAction(plan, a).grind, plan.grind);
+});

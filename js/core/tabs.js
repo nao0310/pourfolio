@@ -3,7 +3,7 @@
 
 export const TABS = Object.freeze([
   { key: 'home', label: 'ホーム', href: './' },
-  { key: 'brew', label: '抽出', href: 'recipes.html' },
+  { key: 'brew', label: '淹れる', href: 'recipes.html' },
   { key: 'beans', label: '豆と在庫', href: 'beans.html' },
   { key: 'analysis', label: '分析', href: 'analysis.html' },
   { key: 'more', label: 'その他', href: 'more.html' },

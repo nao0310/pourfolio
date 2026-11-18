@@ -24,7 +24,7 @@ function render(month) {
       { class: 'rp-stats' },
       stat('杯数', `${r.cups}杯`, `${r.days}日・${r.beansUsed}種類の豆`),
       stat('平均の★', r.avgStars != null ? `★${r.avgStars}` : '—', r.prevAvgStars != null ? `先月 ★${r.prevAvgStars}` : ''),
-      stat('使った額', `${yen(r.spend.drankJpy)}`, r.spend.uncostedCups ? `原価のない${r.spend.uncostedCups}杯を除く` : '飲んだ豆の原価'),
+      stat('飲んだ額', `${yen(r.spend.drankJpy)}`, r.spend.uncostedCups ? `原価のない${r.spend.uncostedCups}杯を除く` : '飲んだ豆の原価'),
       stat('買った額', `${yen(r.spend.boughtJpy)}`, `${r.spend.bags}袋${r.spend.unpricedBags ? `（価格なし${r.spend.unpricedBags}袋）` : ''}・送料込み`),
     ),
     el('section', {}, el('h3', {}, 'ベスト3'), r.best.length ? el('ol', { class: 'rp-best' }, ...r.best.map((b) => el('li', {}, el('span', { class: 'num' }, `★${b.stars}`), `　${b.beanName}${b.roastLevel ? `（${b.roastLevel}）` : ''}`, el('span', { class: 'muted num' }, `　${formatYmdJa(b.ymd)}${b.ratio ? `・1:${b.ratio}` : ''}`)))) : el('p', { class: 'muted' }, '★を付けた杯がありません')),
@@ -39,7 +39,7 @@ function render(month) {
             ...r.origins.map((o) => el('div', { class: 'rp-bar-row' }, el('span', { class: 'rp-bar-label' }, o.key), el('span', { class: 'rp-bar' }, el('span', { class: 'rp-bar-fill', style: `width:${Math.round((o.cups / maxOrigin) * 100)}%` })), el('span', { class: 'num' }, `${o.cups}杯`))),
             r.otherOrigins ? el('p', { class: 'muted' }, `ほか${r.otherOrigins}か国`) : '',
           )
-        : el('p', { class: 'muted' }, '記録がありません'),
+        : el('p', { class: 'muted' }, 'この月の記録はありません。淹れると表示します'),
     ),
     el('section', {}, el('h3', {}, '好みの変化（先月と比べて）'), el('ul', { class: 'rp-list' }, ...r.prefChange.map((t) => el('li', {}, t)))),
     r.caffeinePerDayMg != null ? el('p', { class: 'muted' }, `飲んだ日のカフェインは平均 約${r.caffeinePerDayMg}mg（カフェインレスを除く目安）`) : '',
@@ -66,5 +66,5 @@ setupAnalysisPage();
 registerServiceWorker();
 init().catch((err) => {
   console.error(err);
-  $('sheet').replaceChildren(el('p', { class: 'muted' }, '読み込みに失敗しました。開き直してください'));
+  $('sheet').replaceChildren(el('p', { class: 'error' }, '読み込めませんでした。開き直してください')); // 赤い文で（2-8の45番）
 });

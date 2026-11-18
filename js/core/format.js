@@ -35,6 +35,15 @@ export function formatYmdJa(ymd, { withYear = false } = {}) {
   return withYear ? `${m[1]}/${md}` : md;
 }
 
+/**
+ * 日時を、端末のタイムゾーンの日付で「1/5」（withYear なら「2026/1/5」）にする（2-8の43番）。
+ * 世界標準時の日付（toISOString の先頭）を使うと、日本時間の0〜9時に前の日になるため
+ * @param {Date|string|number} value
+ */
+export function formatDateJa(value, opts = {}) {
+  return formatYmdJa(localYmd(value), opts);
+}
+
 /** 重さを「164.2g」の形にする（小数点以下が0なら省く） */
 export function formatG(g) {
   if (g == null || Number.isNaN(g)) return '';

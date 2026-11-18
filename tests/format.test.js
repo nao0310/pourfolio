@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { formatDateTimeJa, localYmd, formatYmdJa, formatG } from '../js/core/format.js';
+import { formatDateTimeJa, localYmd, formatYmdJa, formatG, formatDateJa } from '../js/core/format.js';
 
 test('端末の日付を「年-月-日」で返す', () => {
   assert.equal(localYmd(new Date(2026, 0, 5, 23, 59)), '2026-01-05');
@@ -32,4 +32,11 @@ test('文字列や数値の日時も受け付ける', () => {
 test('不正な値は空文字を返す', () => {
   assert.equal(formatDateTimeJa('not a date'), '');
   assert.equal(formatDateTimeJa(undefined), '');
+});
+
+test('2-8の43番：日時の日付は端末の時刻で「1/5」の形（世界標準時で前の日にしない）', () => {
+  assert.equal(formatDateJa(new Date(2026, 0, 5, 8, 30)), '1/5');
+  assert.equal(formatDateJa(new Date(2026, 0, 5, 8, 30).toISOString()), '1/5');
+  assert.equal(formatDateJa(new Date(2026, 0, 5, 0, 10).toISOString(), { withYear: true }), '2026/1/5');
+  assert.equal(formatDateJa('bad'), '');
 });

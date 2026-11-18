@@ -15,6 +15,23 @@ export const TX_KINDS = Object.freeze({
   thaw: '冷凍から取り出し',
 });
 
+/** 入庫の量に関わる豆の項目。これが変わったときだけ入庫の履歴を直す（2-8の38番） */
+export const STOCK_FIELDS = Object.freeze(['actualWeightG', 'labelWeightG', 'labelWeightBasis', 'roastLevel', 'status', 'arrivalDate']);
+
+/** 編集で入庫の量に関わる項目が変わったか */
+export function stockFieldsChanged(cur, next) {
+  return STOCK_FIELDS.some((k) => (cur?.[k] ?? null) !== (next?.[k] ?? null));
+}
+
+/**
+ * 「飲み切りを取り消す」で戻す状態（2-8の42番）。
+ * 入庫のほかに履歴（抽出・量り直し・冷凍など）があれば開封済み、入庫だけなら未開封
+ * @param {object[]} txs その豆の在庫履歴（削除の印が付いたものは除く）
+ */
+export function statusAfterUnfinish(txs) {
+  return (txs ?? []).some((t) => t.deletedAt == null && t.kind !== 'in') ? 'open' : 'unopened';
+}
+
 /** 残り杯数の計算に使う1杯の粉の量の初期値（設定 defaultDoseG で変えられる） */
 export const DEFAULT_DOSE_G = 15;
 
@@ -38,6 +55,22 @@ export function doseFromSettings(settings) {
  */
 export function remainingG(txs) {
   return round1(txs.filter(alive).reduce((s, t) => s + (Number(t.deltaG) || 0), 0));
+}
+
+/** 残りが0gとみなす幅（g）。はかりの誤差 */
+export const EMPTY_TOLERANCE_G = 0.5;
+
+/**
+ * 抽出を保存する前の在庫の確かめ（2-8の32番）
+ * @param {{txCount:number, roomG:number, doseG:number, usingPortion?:boolean}} p
+ *   txCount はその豆の在庫履歴の数（0なら重さを入れていない豆なので確かめない）。冷凍の袋を使うときも確かめない
+ * @returns {{short:boolean, empty:boolean, afterG:number|null}}
+ *   short＝残りが足りない（保存すると残りがマイナス）、empty＝保存すると残りがほぼ0g（飲み切りにするか聞く）
+ */
+export function stockCheckForBrew({ txCount = 0, roomG = 0, doseG = 0, usingPortion = false }) {
+  if (usingPortion || !(txCount > 0) || !(doseG > 0)) return { short: false, empty: false, afterG: null };
+  const afterG = round1(roomG - doseG);
+  return { short: afterG < -EMPTY_TOLERANCE_G, empty: afterG <= EMPTY_TOLERANCE_G, afterG };
 }
 
 /** 残り杯数（端数は切り捨て。マイナスにはしない） */

@@ -8,6 +8,7 @@ import {
   addInventoryTx,
   deleteInventoryTx,
   setBeanStatus,
+  unfinishBean,
   deleteBean,
   listBeans,
   markArrived,
@@ -31,12 +32,17 @@ import { gramPrice, yen, yenPerGText } from './core/cost.js';
 import { remainingG, cupsLeft, consumptionPace, emptyForecast, doseFromSettings, sortTxNewestFirst, TX_KINDS } from './core/inventory.js';
 import { freshness, FRESHNESS_WINDOWS, FALLBACK_GROUP, STAGES } from './core/freshness.js';
 import { roastGroup, ROAST_GROUPS } from './core/roast.js';
-import { localYmd, formatYmdJa, formatG, formatDateTimeJa } from './core/format.js';
+import { localYmd, formatYmdJa, formatG, formatDateTimeJa, formatDateJa } from './core/format.js';
 import { roastPreferences, preferenceForBean, preferenceText } from './core/compare.js';
-import { $, el, queryParam, showMessage, freshnessPill, frozenPill, stepperField, svgElement } from './ui.js';
+import { $, el, queryParam, showMessage as showBoxMessage, showToast, freshnessPill, frozenPill, stepperField, svgElement } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
 import { showCard } from './dismiss-card.js';
 import { singleFlight } from './core/once.js';
+import { askConfirm } from './confirm-box.js';
+
+// 豆の画面の知らせは、決まった場所（量り直しの下）に出すと上にいるとき見えないので、画面の上に浮かべて出す（2-8の30番）。
+// 冷凍の欄の知らせ（fzMsg）は押した所のすぐ下なので、そのまま
+const showMessage = (text, kind = 'ok', id = 'msg') => (id === 'msg' ? showToast(text, kind) : showBoxMessage(text, kind, id));
 
 /**
  * 送信の処理を、終わるまで2回目を受け付けない形にする（2-8 の13番：冷凍する・1杯淹れたなどの2度押しで2件できないように）。
@@ -73,12 +79,17 @@ function readGrams(input, max = 5000) {
   return Math.round(g * 10) / 10;
 }
 
-/** 飲み頃の帯：4段階を横に並べ、今日の位置に印を付ける */
+/**
+ * 飲み頃の帯：4段階を横に並べ、今日の位置に印を付ける。
+ * 段階の名前は帯の中に入れると幅320・375で切れるので、帯の下に色の印と並べる（2-8の27番）
+ */
 function renderBand(f, group) {
   const w = FRESHNESS_WINDOWS[group];
   const total = w.pastUntil + 8; // 「早めに消費」も少し見せる
-  const seg = (stage, from, to) =>
-    el('span', { class: `seg stage-${stage}`, style: `flex-grow:${to - from}` }, to - from >= 3 ? STAGES[stage] : '');
+  const seg = (stage, from, to) => el('span', { class: `seg stage-${stage}`, style: `flex-grow:${to - from}` });
+  $('bandLegend').replaceChildren(
+    ...['resting', 'peak', 'past', 'useSoon'].map((stage) => el('span', { class: 'band-key' }, el('span', { class: `band-dot stage-${stage}` }), STAGES[stage])),
+  );
   const children = [
     seg('resting', 0, w.restUntil + 1),
     seg('peak', w.restUntil + 1, w.peakUntil + 1),
@@ -86,8 +97,9 @@ function renderBand(f, group) {
     seg('useSoon', w.pastUntil + 1, total),
   ];
   if (f) {
+    // 印が帯の端からはみ出さないよう、端から3px内側に収める
     const pos = Math.min(Math.max(f.days + 0.5, 0), total) / total;
-    children.push(el('span', { class: 'band-marker', style: `left:${(pos * 100).toFixed(1)}%` }));
+    children.push(el('span', { class: 'band-marker', style: `left:clamp(3px, ${(pos * 100).toFixed(1)}%, calc(100% - 3px))` }));
   }
   $('band').replaceChildren(...children);
 }
@@ -122,7 +134,7 @@ function renderStock(bean, txs, parts) {
   if (rest <= 0) {
     $('forecast').textContent = bean.status === 'finished' ? '' : '残りがなくなりました。飲み切りにしておくと一覧がすっきりします。';
   } else if (fc) {
-    $('forecast').textContent = `この2週間のペース（1日${formatG(pace.gPerDay)}）だと、あと${fc.days}日（${formatDateTimeJa(fc.date).slice(5, 10)}ごろ）でなくなります`;
+    $('forecast').textContent = `この2週間のペース（1日${formatG(pace.gPerDay)}）だと、あと${fc.days}日（${formatDateJa(fc.date)}ごろ）でなくなります`;
   } else {
     $('forecast').textContent = 'なくなる日の目安は、2週間で2杯以上淹れると表示します';
   }
@@ -158,7 +170,7 @@ function renderTxList(txs) {
               type: 'button',
               onclick: async () => {
                 const extra = { freeze: '（作った袋も消えます）', thaw: '（袋は冷凍庫に戻ります）' }[t.kind] ?? '';
-                if (!confirm(`「${TX_KINDS[t.kind] ?? t.kind} ${formatG(t.deltaG)}」を取り消しますか？${extra}`)) return;
+                if (!(await askConfirm(`「${TX_KINDS[t.kind] ?? t.kind} ${formatG(t.deltaG)}」を取り消しますか？${extra}`, { ok: '取り消す' }))) return;
                 try {
                   await deleteInventoryTx(db, t.id);
                 } catch (err) {
@@ -465,14 +477,15 @@ $('outForm').addEventListener('submit', guarded(async (event) => {
 }));
 
 $('toggleFinished').addEventListener('click', async (event) => {
-  const next = event.target.dataset.status === 'finished' ? 'open' : 'finished';
-  await setBeanStatus(db, beanId, next);
-  showMessage(next === 'finished' ? '飲み切りにしました' : '飲み切りを取り消しました');
+  const finishing = event.target.dataset.status !== 'finished';
+  if (finishing) await setBeanStatus(db, beanId, 'finished');
+  else await unfinishBean(db, beanId);
+  showMessage(finishing ? '飲み切りにしました' : '飲み切りを取り消しました');
   await render();
 });
 
 $('delete').addEventListener('click', async () => {
-  if (!confirm('この豆と在庫の履歴を削除しますか？')) return;
+  if (!(await askConfirm('この豆と在庫の履歴を削除しますか？元に戻せません', { ok: '削除する', danger: true }))) return;
   await deleteBean(db, beanId);
   location.replace('beans.html');
 });
@@ -480,5 +493,5 @@ $('delete').addEventListener('click', async () => {
 registerServiceWorker();
 render().catch((err) => {
   console.error(err);
-  showMessage('読み込みに失敗しました', 'error');
+  showMessage('読み込めませんでした。開き直してください', 'error');
 });

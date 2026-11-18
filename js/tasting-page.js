@@ -44,6 +44,7 @@ import { formatG } from './core/format.js';
 import { portionsOf, stockParts, stockPartsText } from './core/frozen.js';
 import { $, el, queryParam, showMessage, showPageLoadError } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
+import { askConfirm } from './confirm-box.js';
 
 const db = openDb();
 let brew = null;
@@ -101,9 +102,9 @@ function renderStageTabs() {
   $('stageHint').textContent = STAGE_HINTS[stage];
 }
 
-function switchStage(next) {
+async function switchStage(next) {
   if (next === stage) return;
-  if (dirty && !confirm('保存していない入力は消えます。温度帯を切り替えますか？')) return;
+  if (dirty && !(await askConfirm('保存していない入力は消えます。温度帯を切り替えますか？', { ok: '切り替える', danger: true }))) return;
   stage = next;
   const url = new URL(location.href);
   url.searchParams.set('stage', stage);
@@ -303,9 +304,15 @@ async function onPickPhoto(slot, file) {
 }
 
 async function onDeletePhoto(slot, photo) {
-  if (!confirm(`${slot.label}の写真を消しますか？元に戻せません`)) return;
-  await deletePhoto(db, photo.id);
-  showMessage(`${slot.label}の写真を消しました`, 'ok', 'photoMsg');
+  if (!(await askConfirm(`${slot.label}の写真を削除しますか？元に戻せません`, { ok: '削除する', danger: true }))) return;
+  try {
+    await deletePhoto(db, photo.id);
+  } catch (err) {
+    console.error(err);
+    showMessage('写真を削除できませんでした。もう一度押してください', 'error', 'photoMsg'); // 2-8の45番
+    return;
+  }
+  showMessage(`${slot.label}の写真を削除しました`, 'ok', 'photoMsg');
   await renderPhotos();
 }
 
@@ -381,7 +388,13 @@ async function onSaveTds() {
     showMessage(error, 'error', 'tdsMsg');
     return;
   }
-  brew = await setBrewTds(db, brew.id, value);
+  try {
+    brew = await setBrewTds(db, brew.id, value);
+  } catch (err) {
+    console.error(err);
+    showMessage('TDSを保存できませんでした。もう一度押してください', 'error', 'tdsMsg'); // 2-8の45番
+    return;
+  }
   showMessage(value == null ? 'TDSを消しました' : 'TDSを保存しました', 'ok', 'tdsMsg');
   await renderTds();
 }

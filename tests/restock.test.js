@@ -251,3 +251,11 @@ test('まとめ買い：1つで届かなければ、★の高い順に足した�
   const none = bulkBuyPlan({ picked: [candidates[0]], candidates, settings: { ...SHIP, freeShippingJpy: 10000 }, doseG: 15 });
   assert.deepEqual(none.suggestions, []);
 });
+
+test('2-8の46番：豆が1つもないときは、豆を登録するよう書く', () => {
+  const plan = restockPlan({ beans: [], txs: [], today: TODAY, now: NOW });
+  assert.equal(plan.status, 'unknown');
+  assert.match(restockText(plan).text, /^まだ豆はありません。豆を登録して/);
+  const one = restockPlan({ beans: [bean('a')], txs: [tx('a', 160)], today: TODAY, now: NOW });
+  assert.doesNotMatch(restockText(one).text, /まだ豆はありません/);
+});

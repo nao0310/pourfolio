@@ -118,7 +118,7 @@ test('控える時刻までの残りと、過ぎたとき・目安を超えた�
   assert.match(over.sub, /目安に届きました/);
   const none = caffeineKeeper({ now: new Date(2026, 10, 18, 9, 0), cutoff: null, mg: 0 });
   assert.equal(none.minutesLeft, null);
-  assert.match(none.sub, /今日の一杯/);
+  assert.match(none.sub, /今日の1杯/);
 });
 
 test('残り時間の言い方', () => {

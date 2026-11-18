@@ -5,8 +5,7 @@ import { beanJourneys } from './core/dialin-history.js';
 import { chartPoints, favoriteZone } from './core/brew-chart.js';
 import { roastCurves } from './core/factors.js';
 import { preferenceBy, topLine } from './core/preference.js';
-import { dailyStats } from './core/calendar.js';
-import { localYmd } from './core/format.js';
+import { todayCaffeine } from './core/caffeine.js';
 import { $, el } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
 
@@ -30,7 +29,8 @@ async function render() {
   const factorsReady = readiness(rated.length, THRESHOLDS.factors);
   const curves = roastCurves(rows).filter((c) => c.ready.ready).length;
   const profileReady = readiness(rated.length, THRESHOLDS.profile);
-  const today = dailyStats(rows).get(localYmd());
+  // 今日はホームと同じ朝5時区切り（2-8の37番）
+  const today = todayCaffeine(rows, new Date());
 
   const summary = el(
     'section',
@@ -46,7 +46,7 @@ async function render() {
       el('dt', {}, '豆'),
       el('dd', { class: 'num' }, `${journeys.length}袋`),
       el('dt', {}, '今日'),
-      el('dd', { class: 'num' }, today ? `${today.cups}杯・カフェイン約${today.caffeineMg}mg` : 'まだ淹れていません'),
+      el('dd', { class: 'num' }, today.cups ? `${today.cups}杯・カフェイン約${today.mg}mg` : 'まだ淹れていません'),
     ),
     profileReady.ready ? el('p', {}, topLine(preferenceBy(rows, 'origin'), '産地')) : null,
   );

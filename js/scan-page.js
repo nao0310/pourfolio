@@ -98,7 +98,9 @@ $('pasteBtn').addEventListener('click', () => {
   }
   // share.html#r=… だけを貼った場合も開けるように、アプリの場所を補う
   const full = /^share\.html#/.test(text) ? new URL(text, appBase).href : text;
-  if (!go(full)) showMessage('Pourfolioのリンクではないので開きません', 'error');
+  // Pourfolio 以外の文字は、下の「読み取った文字」の箱だけで知らせる（知らせを2つ出さない、2-8の47番）
+  showMessage('', 'ok');
+  go(full);
 });
 
 registerServiceWorker();

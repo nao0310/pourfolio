@@ -199,5 +199,5 @@ $('shipForm').addEventListener('submit', async (event) => {
 registerServiceWorker();
 render().catch((err) => {
   console.error(err);
-  $('planTitle').textContent = '読み込みに失敗しました。開き直してください';
+  $('planTitle').textContent = '読み込めませんでした。開き直してください';
 });

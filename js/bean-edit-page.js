@@ -159,7 +159,7 @@ form.addEventListener('submit', async (event) => {
     location.replace(`bean.html?id=${encodeURIComponent(saved.id)}`);
   } catch (err) {
     console.error(err);
-    showMessage('保存に失敗しました', 'error');
+    showMessage('保存できませんでした。もう一度押してください', 'error');
     $('save').disabled = false;
   }
 });
@@ -171,6 +171,7 @@ async function init() {
     if (!found) {
       $('title').textContent = '豆が見つかりません';
       form.hidden = true;
+      form.after(el('p', { class: 'muted' }, '削除したのかもしれません。'), el('p', {}, el('a', { class: 'btn block', href: 'beans.html' }, '豆の一覧へ')));
       return;
     }
     document.title = '豆の編集 - Pourfolio';
@@ -188,5 +189,5 @@ async function init() {
 registerServiceWorker();
 init().catch((err) => {
   console.error(err);
-  showMessage('読み込みに失敗しました', 'error');
+  showMessage('読み込めませんでした。開き直してください', 'error');
 });

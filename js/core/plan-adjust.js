@@ -9,7 +9,7 @@ const round1 = (n) => Math.round(n * 10) / 10;
 
 /**
  * 気分プリセット（spec 6.4）。狙いの味を「比率」と「4:6の味・濃さ」に置き換える。
- * roastGroups は今日の一杯（F3）で少し点数を足す焙煎度の区分。
+ * roastGroups は今日の1杯（F3）で少し点数を足す焙煎度の区分。
  */
 export const MOODS = Object.freeze({
   wake: { label: '目覚め', aim: '明るい酸味・やや濃いめ', ratioDelta: -0.5, taste: 'bright', strength: 'strong', roastGroups: ['light', 'medium'] },

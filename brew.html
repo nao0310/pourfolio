@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="color-scheme" content="light dark">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>抽出 - Pourfolio</title>
+  <title>淹れる - Pourfolio</title>
   <meta name="theme-color" content="#5a371f">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -19,13 +19,14 @@
     <p class="crumb"><a href="recipes.html" id="crumb">淹れる</a></p>
     <div id="notFound" hidden>
       <h1>レシピが見つかりません</h1>
-      <p class="muted">削除されたレシピです。「淹れる」の一覧から選び直してください。</p>
+      <p class="muted">削除したのかもしれません。レシピの一覧から選び直してください。</p>
+      <p><a class="btn block" href="recipes.html" id="notFoundBtn">レシピの一覧へ</a></p>
     </div>
 
     <!-- 計画（スタート前） -->
     <div id="content" hidden>
       <div class="card resume-card" id="resumeCard" hidden>
-        <p><strong>途中の抽出があります</strong></p>
+        <p><strong>淹れている途中の1杯があります</strong></p>
         <p class="muted" id="resumeText"></p>
         <div class="row">
           <button class="btn" type="button" id="resume">続きに戻る</button>
@@ -179,7 +180,6 @@
   <section class="timer-screen" id="timerView" hidden aria-label="抽出タイマー">
     <div class="timer-bar">
       <button class="timer-small" type="button" id="cancel">やめる</button>
-      <button class="timer-small" type="button" id="speechToggle" aria-pressed="true">読み上げ オン</button>
     </div>
     <div class="timer-top">
       <p class="timer-elapsed num" id="tElapsed">0:00</p>
@@ -190,6 +190,10 @@
       <p class="timer-next muted" id="tNext"></p>
       <p class="timer-ghost num" id="tGhost"></p>
       <p class="timer-wake" id="tWake"></p>
+    </div>
+    <!-- 読み上げの切り替えは、片手の親指が届く真ん中の右に置く（2-8の34番）。下半分の「注湯完了」とは分ける -->
+    <div class="timer-tools">
+      <button class="timer-small" type="button" id="speechToggle" aria-pressed="true">読み上げ オン</button>
     </div>
     <button class="timer-tap" type="button" id="tap">
       <span id="tapLabel">注湯完了</span>

@@ -144,3 +144,16 @@ test('抽出の一覧：気分・杯数・氷の列（調整しなかった杯�
   assert.equal(col(row, '氷g'), 120);
   assert.deepEqual([col(row2, '気分'), col(row2, '杯数'), col(row2, '氷g')], ['', '', '']);
 });
+
+test('2-8の41番：= + - @ で始まる文字は式として動かないよう先頭に \' を付ける', () => {
+  assert.equal(csvCell('=HYPERLINK("x")'), `"'=HYPERLINK(""x"")"`);
+  assert.equal(csvCell('+1 甘い'), "'+1 甘い");
+  assert.equal(csvCell('-濃いめ'), "'-濃いめ");
+  assert.equal(csvCell('@メモ'), "'@メモ");
+  assert.equal(csvCell('\tタブ'), "'\tタブ");
+  // 数字はそのまま
+  assert.equal(csvCell(-15), '-15');
+  assert.equal(csvCell('-15'), '-15');
+  assert.equal(csvCell('+2.5'), '+2.5');
+  assert.equal(csvCell('ふつう=よい'), 'ふつう=よい');
+});

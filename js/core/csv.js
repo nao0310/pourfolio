@@ -20,10 +20,14 @@ import { retentionTable, brewMetrics } from './extraction.js';
 export const BOM = '﻿';
 const alive = (r) => r && r.deletedAt == null;
 
-/** 1つの値をCSVの欄にする（カンマ・改行・「"」を含むときは "" で囲み、" は2つにする） */
+/**
+ * 1つの値をCSVの欄にする（カンマ・改行・「"」を含むときは "" で囲み、" は2つにする）。
+ * = + - @ タブで始まる文字（数字だけのものを除く）は、表計算ソフトで式として動かないよう先頭に ' を付ける（2-8の41番）
+ */
 export function csvCell(v) {
   if (v == null) return '';
-  const s = typeof v === 'boolean' ? (v ? 'はい' : 'いいえ') : String(v);
+  let s = typeof v === 'boolean' ? (v ? 'はい' : 'いいえ') : String(v);
+  if (typeof v === 'string' && /^[=+\-@\t\r]/.test(s) && !/^[+-]?\d+(\.\d+)?$/.test(s)) s = `'${s}`;
   return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 

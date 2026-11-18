@@ -243,6 +243,11 @@ test('通し：始める→淹れた抽出をつなぐ→ブラインドで評�
   await saveTasting(db, b2.id, normalizeTastingInput({ stars: 5 }).value, later(11));
   assert.equal((await getTastingForBrew(db, b2.id)).blind, true);
 
+  // 2-8の50番：結果を出したあとは、古い画面から淹れ直してもつながない（結果の杯を置き換えない）
+  const { brew: b3 } = await saveBrew(db, { at: later(13).toISOString(), beanId: null, planned: {}, actual: { doseG: 10, waterG: 160, totalSec: 150 } }, later(13));
+  assert.equal(await attachBrewToExperiment(db, exp.id, { brewId: b3.id, beanId: null, targetBeanId: 'm' }, later(14)), null);
+  assert.deepEqual((await getExperiment(db, exp.id)).entries.map((e) => e.brewId), [b1.id, b2.id]);
+
   const backup = parseBackup(JSON.stringify(await exportAll(db, later(12))));
   await clearAll(db);
   await restoreBackup(db, backup);

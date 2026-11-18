@@ -12,6 +12,7 @@ import { registerServiceWorker, requestPersistentStorage, getOfflineStatus } fro
 import { APP_VERSION, CHANGELOG, versionLabel } from './core/version.js';
 import { photoUsage, formatBytes, withoutPhotos } from './core/photos.js';
 import { autosaveSupported, getAutosaveState, chooseFolder, resumeAutosave, stopAutosave } from './autosave-file.js';
+import { askConfirm } from './confirm-box.js';
 
 const LABELS = {
   beans: '豆',
@@ -103,7 +104,7 @@ $('export').addEventListener('click', async () => {
     await render();
   } catch (err) {
     console.error(err);
-    showMessage('書き出しに失敗しました', 'error');
+    showMessage('書き出せませんでした。もう一度押してください', 'error');
   }
 });
 
@@ -143,7 +144,7 @@ $('exportCsv').addEventListener('click', async () => {
     showMessage(`CSVを書き出しました（${files.map((f) => f.name).join('、')}）`);
   } catch (err) {
     console.error(err);
-    showMessage('CSVの書き出しに失敗しました', 'error');
+    showMessage('CSVを書き出せませんでした。もう一度押してください', 'error');
   }
 });
 
@@ -160,7 +161,7 @@ $('file').addEventListener('change', async (event) => {
       return;
     }
     const when = formatDateTimeJa(backup.exportedAt) || '不明';
-    if (!confirm(`${when} に書き出したファイル（${total} 件）を復元します。よろしいですか？`)) return;
+    if (!(await askConfirm(`${when} に書き出したファイル（${total} 件）を復元しますか？`, { ok: '復元する' }))) return;
     const result = await restoreBackup(db, backup);
     const added = TABLES.reduce((n, name) => n + result[name].added, 0);
     const updated = TABLES.reduce((n, name) => n + result[name].updated, 0);
@@ -169,13 +170,13 @@ $('file').addEventListener('change', async (event) => {
     await render();
   } catch (err) {
     console.error(err);
-    showMessage(err instanceof BackupError ? err.message : '復元に失敗しました', 'error');
+    showMessage(err instanceof BackupError ? err.message : '復元できませんでした。ファイルを確かめて、もう一度選んでください', 'error');
   }
 });
 
 $('clear').addEventListener('click', async () => {
-  if (!confirm('この端末の記録をすべて消します。よろしいですか？')) return;
-  if (!confirm('本当に消しますか？ 元に戻せません。')) return;
+  if (!(await askConfirm('この端末の記録をすべて消しますか？', { ok: '消す', danger: true }))) return;
+  if (!(await askConfirm('本当に消しますか？元に戻せません', { ok: 'すべて消す', danger: true }))) return;
   // 設定もここでは作り直さない（作り直すと、復元したときにファイルの設定より新しいと判定されてしまう）
   await clearAll(db);
   // 自動ファイル保存も止める。続けると、復元する前の保存でフォルダのファイルが空の中身に替わるため（2-8 の18番）
@@ -198,7 +199,7 @@ if (isDev) {
     await render();
   });
   $('demoData').addEventListener('click', async () => {
-    if (!confirm('分析のデモデータ（豆8袋・80杯）をこの端末のデータに入れますか？あとで1件ずつ消すのは大変です')) return;
+    if (!(await askConfirm('分析のデモデータ（豆8袋・80杯）をこの端末のデータに入れますか？あとで1件ずつ消すのは大変です', { ok: '入れる' }))) return;
     await putAll(db, makeDemoData());
     showMessage('デモデータを入れました');
     await render();
@@ -273,9 +274,17 @@ if (autosaveSupported()) {
 
 $('appVersionLabel').textContent = versionLabel(APP_VERSION);
 renderChangelog();
-registerServiceWorker().then(() => navigator.serviceWorker?.ready).then(renderOffline, renderOffline);
+// 準備がいつまでも終わらないときも「確かめています…」のままにせず、5秒で今の状況を出す（2-8の49番）
+const swReady = registerServiceWorker().then(() => navigator.serviceWorker?.ready);
+Promise.race([swReady, new Promise((resolve) => setTimeout(resolve, 5000))]).then(renderOffline, renderOffline);
+swReady.then(renderOffline, () => {}); // 5秒より遅れて準備できたら、出し直す
 requestPersistentStorage();
 render().catch((err) => {
   console.error(err);
-  showMessage('記録の読み込みに失敗しました', 'error');
+  // 件数の「読み込み中…」を残さない（2-8の45番）
+  const dt = document.createElement('dt');
+  dt.className = 'error';
+  dt.textContent = '件数を読み込めませんでした';
+  $('counts').replaceChildren(dt, document.createElement('dd'));
+  showMessage('記録を読み込めませんでした。開き直してください', 'error');
 });

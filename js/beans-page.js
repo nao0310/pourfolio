@@ -70,7 +70,7 @@ async function render() {
       el(
         'div',
         { class: 'card empty' },
-        el('p', {}, beans.length ? '飲みかけの豆はありません。' : 'まだ豆が登録されていません。'),
+        el('p', {}, beans.length ? '飲みかけの豆はありません。' : 'まだ豆はありません。下の「＋ 豆を登録」から登録すると、ここに表示します。'),
         el('p', { class: 'muted' }, '下の「＋ 豆を登録」から、届いた豆を登録してください。'),
       ),
     );
@@ -113,5 +113,5 @@ if (registered > 0) {
 registerServiceWorker();
 render().catch((err) => {
   console.error(err);
-  $('list').replaceChildren(el('p', { class: 'error' }, '豆の読み込みに失敗しました'));
+  $('list').replaceChildren(el('p', { class: 'error' }, '豆を読み込めませんでした。開き直してください'));
 });

@@ -1,4 +1,4 @@
-// 焙煎所・店の台帳（C7）：店ごとの平均評価・買った回数・使った金額・お気に入り
+// 焙煎所・店の台帳（C7）：店ごとの平均評価・買った回数・買った額・お気に入り
 import { openDb, readAll, getSettings, updateSettings } from './db.js';
 import { shopLedger, toggleFavorite } from './core/shops.js';
 import { yen } from './core/cost.js';
@@ -12,7 +12,7 @@ const alive = (r) => r && r.deletedAt == null;
 function shopCard(s, favorites) {
   const facts = [
     ['買った', `${s.bags}袋・${s.purchases}回${s.lastBoughtYmd ? `（最後は${formatYmdJa(s.lastBoughtYmd, { withYear: true })}）` : ''}`],
-    ['使った金額', `${yen(s.spentJpy)}${s.unpricedBags ? `（価格未入力の${s.unpricedBags}袋を除く）` : ''}`],
+    ['買った額', `${yen(s.spentJpy)}${s.unpricedBags ? `（価格未入力の${s.unpricedBags}袋を除く）` : ''}`],
     ['平均★', s.avgStars != null ? `★${s.avgStars}（${s.rated}杯）` : 'まだ評価なし'],
     ['1杯の平均', s.avgCostJpy != null ? yen(s.avgCostJpy) : '—'],
     ['★1つあたり', s.yenPerStar != null ? yen(s.yenPerStar) : '—'],
@@ -67,5 +67,5 @@ async function render() {
 registerServiceWorker();
 render().catch((err) => {
   console.error(err);
-  $('shops').replaceChildren(el('p', { class: 'error' }, '読み込みに失敗しました'));
+  $('shops').replaceChildren(el('p', { class: 'error' }, '読み込めませんでした。開き直してください'));
 });

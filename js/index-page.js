@@ -310,5 +310,5 @@ async function init() {
 
 init().catch((err) => {
   console.error(err);
-  $('todayText').textContent = '記録の読み込みに失敗しました。開き直してください';
+  $('todayText').textContent = '記録を読み込めませんでした。開き直してください';
 });

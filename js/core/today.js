@@ -1,4 +1,4 @@
-// 今日の一杯（F3、spec 6.4）：手元の豆ごとに点数を付け、上位3つを理由と一緒に出す（純粋関数）
+// 今日の1杯（F3、spec 6.4）：手元の豆ごとに点数を付け、上位3つを理由と一緒に出す（純粋関数）
 // 点数＝予測評価（★の目安）＋飲み頃・在庫・気分（F4）・カフェインの補正。
 // 淹れ方は、その豆で★がいちばん高かった杯の計画。まだ淹れていない豆は初期レシピ（F2）。
 
@@ -49,16 +49,36 @@ export function normalizeCutoff(v) {
   return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 }
 
+/** 1日の区切りの時刻（分）。朝5時 */
+const DAY_START_MIN = 5 * 60;
+
+/**
+ * 控える時刻を過ぎているか、まだなら残りの分（純粋関数）
+ * 控える時刻が朝5時より前（0:00〜4:59）のときは、その時刻から朝5時までだけを控える時間にする（2-8の35番）。
+ * 5時以降のときは、その時刻から次の朝5時まで（夜中は前の日の続き）。
+ * @returns {{past:boolean, minutesLeft:number|null}} 時刻がないときは past:false, minutesLeft:null
+ */
+export function cutoffStatus(now, cutoff) {
+  const c = minutesOf(cutoff);
+  if (c == null) return { past: false, minutesLeft: null };
+  const d = new Date(now);
+  const cur = d.getHours() * 60 + d.getMinutes();
+  if (c < DAY_START_MIN) {
+    if (cur >= c && cur < DAY_START_MIN) return { past: true, minutesLeft: null };
+    return { past: false, minutesLeft: cur < c ? c - cur : 24 * 60 - cur + c };
+  }
+  if (cur >= c || cur < DAY_START_MIN) return { past: true, minutesLeft: null };
+  return { past: false, minutesLeft: c - cur };
+}
+
 /**
  * カフェインを控える状態か
  * @param {{now:Date, cutoff?:string|null, todayCaffeineMg?:number}} p
  * @returns {{late:boolean, why:string}}
  */
 export function caffeineState({ now, cutoff = null, todayCaffeineMg = 0 }) {
-  const c = minutesOf(cutoff);
-  const cur = now.getHours() * 60 + now.getMinutes();
-  // 夜中（0〜4時）は前の日の続きとして、控える時間に入れる
-  if (c != null && (cur >= c || now.getHours() < 5)) return { late: true, why: `${cutoff}を過ぎたのでカフェインを控える時間です` };
+  // 夜中（0〜4時）は前の日の続きとして、控える時間に入れる（cutoffStatus）
+  if (cutoffStatus(now, cutoff).past) return { late: true, why: `${cutoff}を過ぎたのでカフェインを控える時間です` };
   if (todayCaffeineMg >= DAILY_CAFFEINE_MG) return { late: true, why: `今日のカフェインが約${todayCaffeineMg}mgで、目安の${DAILY_CAFFEINE_MG}mgに届きました` };
   return { late: false, why: '' };
 }
@@ -104,7 +124,7 @@ function attrPrediction(bean, prefs) {
 }
 
 /**
- * 今日の一杯の候補（点数の高い順）。
+ * 今日の1杯の候補（点数の高い順）。
  * @param {{rows:object[], brews?:object[], tastings?:object[], beans?:object[], now?:Date, mood?:string|null,
  *   cutoff?:string|null, todayCaffeineMg?:number, n?:number}} p rows は home.js の beanRows の結果
  * @returns {{bean:object, score:number, predicted:number, reasons:string[], base:{kind:'brew', brewId:string}|{kind:'initial'}, cups:number, mood:string|null, n:number}[]}

@@ -15,6 +15,7 @@ import { GRIND_SIZES, sizeWord } from './core/grinder-scale.js';
 import { WATER_ITEMS, normalizeWaterInput, waterCheck } from './core/water.js';
 import { $, el, queryParam, showMessage } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
+import { askConfirm } from './confirm-box.js';
 
 const db = openDb();
 const form = $('form');
@@ -200,13 +201,13 @@ form.addEventListener('submit', async (event) => {
     location.replace('equipment.html');
   } catch (err) {
     console.error(err);
-    showMessage('保存に失敗しました', 'error');
+    showMessage('保存できませんでした。もう一度押してください', 'error');
     $('save').disabled = false;
   }
 });
 
 $('delete').addEventListener('click', async () => {
-  if (!confirm('この器具（水）を削除しますか？（レシピに入っている器具の名前は表示されなくなります）')) return;
+  if (!(await askConfirm('この器具（水）を削除しますか？元に戻せません（レシピに入っている器具の名前は表示されなくなります）', { ok: '削除する', danger: true }))) return;
   await deleteEquipment(db, editId);
   location.replace('equipment.html');
 });
@@ -215,8 +216,14 @@ async function init() {
   if (editId) {
     const eq = await getEquipment(db, editId);
     if (!eq) {
-      $('title').textContent = '見つかりません';
+      // 削除した器具を開いた：何が起きたかと戻り道を出す（2-8の51番）
+      document.title = '器具が見つかりません - Pourfolio';
+      $('title').textContent = '器具が見つかりません';
       form.hidden = true;
+      form.after(
+        el('p', { class: 'muted' }, '削除したのかもしれません。'),
+        el('p', {}, el('a', { class: 'btn block', href: 'equipment.html' }, '器具の一覧へ')),
+      );
       return;
     }
     document.title = '器具の編集 - Pourfolio';
@@ -233,5 +240,5 @@ async function init() {
 registerServiceWorker();
 init().catch((err) => {
   console.error(err);
-  showMessage('読み込みに失敗しました', 'error');
+  showMessage('読み込めませんでした。開き直してください', 'error');
 });

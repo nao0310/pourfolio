@@ -39,7 +39,7 @@ async function renderSend() {
 async function initSend(id) {
   [recipe, beans, equipment] = await Promise.all([getRecipe(db, id), listBeans(db), listEquipment(db)]);
   if (!recipe) {
-    $('emptyText').textContent = 'レシピが見つかりません。消したレシピかもしれません。';
+    $('emptyText').textContent = 'レシピが見つかりません。削除したのかもしれません。';
     $('empty').hidden = false;
     return;
   }
@@ -55,8 +55,9 @@ async function initSend(id) {
     $('shareBtn').addEventListener('click', async () => {
       try {
         await navigator.share({ title: `レシピ「${recipe.name}」`, url: link });
-      } catch {
-        // 閉じただけのときは何もしない
+      } catch (err) {
+        // 閉じただけのときは何もしない。それ以外の失敗は知らせる（2-8の45番）
+        if (err?.name !== 'AbortError') showMessage('共有できませんでした。「リンクをコピー」を使ってください', 'error', 'copyMsg');
       }
     });
   }
@@ -137,5 +138,5 @@ async function init() {
 registerServiceWorker();
 init().catch((err) => {
   console.error(err);
-  showMessage('読み込みに失敗しました。開き直してください', 'error');
+  showMessage('読み込めませんでした。開き直してください', 'error');
 });

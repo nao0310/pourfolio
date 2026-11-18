@@ -11,7 +11,7 @@ test('画面のパスからタブを決める。入力の途中の画面には�
   assert.equal(tabForPath('/factors.html'), 'analysis');
   assert.equal(tabForPath('/brew.html'), null);
   assert.equal(tabForPath('/tasting.html'), null);
-  assert.deepEqual(TABS.map((t) => t.label), ['ホーム', '抽出', '豆と在庫', '分析', 'その他']);
+  assert.deepEqual(TABS.map((t) => t.label), ['ホーム', '淹れる', '豆と在庫', '分析', 'その他']);
 });
 
 test('全部の画面が、タブを出す画面か出さない画面のどちらかに入っていて、タブの部品を読み込む', () => {

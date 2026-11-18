@@ -39,6 +39,7 @@ import { renderStars, renderTags } from './tasting-parts.js';
 import { $, el, queryParam, showMessage, showPageLoadError } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
 import { singleFlight, serialQueue } from './core/once.js';
+import { askConfirm } from './confirm-box.js';
 
 const db = openDb();
 const enc = encodeURIComponent;
@@ -259,6 +260,7 @@ function renderCups() {
 function renderReveal() {
   const blind = exp.blind !== false;
   $('revealTitle').textContent = blind ? '3. 答え合わせ' : '3. 結果を見る';
+  $('reveal').textContent = blind ? '答え合わせをする' : '結果を見る'; // 見出しとボタンの言葉をそろえる（2-8の25番）
   $('revealHint').textContent = blind ? '全部に★を付けたら、カップの底を見て、番号ごとに焙煎度を選びます' : '全部に★を付けたら押します';
   $('answers').replaceChildren(
     ...(blind
@@ -387,7 +389,7 @@ $('startForm').addEventListener('submit', (e) => {
 });
 $('reveal').addEventListener('click', onReveal);
 $('remove').addEventListener('click', async () => {
-  if (!confirm('この飲み比べをやめますか？淹れた抽出と評価は残ります')) return;
+  if (!(await askConfirm('この飲み比べをやめますか？淹れた抽出と評価は残ります', { ok: 'やめる', danger: true }))) return;
   await deleteExperiment(db, exp.id);
   location.replace('compare.html');
 });

@@ -3,9 +3,10 @@ import { openDb, addOrder, listOrders } from './db.js';
 import { parseOrderEmail } from './core/tonya.js';
 import { normalizeOrderItem, orderFields } from './core/orders.js';
 import { ROAST_LEVELS } from './core/roast.js';
-import { formatG, formatYmdJa, localYmd } from './core/format.js';
+import { formatG, formatYmdJa, formatDateJa, localYmd } from './core/format.js';
 import { $, el, showMessage } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
+import { askConfirm } from './confirm-box.js';
 
 const db = openDb();
 let parsed = null;
@@ -87,7 +88,7 @@ async function render() {
   ];
   $('orderInfo').replaceChildren(...info.flatMap(([k, v]) => [el('dt', {}, k), el('dd', {}, v)]));
   $('dupNote').hidden = !dup;
-  $('dupNote').textContent = dup ? `この注文（${dup.orderNo}）は${formatYmdJa(dup.createdAt.slice(0, 10))}に登録済みです。もう一度登録すると、同じ豆が増えます。` : '';
+  $('dupNote').textContent = dup ? `この注文（${dup.orderNo}）は${formatDateJa(dup.createdAt)}に登録済みです。もう一度登録すると、同じ豆が増えます。` : '';
   $('items').replaceChildren(...rows.map(itemCard));
   $('others').textContent = o.others.length ? `豆以外の品物（登録しません）：${o.others.map((x) => x.name).join('、')}` : '';
   $('result').hidden = false;
@@ -126,7 +127,7 @@ $('save').addEventListener('click', async () => {
     items.push(value);
   }
   if (!items.length) return;
-  if (!$('dupNote').hidden && !confirm('この注文は登録済みです。もう一度登録しますか？')) return;
+  if (!$('dupNote').hidden && !(await askConfirm('この注文は登録済みです。もう一度登録しますか？', { ok: 'もう一度登録する' }))) return;
   $('save').disabled = true;
   try {
     const orderDate = parsed.orderDate ?? localYmd();
@@ -134,7 +135,7 @@ $('save').addEventListener('click', async () => {
     location.replace(`beans.html?registered=${beans.length}`);
   } catch (err) {
     console.error(err);
-    showMessage('登録に失敗しました', 'error');
+    showMessage('登録できませんでした。もう一度押してください', 'error');
     $('save').disabled = false;
   }
 });

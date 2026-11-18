@@ -10,6 +10,7 @@ import {
   groupTxByBean,
   sortTxNewestFirst,
   DEFAULT_DOSE_G,
+  stockCheckForBrew,
 } from '../js/core/inventory.js';
 
 const NOW = new Date('2026-11-18T12:00:00Z');
@@ -80,4 +81,15 @@ test('履歴を豆ごとに分け、新しい順に並べる', () => {
   const c = tx(1, 'in', daysAgo(0), { beanId: 'a' });
   assert.deepEqual(groupTxByBean([a, b, c]), { a: [a, c], b: [b] });
   assert.deepEqual(sortTxNewestFirst([a, b, c]), [c, b, a]);
+});
+
+test('2-8の32番：保存の前に、残りが足りないか・0gになるかを確かめる', () => {
+  assert.deepEqual(stockCheckForBrew({ txCount: 2, roomG: 30, doseG: 15 }), { short: false, empty: false, afterG: 15 });
+  assert.deepEqual(stockCheckForBrew({ txCount: 2, roomG: 15, doseG: 15 }), { short: false, empty: true, afterG: 0 });
+  assert.deepEqual(stockCheckForBrew({ txCount: 2, roomG: 15.3, doseG: 15 }), { short: false, empty: true, afterG: 0.3 });
+  assert.deepEqual(stockCheckForBrew({ txCount: 2, roomG: 10, doseG: 15 }), { short: true, empty: true, afterG: -5 });
+  assert.equal(stockCheckForBrew({ txCount: 2, roomG: 14.6, doseG: 15 }).short, false); // はかりの誤差の内
+  // 重さを入れていない豆・冷凍の袋を使うときは確かめない
+  assert.equal(stockCheckForBrew({ txCount: 0, roomG: 0, doseG: 15 }).short, false);
+  assert.equal(stockCheckForBrew({ txCount: 2, roomG: 0, doseG: 15, usingPortion: true }).empty, false);
 });

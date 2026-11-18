@@ -73,7 +73,7 @@ export function restockPlan({ beans = [], txs = [], portions = [], brews = [], t
   const restDays = restDaysFor(roastLevel);
   const base = { ...stock, deliveryDays: delivery.days, deliveryLearned: delivery.learned, restDays, roastLevel };
   const pace = consumptionPace(txs.filter(alive), now);
-  if (!pace || !(pace.gPerDay > 0)) return { status: 'unknown', ...base };
+  if (!pace || !(pace.gPerDay > 0)) return { status: 'unknown', noBeans: !beans.some(alive), ...base };
   const daysLeft = Math.floor((stock.onHandG + stock.incomingG) / pace.gPerDay);
   const daysUntilOrder = daysLeft - delivery.days - restDays;
   let status = 'ok';
@@ -103,7 +103,9 @@ function leadText(plan) {
  */
 export function restockText(plan) {
   if (plan.status === 'unknown') {
-    return { title: '買い足しの目安', text: '2週間で2杯以上淹れると、注文の目安日を出します' };
+    // 豆が1つもないときは、まず何をすればよいかを書く（2-8の46番）
+    if (plan.noBeans) return { title: '買い足しの目安', text: 'まだ豆はありません。豆を登録して2週間で2杯以上淹れると、注文の目安日を表示します' };
+    return { title: '買い足しの目安', text: '2週間で2杯以上淹れると、注文の目安日を表示します' };
   }
   const incl = [plan.frozenG > 0 ? '冷凍' : '', plan.incomingG > 0 ? '入荷待ち' : ''].filter(Boolean).join('・');
   const stock = `在庫はあと約${plan.daysLeft}日分（1日${formatG(plan.gPerDay)}のペース${incl ? `・${incl}を含む` : ''}）`;

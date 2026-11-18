@@ -37,6 +37,28 @@ export function showMessage(text, kind = 'ok', id = 'msg') {
   box.className = kind;
 }
 
+let toastTimer = null;
+
+/**
+ * 画面の上に浮かべて出す短い知らせ（2-8の30番）。スクロールした位置に関係なく見える。
+ * 4秒（失敗は8秒）で消える。押しても消える
+ * @param {string} text
+ * @param {'ok'|'error'|'muted'} [kind]
+ */
+export function showToast(text, kind = 'ok') {
+  let box = document.getElementById('toast');
+  if (!box) {
+    box = el('div', { id: 'toast', class: 'toast', role: 'status', 'aria-live': 'polite' });
+    box.addEventListener('click', () => box.classList.remove('show'));
+    document.body.append(box);
+  }
+  box.textContent = text;
+  box.dataset.kind = kind;
+  box.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => box.classList.remove('show'), kind === 'error' ? 8000 : 4000);
+}
+
 /**
  * 画面の読み込みに失敗したときの知らせ（2-8 の15番）。中身の箱が隠れたままでも見えるよう、main の先頭に出す。
  * 真っ白な画面のまま止まらないように

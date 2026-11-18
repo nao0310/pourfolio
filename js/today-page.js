@@ -1,4 +1,4 @@
-// 今日の一杯（F3）と気分プリセット（F4）：上位3つの豆を理由と一緒に出し、選んだ気分で淹れる画面に進む
+// 今日の1杯（F3）と気分プリセット（F4）：上位3つの豆を理由と一緒に出し、選んだ気分で淹れる画面に進む
 import { openDb, readAll, getSettings, updateSettings } from './db.js';
 import { beanRows } from './core/home.js';
 import { todayPicks, pickHref, baseText, caffeineState, normalizeCutoff, DAILY_CAFFEINE_MG } from './core/today.js';
@@ -94,5 +94,5 @@ async function init() {
 registerServiceWorker();
 init().catch((err) => {
   console.error(err);
-  $('picks').replaceChildren(el('p', { class: 'muted' }, '読み込みに失敗しました。開き直してください'));
+  $('picks').replaceChildren(el('p', { class: 'muted' }, '読み込めませんでした。開き直してください'));
 });
