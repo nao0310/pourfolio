@@ -28,7 +28,7 @@ const isValidYmd = (s) => YMD.test(s ?? '') && addDaysYmd(s, 0) === s;
 
 /**
  * 注文の品目を確かめて整える（読み取りの結果や、画面で直した値）
- * @param {{name?:string, roastLevel?:string, labelWeightG?:number|string, qty?:number|string, priceJpy?:number|string|null, productUrl?:string}} item
+ * @param {{name?:string, productCode?:string, roastLevel?:string, labelWeightG?:number|string, labelWeightBasis?:string, qty?:number|string, priceJpy?:number|string|null, productUrl?:string, process?:string, farm?:string}} item
  * @returns {{value:object, errors:Record<string,string>}}
  */
 export function normalizeOrderItem(item = {}) {
@@ -54,11 +54,15 @@ export function normalizeOrderItem(item = {}) {
   return {
     value: {
       name,
+      productCode: clean(item.productCode),
       roastLevel,
       labelWeightG: labelWeightG > 0 ? Math.round(labelWeightG * 10) / 10 : null,
       qty: Number.isInteger(qty) ? qty : 1,
       priceJpy: priceJpy == null ? null : Math.round(priceJpy),
       productUrl: /^https?:\/\/\S+$/i.test(productUrl) ? productUrl : '',
+      labelWeightBasis: item.labelWeightBasis === 'roasted' ? 'roasted' : 'green',
+      process: clean(item.process),
+      farm: clean(item.farm),
     },
     errors,
   };
@@ -75,7 +79,15 @@ export function orderFields({ orderNo = '', orderDate, shippingJpy = null, items
     orderNo: clean(orderNo),
     orderDate,
     shippingJpy: Number.isFinite(shippingJpy) && shippingJpy >= 0 ? Math.round(shippingJpy) : null,
-    items: items.map(({ name, roastLevel, labelWeightG, qty, priceJpy }) => ({ name, roastLevel, labelWeightG, qty, priceJpy })),
+    items: items.map(({ name, productCode, roastLevel, labelWeightG, labelWeightBasis, qty, priceJpy }) => ({
+      name,
+      productCode: productCode ?? '',
+      roastLevel,
+      labelWeightG,
+      labelWeightBasis: labelWeightBasis === 'roasted' ? 'roasted' : 'green',
+      qty,
+      priceJpy,
+    })),
   };
 }
 
@@ -95,15 +107,16 @@ export function beansFromOrder({ orderId, orderDate, items }) {
         name: it.name,
         shop: DEFAULT_SHOP,
         productUrl: it.productUrl ?? '',
-        origin: { country: '', region: '', farm: '' },
+        productCode: it.productCode ?? '',
+        origin: { country: '', region: '', farm: it.farm ?? '' },
         variety: '',
-        process: '',
+        process: it.process ?? '',
         roastLevel: it.roastLevel ?? '',
         roastDate: null,
         orderDate,
         arrivalDate: null,
         labelWeightG: it.labelWeightG,
-        labelWeightBasis: 'green',
+        labelWeightBasis: it.labelWeightBasis === 'roasted' ? 'roasted' : 'green',
         actualWeightG: null,
         priceJpy: it.priceJpy ?? null,
         flavorNotes: '',

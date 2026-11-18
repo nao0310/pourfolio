@@ -22,7 +22,18 @@ test('日付に日数を足す（月・年をまたぐ）', () => {
 test('品目：銘柄・重さ・数量を確かめ、全角やカンマも読む', () => {
   const { value, errors } = normalizeOrderItem({ name: ' コロンビア ', roastLevel: 'シティ', labelWeightG: '２００', qty: '2', priceJpy: '1,280' });
   assert.deepEqual(errors, {});
-  assert.deepEqual(value, { name: 'コロンビア', roastLevel: 'シティ', labelWeightG: 200, qty: 2, priceJpy: 1280, productUrl: '' });
+  assert.deepEqual(value, {
+    name: 'コロンビア',
+    productCode: '',
+    roastLevel: 'シティ',
+    labelWeightG: 200,
+    qty: 2,
+    priceJpy: 1280,
+    productUrl: '',
+    labelWeightBasis: 'green',
+    process: '',
+    farm: '',
+  });
   assert.equal(normalizeOrderItem({ name: 'x', roastLevel: '中煎り', labelWeightG: 100 }).value.roastLevel, '', '8段階にない焙煎度は空にする');
   const bad = normalizeOrderItem({ name: '', labelWeightG: 0, qty: 0, priceJpy: -1 }).errors;
   assert.deepEqual(Object.keys(bad).sort(), ['labelWeightG', 'name', 'priceJpy', 'qty']);
@@ -36,7 +47,7 @@ test('注文の記録：品目と送料、注文日の形', () => {
   const o = orderFields({ orderNo: ' 12345 ', orderDate: '2026-11-10', shippingJpy: 500, items });
   assert.equal(o.shop, '珈琲問屋');
   assert.equal(o.orderNo, '12345');
-  assert.deepEqual(o.items, [{ name: 'A', roastLevel: 'ハイ', labelWeightG: 100, qty: 1, priceJpy: 600 }]);
+  assert.deepEqual(o.items, [{ name: 'A', productCode: '', roastLevel: 'ハイ', labelWeightG: 100, labelWeightBasis: 'green', qty: 1, priceJpy: 600 }]);
   assert.equal(orderFields({ orderDate: '2026-11-10', shippingJpy: NaN, items }).shippingJpy, null);
   assert.throws(() => orderFields({ orderDate: '11/10', items }), /注文日/);
 });
@@ -59,6 +70,15 @@ test('注文から1袋ずつ入荷待ちの豆を作る（生豆時の表記・1
     assert.equal(b.roastDate, null);
   }
   assert.equal(beans[0].priceJpy, 1200);
+  // 読み取った商品コード・精製・農園も豆に入る
+  const [laos] = beansFromOrder({
+    orderId: 'o2',
+    orderDate: '2026-11-01',
+    items: [normalizeOrderItem({ name: 'ラオス', productCode: '20564', labelWeightG: 300, process: 'ウォッシュト', farm: 'ミンティエン農園' }).value],
+  });
+  assert.equal(laos.productCode, '20564');
+  assert.equal(laos.process, 'ウォッシュト');
+  assert.equal(laos.origin.farm, 'ミンティエン農園');
   assert.equal(beans[2].priceJpy, null);
   const many = [normalizeOrderItem({ name: 'x', labelWeightG: 100, qty: MAX_BAGS }).value, normalizeOrderItem({ name: 'y', labelWeightG: 100, qty: 1 }).value];
   assert.throws(() => beansFromOrder({ orderId: 'o', orderDate: '2026-11-10', items: many }), /袋まで/);

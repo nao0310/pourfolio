@@ -9,7 +9,7 @@
 // <manifest> npm run sw が書き込む（手で直さない）
 const MANIFEST = {
   "label": "2.1",
-  "version": "e8e0d5baedef",
+  "version": "db5c806ca594",
   "files": {
     "bean-edit.html": "7d5976226f8f8f43",
     "bean.html": "45cda9d0efff36cb",
@@ -29,7 +29,7 @@ const MANIFEST = {
     "js/brew-draft.js": "d7586b9a8f874516",
     "js/brew-page.js": "b123c262ba162911",
     "js/core/backup.js": "0ef4ff8bb8b876bd",
-    "js/core/beans.js": "1de7259501c7411d",
+    "js/core/beans.js": "8419d0b8b44e63d6",
     "js/core/brews.js": "1fe31fa5c08be885",
     "js/core/csv.js": "004124f00a96a762",
     "js/core/dialin.js": "fbdeef29b0af89c8",
@@ -40,7 +40,7 @@ const MANIFEST = {
     "js/core/install.js": "1ce19201bb995ac2",
     "js/core/inventory.js": "cd8183b99b1482b3",
     "js/core/offline.js": "907135ce0abe78fb",
-    "js/core/orders.js": "e4b9ce06a514c719",
+    "js/core/orders.js": "ce5e1aa3317b4a8b",
     "js/core/recipes.js": "55ddfa6fcd9cd3f0",
     "js/core/records.js": "7e3ae938eae5411a",
     "js/core/restock.js": "67fb0c7bcd6f227d",
@@ -48,6 +48,7 @@ const MANIFEST = {
     "js/core/sample-data.js": "b5fe1f481b2a34ca",
     "js/core/tastings.js": "0788a597a8fd46f1",
     "js/core/timer.js": "158a32d82adfeb48",
+    "js/core/tonya.js": "faac59308d2b0ca5",
     "js/core/version.js": "910ad563972dae99",
     "js/cue.js": "4ec66c174d81b2d6",
     "js/data-page.js": "9bc295132c28015e",
