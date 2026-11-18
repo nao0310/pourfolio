@@ -9,7 +9,7 @@
 // <manifest> npm run sw が書き込む（手で直さない）
 const MANIFEST = {
   "label": "2.6",
-  "version": "4972ec9f9e36",
+  "version": "85bcac66c529",
   "files": {
     "ai.html": "59695a4c56acc346",
     "analysis.html": "5d1a57fe334099d6",
@@ -49,6 +49,7 @@ const MANIFEST = {
     "js/core/beans.js": "beb8a4de93b83f50",
     "js/core/brew-chart.js": "fc278a68a2345e4d",
     "js/core/brews.js": "02a9752d2f65c8c0",
+    "js/core/caffeine.js": "e6d6056ea4336fc2",
     "js/core/calendar.js": "40574f4fd96be1fb",
     "js/core/chart-scale.js": "b7cfe06796a7ccc0",
     "js/core/compare.js": "2e3ea884c75c2aaa",
@@ -80,12 +81,14 @@ const MANIFEST = {
     "js/core/restock.js": "27a93133facd5d34",
     "js/core/roast.js": "e713f66bb296aa2d",
     "js/core/sample-data.js": "319cceeb6cfea345",
+    "js/core/share-code.js": "7b5cd8f066390c07",
     "js/core/shops.js": "5cea814d683272ae",
     "js/core/tabs.js": "ca29913fec0edb90",
     "js/core/tastings.js": "5d49b1a72a18a144",
     "js/core/timer.js": "158a32d82adfeb48",
     "js/core/today.js": "ca7dfe9db2c0505c",
     "js/core/tonya.js": "faac59308d2b0ca5",
+    "js/core/usual.js": "306c68f4420764a8",
     "js/core/version.js": "2d07d3d92d2990a5",
     "js/core/water.js": "26dace0c46b908b4",
     "js/cost-page.js": "c20bca9c70ccf702",
@@ -124,7 +127,8 @@ const MANIFEST = {
     "storage-test.html": "55d68ef5a3e34561",
     "tasting.html": "977259abd123f214",
     "today.html": "70bff3579bd84a34",
-    "vendor/dexie/dexie.mjs": "c3ecb25376f4e2d1"
+    "vendor/dexie/dexie.mjs": "c3ecb25376f4e2d1",
+    "vendor/qrcode-generator/qrcode.mjs": "ea91d7118a539528"
   }
 };
 // </manifest>
