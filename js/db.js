@@ -134,7 +134,7 @@ export async function getBeanWithTx(db, beanId) {
 
 /**
  * 入庫の履歴を、豆の重量の入力に合わせる（なければ作る、量がなければ削除の印を付ける）。
- * 豆の登録と、編集で重量を直したときに使う。
+ * 豆の登録と、編集で重量を直したときに使う。量り直しの履歴があれば入庫の量は変えない。
  */
 async function syncInboundTx(db, bean, now) {
   const allBeans = await db.table('beans').toArray();
@@ -147,6 +147,8 @@ async function syncInboundTx(db, bean, now) {
   }
   const memo = stock.estimated ? `生豆時の表記から見積もり（目減り${stock.lossPct}%）` : '';
   if (inbound) {
+    // 量り直した後は、量った値のほうが正しいので入庫の量を書き換えない
+    if (txs.some((t) => t.kind === 'adjust')) return stock;
     if (inbound.deltaG !== stock.g || inbound.memo !== memo) {
       await db.table('inventoryTx').put(updateRecord(inbound, { deltaG: stock.g, memo }, now));
     }

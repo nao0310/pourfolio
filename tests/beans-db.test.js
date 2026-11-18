@@ -94,6 +94,16 @@ test('編集で実重量を入れると、入庫の量が実重量に直る（�
   db.close();
 });
 
+test('量り直した後に編集で実重量を入れても、量った残量は変わらない', async () => {
+  const db = freshDb();
+  const bean = await addBean(db, input(), NOW);
+  await recordCupUsage(db, bean.id, 15, later(1));
+  await measureBean(db, bean.id, 146.5, later(2));
+  await updateBean(db, bean.id, input({ actualWeightG: '166.5' }), later(3));
+  assert.equal(remainingG((await getBeanWithTx(db, bean.id)).txs), 146.5);
+  db.close();
+});
+
 test('削除すると一覧から消え、在庫履歴にも削除の印が付く', async () => {
   const db = freshDb();
   const a = await addBean(db, input(), NOW);

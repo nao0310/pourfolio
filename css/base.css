@@ -9,6 +9,12 @@
   --accent-fg: #ffffff;
   --ok: #2e7d32;
   --danger: #c62828;
+  /* 飲み頃の4段階（色は意味にだけ使う。文字の札も必ず添える） */
+  --stage-resting: #3f51b5;
+  --stage-peak: #2e7d32;
+  --stage-past: #a15c00;
+  --stage-useSoon: #c62828;
+  --stage-fg: #ffffff;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -21,9 +27,15 @@
     --accent-fg: #1a1310;
     --ok: #81c784;
     --danger: #ef9a9a;
+    --stage-resting: #9fa8da;
+    --stage-peak: #81c784;
+    --stage-past: #ffb74d;
+    --stage-useSoon: #ef9a9a;
+    --stage-fg: #1a1310;
   }
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
@@ -92,3 +104,128 @@ dd { margin: 0; }
   white-space: nowrap;
 }
 .btn:focus-visible, input:focus-visible + .btn, label.btn:focus-within { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+/* ---- 1-2 豆と在庫 ---- */
+a { color: var(--accent); }
+.crumb { margin: 0 0 4px; font-size: 0.95rem; }
+.crumb a::before { content: "‹ "; }
+.btn.block { display: block; width: 100%; text-align: center; }
+.btn:disabled { opacity: 0.5; }
+main.with-bottom-bar { padding-bottom: calc(110px + env(safe-area-inset-bottom)); }
+.bottom-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 10px 16px max(12px, env(safe-area-inset-bottom));
+  background: var(--bg);
+  border-top: 1px solid var(--line);
+  z-index: 10;
+}
+.bottom-bar > * { max-width: 528px; margin: 0 auto; }
+.bottom-bar .btn.secondary { background: var(--card); }
+
+/* 入力欄 */
+.field { display: block; border: 0; padding: 0; margin: 0 0 16px; min-width: 0; }
+.field:last-child { margin-bottom: 0; }
+.field .label { display: block; font-weight: 600; margin-bottom: 4px; padding: 0; }
+.field .hint, p.hint { display: block; color: var(--muted); font-size: 0.85rem; margin-top: 4px; }
+.field-error { display: block; color: var(--danger); font-size: 0.9rem; font-weight: 600; }
+.field-error:empty { display: none; }
+.req { font-size: 0.75rem; color: var(--danger); border: 1px solid var(--danger); border-radius: 6px; padding: 0 4px; margin-left: 4px; vertical-align: middle; }
+input[type="url"], input[type="date"], select, textarea {
+  width: 100%;
+  min-height: 52px;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 1.05rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--fg);
+}
+input[type="date"] { appearance: none; -webkit-appearance: none; display: block; }
+textarea { min-height: 0; }
+select + input[type="text"] { margin-top: 8px; }
+.with-unit { display: flex; align-items: center; gap: 8px; }
+.with-unit input { flex: 1; min-width: 0; font-variant-numeric: tabular-nums; }
+.with-unit > span { color: var(--muted); }
+.field.compact { margin: 0; flex: 1; min-width: 0; }
+.inline-form { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+.inline-form .btn { flex: 0 0 auto; }
+.check-row { display: flex; gap: 10px; align-items: center; min-height: 48px; }
+.check-row input { width: 24px; height: 24px; }
+
+/* 選択チップ（ラジオボタン） */
+.chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.chips.two { grid-template-columns: repeat(2, 1fr); margin-bottom: 12px; }
+.chips.three { grid-template-columns: repeat(3, 1fr); }
+.chip { position: relative; display: block; }
+.chip input { position: absolute; opacity: 0; inset: 0; margin: 0; }
+.chip span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 6px 4px;
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  font-size: 0.95rem;
+  text-align: center;
+  line-height: 1.2;
+  cursor: pointer;
+}
+.chip input:checked + span { border-color: var(--accent); background: var(--accent); color: var(--accent-fg); font-weight: 700; }
+.chip input:focus-visible + span { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+details > summary { cursor: pointer; font-weight: 600; min-height: 44px; display: flex; align-items: center; }
+details[open] > summary { margin-bottom: 12px; }
+details.sub-action { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 4px; }
+.stock-preview { font-weight: 600; margin: 4px 0 0; }
+
+/* 飲み頃の札と帯 */
+.pill {
+  display: inline-block;
+  flex: 0 0 auto;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--stage-fg);
+  white-space: nowrap;
+}
+.stage-resting { background: var(--stage-resting); }
+.stage-peak { background: var(--stage-peak); }
+.stage-past { background: var(--stage-past); }
+.stage-useSoon { background: var(--stage-useSoon); }
+.pill.stage-none { background: transparent; color: var(--muted); border: 1px solid var(--line); }
+.fresh-band { position: relative; display: flex; height: 28px; border-radius: 8px; overflow: hidden; margin: 8px 0; }
+.fresh-band .seg { display: flex; align-items: center; justify-content: center; color: var(--stage-fg); font-size: 0.7rem; font-weight: 700; white-space: nowrap; overflow: hidden; opacity: 0.85; }
+.band-marker { position: absolute; top: 0; bottom: 0; width: 4px; margin-left: -2px; background: var(--fg); border: 1px solid var(--bg); border-radius: 2px; }
+
+/* 豆の一覧 */
+.bean-card { display: block; color: inherit; text-decoration: none; }
+.bean-card:active { opacity: 0.7; }
+.bean-card.finished { opacity: 0.6; }
+.bean-card-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.bean-card-top h2 { margin: 0; }
+.bean-name { font-size: 1.15rem; font-weight: 700; line-height: 1.3; }
+.bean-card-stock { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; margin-top: 6px; }
+.num { font-variant-numeric: tabular-nums; font-weight: 700; }
+.bean-card-stock .num { font-size: 1.3rem; }
+.empty p:first-child { font-weight: 600; }
+
+/* 豆の詳細 */
+.stock-big { display: flex; gap: 16px; align-items: baseline; flex-wrap: wrap; }
+.stock-big .num { font-size: 2.2rem; }
+.stock-big #cups { font-size: 1.1rem; font-weight: 600; }
+.tx-list { list-style: none; margin: 0; padding: 0; }
+.tx-list li { padding: 10px 0; border-bottom: 1px solid var(--line); }
+.tx-list li:last-child { border-bottom: 0; }
+.tx-main { display: flex; justify-content: space-between; gap: 8px; }
+.tx-kind { font-weight: 600; }
+.num.minus { color: var(--fg); }
+.num.plus { color: var(--ok); }
+.tx-sub { font-size: 0.85rem; }
+.link-btn { background: none; border: 0; padding: 8px 0 0; color: var(--accent); font: inherit; font-size: 0.9rem; text-decoration: underline; cursor: pointer; min-height: 32px; }
+#info dd { white-space: pre-wrap; word-break: break-word; }

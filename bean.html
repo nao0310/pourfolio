@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>豆の詳細 - Pourfolio</title>
+  <meta name="theme-color" content="#5a371f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Pourfolio">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/base.css">
+</head>
+<body>
+  <main class="with-bottom-bar">
+    <p class="crumb"><a href="beans.html">豆と在庫</a></p>
+    <div id="notFound" hidden>
+      <h1>豆が見つかりません</h1>
+      <p class="muted">削除されたか、別の端末で登録された豆です。</p>
+    </div>
+
+    <div id="content" hidden>
+      <h1 id="name"></h1>
+      <p class="muted" id="sub"></p>
+
+      <div class="card">
+        <div class="bean-card-top"><h2>飲み頃</h2><span id="pill"></span></div>
+        <p id="freshText"></p>
+        <div class="fresh-band" id="band" aria-hidden="true"></div>
+        <p class="muted" id="freshNote"></p>
+      </div>
+
+      <div class="card">
+        <h2>残り</h2>
+        <div class="stock-big">
+          <span class="num" id="remain"></span>
+          <span id="cups"></span>
+        </div>
+        <p class="muted" id="forecast"></p>
+        <p class="muted" id="estimateNote"></p>
+      </div>
+
+      <div class="card" id="actions">
+        <form id="cupForm" class="inline-form">
+          <label class="field compact">
+            <span class="label">粉の量</span>
+            <span class="with-unit"><input type="text" inputmode="decimal" id="cupDose" autocomplete="off"><span>g</span></span>
+          </label>
+          <button class="btn" type="submit">1杯淹れた</button>
+        </form>
+        <p class="hint">抽出の記録画面ができるまでの簡易版です。押した分だけ残量が減ります。</p>
+
+        <details class="sub-action">
+          <summary>量り直す</summary>
+          <p class="muted">袋から出した豆の重さを量って入れると、残量をその値に合わせます。</p>
+          <form id="measureForm" class="inline-form">
+            <label class="field compact">
+              <span class="label">今の重さ</span>
+              <span class="with-unit"><input type="text" inputmode="decimal" id="measured" autocomplete="off"><span>g</span></span>
+            </label>
+            <button class="btn secondary" type="submit">合わせる</button>
+          </form>
+        </details>
+
+        <details class="sub-action">
+          <summary>おすそ分け・廃棄</summary>
+          <form id="outForm">
+            <div class="chips two">
+              <label class="chip"><input type="radio" name="outKind" value="gift" checked><span>おすそ分け</span></label>
+              <label class="chip"><input type="radio" name="outKind" value="discard"><span>廃棄</span></label>
+            </div>
+            <div class="inline-form">
+              <label class="field compact">
+                <span class="label">量</span>
+                <span class="with-unit"><input type="text" inputmode="decimal" id="outG" autocomplete="off"><span>g</span></span>
+              </label>
+              <button class="btn secondary" type="submit">減らす</button>
+            </div>
+          </form>
+        </details>
+        <p id="msg" role="status"></p>
+      </div>
+
+      <div class="card">
+        <h2>在庫の履歴</h2>
+        <ul class="tx-list" id="txList"></ul>
+      </div>
+
+      <div class="card">
+        <h2>豆の情報</h2>
+        <dl id="info"></dl>
+        <div class="row" id="orderRow" hidden>
+          <a class="btn secondary" id="orderLink" target="_blank" rel="noopener noreferrer">同じ豆を注文（店のページ）</a>
+        </div>
+      </div>
+
+      <div class="row">
+        <button class="btn secondary" type="button" id="toggleFinished"></button>
+        <button class="btn danger" type="button" id="delete">削除</button>
+      </div>
+
+      <div class="bottom-bar">
+        <a class="btn block secondary" id="editLink">編集</a>
+      </div>
+    </div>
+  </main>
+  <script type="module" src="js/bean-page.js"></script>
+</body>
+</html>
