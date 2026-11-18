@@ -2,7 +2,7 @@
 
 個人用のコーヒー（ハンドドリップ）記録・分析・提案アプリ。費用ゼロで、記録データは使っている端末の中にだけ保存されます。
 
-- 公開URL：https://（GitHubのユーザー名）.github.io/pourfolio/ （ステップ0-2で確定）
+- 公開URL：https://nao0310.github.io/pourfolio/
 - 設計：`docs/spec.md`
 - 進捗：`docs/PROGRESS.md` ／ 決定事項：`docs/DECISIONS.md` ／ ステップ一覧：`docs/ROADMAP.md`
 - 使い方：`docs/manual/`
