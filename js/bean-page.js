@@ -19,7 +19,12 @@ import {
   listTastings,
   listRecipes,
   listEquipment,
+  listAliveTx,
+  addGift,
+  setHandoverNote,
 } from './db.js';
+import { normalizeGiftInput, recipientSuggestions, giftTxNote } from './core/gift.js';
+import { handoverFor, showHandover, handoverBrewHref, conditionsText, bestHead, normalizeHandoverNote } from './core/handover.js';
 import { initialRecipe, baseRecipe, initialText, INITIAL_SOURCES } from './core/initial-recipe.js';
 import { defaultEquipmentIds } from './core/equipment.js';
 import { normalizeFreezeInput, portionsOf, stockParts, stockPartsText, portionText, labelRange, MAX_PORTIONS } from './core/frozen.js';
@@ -29,7 +34,7 @@ import { canisterUrl } from './core/scan-target.js';
 import { qrSvg } from './core/qr-code.js';
 import { originText, BEAN_STATUS, WEIGHT_BASIS, parseNumber } from './core/beans.js';
 import { gramPrice, yen, yenPerGText } from './core/cost.js';
-import { remainingG, cupsLeft, consumptionPace, emptyForecast, doseFromSettings, sortTxNewestFirst, TX_KINDS } from './core/inventory.js';
+import { remainingG, cupsLeft, consumptionPace, emptyForecast, doseFromSettings, sortTxNewestFirst, TX_KINDS, EMPTY_TOLERANCE_G } from './core/inventory.js';
 import { freshness, FRESHNESS_WINDOWS, FALLBACK_GROUP, STAGES } from './core/freshness.js';
 import { roastGroup, ROAST_GROUPS } from './core/roast.js';
 import { localYmd, formatYmdJa, formatG, formatDateTimeJa, formatDateJa } from './core/format.js';
@@ -146,6 +151,9 @@ function renderStock(bean, txs, parts) {
   $('estimateNote').textContent = inbound?.memo && !measured ? `入庫の量は${inbound.memo}です。届いた豆を量って「量り直す」で合わせると正確になります。` : '';
 }
 
+/** 在庫の履歴の1行に添える文（おすそ分けは相手とメモ） */
+const txNote = (t) => (t.kind === 'gift' ? giftTxNote(t) : t.memo);
+
 function renderTxList(txs) {
   const sorted = sortTxNewestFirst(txs);
   if (!sorted.length) {
@@ -163,7 +171,7 @@ function renderTxList(txs) {
           el('span', { class: 'tx-kind' }, TX_KINDS[t.kind] ?? t.kind),
           el('span', { class: `num ${t.deltaG < 0 ? 'minus' : 'plus'}` }, `${t.deltaG > 0 ? '+' : ''}${formatG(t.deltaG)}`),
         ),
-        el('div', { class: 'tx-sub muted' }, formatDateTimeJa(t.at), t.memo ? `　${t.memo}` : ''),
+        el('div', { class: 'tx-sub muted' }, formatDateTimeJa(t.at), txNote(t) ? `　${txNote(t)}` : ''),
         t.kind !== 'in' &&
           !(t.kind === 'thaw' && t.brewId) && // 抽出で使った袋の取り出しは取り消せない（2-8 の9番）
           el(
@@ -237,6 +245,50 @@ async function renderInitial(bean, allBeans) {
   $('initBrew').href = `brew.html?initial=${id}&bean=${id}`;
 }
 
+/**
+ * 未来の自分への申し送り（X32）：同じ銘柄の前の袋（なければ似た豆）の、ベストの条件・一言・評価のメモ・飲み頃の山。
+ * この袋で淹れた杯が3杯になるまで出す（×で閉じるとこの豆ではもう出さない）
+ */
+async function renderHandover(bean, allBeans) {
+  const [brews, tastings, equipment] = await Promise.all([listBrews(db), listTastings(db), listEquipment(db)]);
+  $('handoverCard').hidden = true;
+  if (!showHandover(bean, brews)) return;
+  const h = handoverFor({ bean, beans: allBeans, brews, tastings });
+  if (!h || !showCard($('handoverCard'), 'handover', bean.id)) return;
+  $('hoFrom').textContent = h.source === 'same' ? `同じ銘柄の${h.fromLabel}` : `${h.fromLabel}（${h.why.join('・')}）`;
+  $('hoNotes').replaceChildren(
+    ...h.notes.map((n) => el('p', { class: 'handover-note' }, `「${n.text}」`, el('span', { class: 'muted small block' }, `${n.ymd ? `${formatYmdJa(n.ymd, { withYear: true })}の` : ''}自分より`))),
+  );
+  $('hoBestBox').hidden = !h.best;
+  $('hoBrewRow').hidden = !h.best;
+  if (h.best) {
+    const grinder = equipment.find((e) => e.id === h.best.grinderId);
+    $('hoBestHead').textContent = bestHead(h.best);
+    $('hoBest').textContent = conditionsText(h.best, grinder?.name ?? '');
+    $('hoRoast').textContent = h.roastNote;
+    $('hoBrew').href = handoverBrewHref(h, bean);
+  }
+  $('hoPeak').hidden = !h.peak;
+  $('hoPeak').textContent = h.peak ? `飲み頃の山：${h.peak.label}（★平均${h.peak.mean}）` : '';
+  $('hoMemoBox').hidden = h.memos.length === 0;
+  $('hoMemos').replaceChildren(...h.memos.map((m) => el('li', {}, `${m.stars != null ? `★${m.stars}　` : ''}${m.text}`, el('span', { class: 'muted' }, `（${formatYmdJa(m.ymd)}）`))));
+}
+
+/** 次の自分への一言（X32）の欄 */
+function renderNote(bean) {
+  $('noteCard').hidden = bean.status === 'ordered';
+  if (document.activeElement !== $('handoverNote')) $('handoverNote').value = bean.handoverNote ?? '';
+}
+
+$('noteForm').addEventListener('submit', guarded(async () => {
+  const { value, error } = normalizeHandoverNote($('handoverNote').value);
+  if (error) return showMessage(error, 'error');
+  await setHandoverNote(db, beanId, value);
+  $('handoverNote').blur();
+  showMessage(value ? '一言を保存しました。次に同じ豆や似た豆を開けたときに出ます' : '一言を消しました');
+  await render();
+}));
+
 /** 焙煎度比較（X27）でわかった、この豆の産地の好きな焙煎度と、条件の飲み比べ（F7）でわかったこと */
 async function renderRoastPref(bean, allBeans) {
   const experiments = await listExperiments(db);
@@ -306,11 +358,15 @@ async function render() {
     renderStock(bean, txs, parts);
     renderFrozen(inFreezer, parts);
     renderTxList(txs);
+    syncOutKind();
+    await renderGiftChips();
     await renderAging(bean);
   }
   const allBeans = await listBeans(db);
   renderInfo(bean, allBeans);
+  await renderHandover(bean, allBeans);
   await renderInitial(bean, allBeans);
+  renderNote(bean);
   await renderRoastPref(bean, allBeans);
   renderCanister(bean);
   $('content').hidden = false;
@@ -487,13 +543,50 @@ $('measureForm').addEventListener('submit', guarded(async () => {
   await render();
 }));
 
+/** おすそ分け・廃棄の切り替え：おすそ分けのときだけ相手とメモの欄を出す */
+function syncOutKind() {
+  const gift = new FormData($('outForm')).get('outKind') !== 'discard';
+  $('giftFields').hidden = !gift;
+  $('giftHint').hidden = !gift;
+}
+$('outForm').addEventListener('change', syncOutKind);
+
+/** 相手の名前の候補（前に渡した相手）。押すと欄に入る */
+async function renderGiftChips() {
+  const names = recipientSuggestions(await listAliveTx(db));
+  $('giftToChips').hidden = names.length === 0;
+  $('giftToChips').replaceChildren(
+    ...names.map((n) => el('button', { type: 'button', class: 'chip-btn', onclick: () => ($('giftTo').value = n) }, n)),
+  );
+}
+
 $('outForm').addEventListener('submit', guarded(async (event) => {
-  const g = readGrams($('outG'));
-  if (g == null) return showMessage('減らす量を0より大きい数字（g）で入れてください', 'error');
-  const kind = new FormData(event.target).get('outKind') === 'discard' ? 'discard' : 'gift';
-  await addInventoryTx(db, { beanId, deltaG: -g, kind });
+  const form = event.target;
+  const kind = new FormData(form).get('outKind') === 'discard' ? 'discard' : 'gift';
+  if (kind === 'discard') {
+    const g = readGrams($('outG'));
+    if (g == null) return showMessage('減らす量を0より大きい数字（g）で入れてください', 'error');
+    await addInventoryTx(db, { beanId, deltaG: -g, kind });
+    $('outG').value = '';
+    showMessage(`${TX_KINDS[kind]}で ${formatG(g)} 減らしました`);
+    await render();
+    return;
+  }
+  // おすそ分け（X34）
+  const { value, errors } = normalizeGiftInput({ g: $('outG').value, recipient: $('giftTo').value, memo: $('giftMemo').value });
+  for (const span of form.querySelectorAll('.field-error')) span.textContent = errors[span.dataset.for] ?? '';
+  if (errors.g) return showMessage(errors.g, 'error');
+  if (Object.keys(errors).length) return showMessage('入力を直してください', 'error');
+  const found = await getBeanWithTx(db, beanId);
+  const room = found ? remainingG(found.txs) : 0;
+  if (found?.txs.length && value.g > room + EMPTY_TOLERANCE_G) {
+    if (!(await askConfirm(`常温の残り（${formatG(Math.max(room, 0))}）より多く渡します。このまま減らしますか？`, { ok: '減らす' }))) return;
+  }
+  await addGift(db, { beanId, ...value });
   $('outG').value = '';
-  showMessage(`${TX_KINDS[kind]}で ${formatG(g)} 減らしました`);
+  $('giftTo').value = '';
+  $('giftMemo').value = '';
+  showMessage(`おすそ分けで ${formatG(value.g)} 減らしました${value.recipient ? `（${value.recipient}）` : ''}`);
   await render();
 }));
 
@@ -501,8 +594,13 @@ $('toggleFinished').addEventListener('click', async (event) => {
   const finishing = event.target.dataset.status !== 'finished';
   if (finishing) await setBeanStatus(db, beanId, 'finished');
   else await unfinishBean(db, beanId);
-  showMessage(finishing ? '飲み切りにしました' : '飲み切りを取り消しました');
+  const noNote = finishing && !$('handoverNote').value.trim();
+  showMessage(finishing ? (noNote ? '飲み切りにしました。次の自分への一言を書いておけます' : '飲み切りにしました') : '飲み切りを取り消しました');
   await render();
+  // 飲み切りにしたら、次の自分への一言の欄へ（X32）。書かなくてもよい
+  if (noNote) {
+    $('noteCard').scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
 });
 
 $('delete').addEventListener('click', async () => {
