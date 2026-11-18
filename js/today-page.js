@@ -4,7 +4,7 @@ import { beanRows } from './core/home.js';
 import { todayPicks, pickHref, baseText, caffeineState, normalizeCutoff, DAILY_CAFFEINE_MG } from './core/today.js';
 import { MOODS, moodForHour, cupsLabel } from './core/plan-adjust.js';
 import { analysisRows } from './core/analysis.js';
-import { todayCaffeine, caffeineKeeper } from './core/caffeine.js';
+import { todayCaffeine as caffeineToday, caffeineKeeper } from './core/caffeine.js';
 import { doseFromSettings } from './core/inventory.js';
 import { localYmd } from './core/format.js';
 import { $, el, queryParam, showMessage } from './ui.js';
@@ -18,7 +18,7 @@ const now = new Date();
 let mood = queryParam('mood') === 'none' ? null : MOODS[queryParam('mood')] ? queryParam('mood') : moodForHour(now.getHours());
 
 function todayCaffeine() {
-  return todayCaffeine(analysisRows(data), now).mg;
+  return caffeineToday(analysisRows(data), now).mg;
 }
 
 function renderMood() {

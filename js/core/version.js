@@ -3,10 +3,19 @@
 // ステップを仕上げるときに APP_VERSION と CHANGELOG の先頭を足す。上げ忘れは tests/version.test.js が見つける。
 // sw.js の一覧（npm run sw）にも番号が入り、更新の知らせに新しい番号を出す。
 
-export const APP_VERSION = '2.6';
+export const APP_VERSION = '2.7';
 
 /** 更新履歴（新しい順）。items は利用者向けの短い文で、2〜3個まで */
 export const CHANGELOG = Object.freeze([
+  {
+    version: '2.7',
+    date: '2026-11-18',
+    items: [
+      'トップに「いつもの1杯」のボタンと、今日のカフェイン・控える時刻までの残り時間が出ます',
+      'レシピをQRやリンクで共有・取り込みでき、キャニスターのQRを「QRを読む」で読むとその豆の淹れ方で開きます。レシピカード・月次レポートを印刷（PDF）できます',
+      '評価の画面で1杯を1枚の画像にでき、PCでは決めたフォルダに自動でファイル保存できます',
+    ],
+  },
   {
     version: '2.6',
     date: '2026-11-18',

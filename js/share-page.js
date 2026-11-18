@@ -77,12 +77,11 @@ async function initSend(id) {
 function renderReceive(payload) {
   const r = payload.recipe;
   $('rName').textContent = r.name || '共有されたレシピ';
-  $('rSummary').textContent = recipeSummary({ doseG: r.doseG, waterG: r.waterG, tempC: r.tempC });
+  $('rSummary').textContent = [recipeSummary({ doseG: r.doseG, waterG: r.waterG, tempC: r.tempC }), r.targetTotalSec ? `落ち切り ${formatSec(r.targetTotalSec)}` : ''].filter(Boolean).join('・');
   $('rPours').replaceChildren(
     ...(r.pours ?? []).map((p, i) =>
       el('li', { class: 'num' }, `${formatSec(p.atSec)}　${i === 0 ? '蒸らし' : `${i + 1}投目`}　${p.toG}gまで${POUR_STYLES[p.style] ? `（${POUR_STYLES[p.style]}）` : ''}`),
     ),
-    r.targetTotalSec ? el('li', { class: 'num muted' }, `${formatSec(r.targetTotalSec)}　落ち切り（目標）`) : '',
   );
   const grind = [r.grinderName, r.grindSetting].filter(Boolean).join(' ');
   $('rGrind').textContent = [grind ? `挽き目：${grind}` : '', r.dripperName ? `ドリッパー：${r.dripperName}` : ''].filter(Boolean).join('　');
