@@ -282,8 +282,12 @@ async function showPlan(loaded, lastBeanId) {
   // 豆：初期値は ?bean= の豆（焙煎度比較）、前回の豆、一覧の先頭の順
   const preferred = queryParam('bean') ?? queryParam('best') ?? plan.beanId ?? lastBeanId ?? null;
   const usable = fillBeanSelect($('bean'), preferred);
-  if (!$('bean').value && usable[0]) $('bean').value = usable[0].id;
+  // URL で指定した豆（?bean=）が見つからない（削除済み・飲み切り）ときは、黙って別の豆にせず「選ばない」にして知らせる（2-8 の19番）
+  const askedBean = queryParam('bean');
+  const missing = askedBean && !usable.some((b) => b.id === askedBean);
+  if (!$('bean').value && usable[0] && !missing) $('bean').value = usable[0].id;
   renderBeanNote(preferred);
+  if (missing) $('beanNote').textContent = '指定された豆が見つかりません（削除した豆です）。淹れる豆を選んでください';
   renderSuggestCard();
   renderAdjust();
   renderPlanBody();
