@@ -43,6 +43,11 @@ export function freshnessPill(f) {
   return el('span', { class: `pill stage-${f.stage}` }, f.label);
 }
 
+/** 冷凍中の札（常温が0で冷凍の袋だけ残っている豆。冷凍中は日数を数えない） */
+export function frozenPill() {
+  return el('span', { class: 'pill frozen' }, '冷凍中');
+}
+
 /**
  * ±ボタン付きの数字の入力欄。数字はほぼ打たずに±で直せるようにする（spec 8.2）。
  * @param {{id:string, label:string, unit?:string, step:number, decimals?:number, min?:number, max?:number,

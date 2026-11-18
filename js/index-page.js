@@ -11,7 +11,7 @@ import { pickPendingSuggestion } from './core/dialin.js';
 import { doseFromSettings } from './core/inventory.js';
 import { localYmd, formatG } from './core/format.js';
 import { STAGES } from './core/freshness.js';
-import { $, el, freshnessPill } from './ui.js';
+import { $, el, freshnessPill, frozenPill } from './ui.js';
 
 registerServiceWorker();
 requestPersistentStorage();
@@ -122,17 +122,18 @@ function renderBeans(rows) {
   $('beanBands').replaceChildren(
     ...rows.map((r) => {
       const f = r.freshness;
-      const days = f ? (f.days >= 0 ? `焙煎から${f.days}日` : `焙煎まであと${-f.days}日`) : '';
+      const days = r.frozenOnly ? '' : f ? (f.days >= 0 ? `焙煎から${f.days}日` : `焙煎まであと${-f.days}日`) : '';
       return el(
         'a',
         { class: 'band-row', href: `bean.html?id=${enc(r.bean.id)}` },
-        el('div', { class: 'bean-card-top' }, el('span', { class: 'bean-name' }, r.bean.name), freshnessPill(f)),
-        bandNode(r),
+        el('div', { class: 'bean-card-top' }, el('span', { class: 'bean-name' }, r.bean.name), r.frozenOnly ? frozenPill() : freshnessPill(f)),
+        !r.frozenOnly && bandNode(r),
         el(
           'div',
           { class: 'band-meta' },
           el('span', { class: 'num' }, `残り ${formatG(Math.max(r.remainingG, 0))}`),
           el('span', {}, `あと${r.cups}杯`),
+          r.frozenCount > 0 && el('span', { class: 'muted' }, `冷凍${r.frozenCount}袋を含む`),
           days && el('span', { class: 'muted' }, days),
         ),
       );
@@ -188,6 +189,7 @@ function renderRestock(all, settings) {
   const plan = restockPlan({
     beans: all.beans,
     txs: all.inventoryTx,
+    portions: all.frozenPortions,
     brews: all.brews,
     tastings: all.tastings,
     settings,
@@ -205,7 +207,7 @@ async function init() {
   const beanName = (id) => all.beans.find((b) => b.id === id)?.name ?? '';
   renderBackup(settings, all);
   renderToday(all, beanName);
-  renderBeans(beanRows({ beans: all.beans, txs: all.inventoryTx, doseG: doseFromSettings(settings), today: localYmd() }));
+  renderBeans(beanRows({ beans: all.beans, txs: all.inventoryTx, portions: all.frozenPortions, doseG: doseFromSettings(settings), today: localYmd() }));
   renderRecent(all, beanName);
   renderRestock(all, settings);
   await renderUnrated(beanName);

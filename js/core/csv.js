@@ -9,6 +9,7 @@ import { freshness } from './freshness.js';
 import { BEAN_STATUS, WEIGHT_BASIS, sortBeansForList } from './beans.js';
 import { formatSec } from './recipes.js';
 import { formatDateTimeJa } from './format.js';
+import { groupPortionsByBean, stockParts } from './frozen.js';
 
 export const BOM = '﻿';
 const alive = (r) => r && r.deletedAt == null;
@@ -113,11 +114,13 @@ export function brewRows({ brews = [], beans = [], recipes = [], equipment = [],
 
 /**
  * 豆の一覧（飲み切りは後ろ、削除済みは除く）
- * @param {{beans:object[], txs?:object[], doseG:number, today:string}} p
+ * 残量g・残り杯数は常温＋冷凍の合計。内訳を「常温g」「冷凍g」「冷凍の袋数」に出す
+ * @param {{beans:object[], txs?:object[], portions?:object[], doseG:number, today:string}} p
  * @returns {string[][]}
  */
-export function beanRowsCsv({ beans = [], txs = [], doseG, today }) {
+export function beanRowsCsv({ beans = [], txs = [], portions = [], doseG, today }) {
   const byBean = groupTxByBean((txs ?? []).filter(alive));
+  const portionsByBean = groupPortionsByBean(portions);
   const head = [
     '名前',
     '購入先',
@@ -135,6 +138,9 @@ export function beanRowsCsv({ beans = [], txs = [], doseG, today }) {
     '状態',
     '残量g',
     '残り杯数',
+    '常温g',
+    '冷凍g',
+    '冷凍の袋数',
     '飲み頃',
     '焙煎後日数',
     'メモ',
@@ -142,7 +148,7 @@ export function beanRowsCsv({ beans = [], txs = [], doseG, today }) {
     '豆ID',
   ];
   const rows = sortBeansForList((beans ?? []).filter(alive)).map((b) => {
-    const rest = remainingG(byBean[b.id] ?? []);
+    const parts = stockParts(remainingG(byBean[b.id] ?? []), portionsByBean[b.id]);
     const f = freshness(b.roastDate, b.roastLevel, today);
     return [
       b.name ?? '',
@@ -159,8 +165,11 @@ export function beanRowsCsv({ beans = [], txs = [], doseG, today }) {
       b.actualWeightG ?? '',
       b.priceJpy ?? '',
       BEAN_STATUS[b.status] ?? '',
-      rest,
-      cupsLeft(rest, doseG),
+      parts.totalG,
+      cupsLeft(parts.totalG, doseG),
+      parts.roomG,
+      parts.frozenG,
+      parts.frozenCount,
       f?.label ?? '',
       f?.days ?? '',
       b.memo ?? '',

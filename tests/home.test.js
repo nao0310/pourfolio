@@ -133,3 +133,28 @@ test('直近の抽出：新しい順に3杯、評価と記録の時間を添え�
   assert.equal(list[1].tasting, null);
   assert.equal(list[0].recordSec, null);
 });
+
+test('冷凍ストック：残量と杯数は常温＋冷凍。常温が0で冷凍だけなら「早めに消費」を出さない', () => {
+  const portion = (beanId, labelNo, extra = {}) => ({ id: `${beanId}-p${labelNo}`, beanId, labelNo, grams: 15, takenOutAt: null, deletedAt: null, ...extra });
+  const old = { roastDate: '2026-10-01' }; // 早めに消費のころ
+  const beans = [bean('room', old), bean('frozenOnly', old), bean('mixed')];
+  const txs = [tx('room', 100), tx('frozenOnly', 60), tx('frozenOnly', -60, { kind: 'freeze' }), tx('mixed', 30), tx('mixed', -15, { kind: 'freeze' })];
+  const portions = [
+    portion('frozenOnly', 1),
+    portion('frozenOnly', 2),
+    portion('frozenOnly', 3),
+    portion('frozenOnly', 4, { takenOutAt: daysAgo(1) }),
+    portion('mixed', 5),
+  ];
+  const rows = beanRows({ beans, txs, portions, doseG: 15, today: '2026-11-18' });
+  const by = Object.fromEntries(rows.map((r) => [r.bean.id, r]));
+  assert.deepEqual(by.room.alerts, ['useSoon']);
+  assert.equal(by.frozenOnly.frozenOnly, true);
+  assert.equal(by.frozenOnly.remainingG, 45);
+  assert.equal(by.frozenOnly.frozenCount, 3);
+  assert.equal(by.frozenOnly.cups, 3);
+  assert.deepEqual(by.frozenOnly.alerts, ['low'], '冷凍だけの豆は早めに消費を出さない');
+  assert.equal(by.mixed.remainingG, 30);
+  assert.equal(by.mixed.roomG, 15);
+  assert.equal(by.mixed.frozenOnly, false);
+});

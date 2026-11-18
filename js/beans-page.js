@@ -1,10 +1,11 @@
 // 豆の一覧（C1〜C3）
-import { openDb, listBeans, listAliveTx, getSettings, updateSettings } from './db.js';
+import { openDb, listBeans, listAliveTx, listFrozenPortions, getSettings, updateSettings } from './db.js';
+import { groupPortionsByBean, stockParts } from './core/frozen.js';
 import { sortBeansForList, originText, BEAN_STATUS, parseNumber } from './core/beans.js';
 import { groupTxByBean, remainingG, cupsLeft, doseFromSettings } from './core/inventory.js';
 import { freshness } from './core/freshness.js';
 import { localYmd, formatG, formatYmdJa } from './core/format.js';
-import { $, el, showMessage, freshnessPill } from './ui.js';
+import { $, el, showMessage, freshnessPill, frozenPill } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
 
 const db = openDb();
@@ -18,15 +19,18 @@ function readShowFinished() {
   }
 }
 
-function beanCard(bean, txs, doseG, today) {
-  const rest = remainingG(txs);
+function beanCard(bean, txs, portions, doseG, today) {
+  // 残量は常温＋冷凍の合計（C4）
+  const parts = stockParts(remainingG(txs), portions);
+  const rest = parts.totalG;
+  const frozenOnly = parts.roomG <= 0 && parts.frozenCount > 0;
   const f = freshness(bean.roastDate, bean.roastLevel, today);
   const sub = [bean.roastLevel, originText(bean)].filter(Boolean).join('　');
-  const daysText = f ? (f.days >= 0 ? `焙煎から${f.days}日` : `焙煎まであと${-f.days}日`) : '';
+  const daysText = frozenOnly ? '' : f ? (f.days >= 0 ? `焙煎から${f.days}日` : `焙煎まであと${-f.days}日`) : '';
   return el(
     'a',
     { class: `card bean-card${bean.status === 'finished' ? ' finished' : ''}`, href: `bean.html?id=${encodeURIComponent(bean.id)}` },
-    el('div', { class: 'bean-card-top' }, el('span', { class: 'bean-name' }, bean.name), bean.status !== 'ordered' && freshnessPill(f)),
+    el('div', { class: 'bean-card-top' }, el('span', { class: 'bean-name' }, bean.name), bean.status !== 'ordered' && (frozenOnly ? frozenPill() : freshnessPill(f))),
     sub && el('div', { class: 'muted' }, sub),
     bean.status === 'ordered'
       ? el(
@@ -40,6 +44,7 @@ function beanCard(bean, txs, doseG, today) {
           { class: 'bean-card-stock' },
           el('span', { class: 'num' }, formatG(Math.max(rest, 0))),
           el('span', {}, `あと${cupsLeft(rest, doseG)}杯`),
+          parts.frozenCount > 0 && el('span', { class: 'muted' }, `冷凍${parts.frozenCount}袋を含む`),
           daysText && el('span', { class: 'muted' }, daysText),
           bean.status !== 'open' && el('span', { class: 'muted' }, BEAN_STATUS[bean.status] ?? ''),
         ),
@@ -47,7 +52,8 @@ function beanCard(bean, txs, doseG, today) {
 }
 
 async function render() {
-  const [beans, txs, settings] = await Promise.all([listBeans(db), listAliveTx(db), getSettings(db)]);
+  const [beans, txs, portions, settings] = await Promise.all([listBeans(db), listAliveTx(db), listFrozenPortions(db), getSettings(db)]);
+  const portionsByBean = groupPortionsByBean(portions);
   const doseG = doseFromSettings(settings);
   if (document.activeElement !== $('dose')) $('dose').value = String(doseG);
   const byBean = groupTxByBean(txs);
@@ -70,7 +76,7 @@ async function render() {
     );
     return;
   }
-  list.replaceChildren(...shown.map((b) => beanCard(b, byBean[b.id] ?? [], doseG, today)));
+  list.replaceChildren(...shown.map((b) => beanCard(b, byBean[b.id] ?? [], portionsByBean[b.id] ?? [], doseG, today)));
 }
 
 $('showFinished').checked = readShowFinished();

@@ -66,14 +66,17 @@ test('抽出の一覧：評価・提案・豆のない抽出は空欄、削除�
   assert.equal(r2[head.indexOf('タイマー')], false);
 });
 
-test('豆の一覧：残量・残り杯数・飲み頃が入る', () => {
+test('豆の一覧：残量（常温＋冷凍）・残り杯数・飲み頃が入る', () => {
   const data = makeSampleData(NOW);
-  const [head, row] = beanRowsCsv({ beans: data.beans, txs: data.inventoryTx, doseG: 15, today: '2026-11-18' });
+  const [head, row] = beanRowsCsv({ beans: data.beans, txs: data.inventoryTx, portions: data.frozenPortions, doseG: 15, today: '2026-11-18' });
   const col = (name) => row[head.indexOf(name)];
   assert.equal(col('名前'), 'サンプル エチオピア');
   assert.equal(col('表記の基準'), '生豆時');
   assert.equal(col('残量g'), 146.4);
   assert.equal(col('残り杯数'), 9);
+  assert.equal(col('常温g'), 116.4);
+  assert.equal(col('冷凍g'), 30);
+  assert.equal(col('冷凍の袋数'), 2);
   assert.equal(col('状態'), '開封済み');
   assert.equal(col('飲み頃'), freshness(data.beans[0].roastDate, 'シティ', '2026-11-18').label);
   assert.equal(col('焙煎日'), data.beans[0].roastDate);

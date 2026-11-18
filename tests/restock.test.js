@@ -159,3 +159,22 @@ test('買い物リスト：★が同じなら評価の多いほうが先', () =>
   const list = shoppingCandidates({ beans, brews, tastings: [t('ra', 4), t('rb1', 4), t('rb2', 4)] });
   assert.deepEqual(list.map((c) => c.name), ['B', 'A']);
 });
+
+test('在庫の合計に冷凍の袋を含める（取り出した・削除した袋、飲み切りの豆の袋は数えない）', () => {
+  const beans = [bean('a'), bean('b', { status: 'finished' })];
+  const txs = [tx('a', 160), tx('a', -60, 'freeze', 2), tx('a', 15, 'thaw', 1), tx('b', 30), tx('b', -30, 'freeze', 3)];
+  const portion = (beanId, labelNo, extra = {}) => ({ id: `p${labelNo}`, beanId, labelNo, grams: 15, takenOutAt: null, deletedAt: null, ...extra });
+  const portions = [
+    portion('a', 1, { takenOutAt: iso(1) }),
+    portion('a', 2),
+    portion('a', 3),
+    portion('a', 4, { deletedAt: iso(1) }),
+    portion('a', 6),
+    portion('b', 5),
+  ];
+  const s = stockSummary({ beans, txs, portions });
+  assert.equal(s.onHandG, 115 + 45);
+  assert.equal(s.frozenG, 45);
+  const plan = restockPlan({ beans, txs: [...txs, ...dailyBrews('a', 14, 1)], portions, today: TODAY, now: NOW });
+  assert.match(restockText(plan).text, /冷凍を含む/);
+});

@@ -8,6 +8,7 @@ import { FRESHNESS_WINDOWS, FALLBACK_GROUP } from './freshness.js';
 import { deliveryDays, addDaysYmd } from './orders.js';
 import { pickTasting } from './tastings.js';
 import { formatG, formatYmdJa } from './format.js';
+import { groupPortionsByBean, frozenG as sumFrozenG } from './frozen.js';
 
 /** 注文の目安日まで何日以内なら「そろそろ注文」を出すか */
 export const RESTOCK_SOON_DAYS = 3;
@@ -25,14 +26,16 @@ export function restDaysFor(roastLevel) {
 
 /**
  * 在庫の合計
- * - 手元：飲み切り・入荷待ちを除く豆の残量（マイナスは0）
+ * - 手元：飲み切り・入荷待ちを除く豆の残量（常温はマイナスなら0）＋冷凍庫の袋（C4）
  * - 入荷待ち：表記重量から見積もった焙煎後の重さ
- * @returns {{onHandG:number, incomingG:number, orderedCount:number}}
+ * @returns {{onHandG:number, frozenG:number, incomingG:number, orderedCount:number}} frozenG は onHandG のうち冷凍の分
  */
-export function stockSummary({ beans = [], txs = [] }) {
+export function stockSummary({ beans = [], txs = [], portions = [] }) {
   const byBean = groupTxByBean(txs.filter(alive));
+  const portionsByBean = groupPortionsByBean(portions);
   const list = beans.filter(alive);
   let onHandG = 0;
+  let frozenG = 0;
   let incomingG = 0;
   let orderedCount = 0;
   for (const b of list) {
@@ -41,10 +44,12 @@ export function stockSummary({ beans = [], txs = [] }) {
       orderedCount += 1;
       incomingG += initialStockG(b, list)?.g ?? 0;
     } else {
-      onHandG += Math.max(0, remainingG(byBean[b.id] ?? []));
+      const fz = sumFrozenG(portionsByBean[b.id]);
+      frozenG += fz;
+      onHandG += Math.max(0, remainingG(byBean[b.id] ?? [])) + fz;
     }
   }
-  return { onHandG: round1(onHandG), incomingG: round1(incomingG), orderedCount };
+  return { onHandG: round1(onHandG), frozenG: round1(frozenG), incomingG: round1(incomingG), orderedCount };
 }
 
 /** 次に買う豆の焙煎度の見当：買い物リストの先頭、なければ最後に登録した豆 */
@@ -56,13 +61,13 @@ function nextRoastLevel(beans, candidates) {
 
 /**
  * 買い足し計画
- * @param {{beans:object[], txs:object[], brews?:object[], tastings?:object[], settings?:object, today:string, now?:Date}} p
+ * @param {{beans:object[], txs:object[], portions?:object[], brews?:object[], tastings?:object[], settings?:object, today:string, now?:Date}} p
  * @returns {{status:'unknown'|'ok'|'soon'|'now', gPerDay?:number, onHandG:number, incomingG:number, orderedCount:number,
  *   daysLeft?:number, runoutYmd?:string, orderByYmd?:string, daysUntilOrder?:number,
  *   deliveryDays:number, deliveryLearned:boolean, restDays:number, roastLevel:string}}
  */
-export function restockPlan({ beans = [], txs = [], brews = [], tastings = [], settings = {}, today, now = new Date() }) {
-  const stock = stockSummary({ beans, txs });
+export function restockPlan({ beans = [], txs = [], portions = [], brews = [], tastings = [], settings = {}, today, now = new Date() }) {
+  const stock = stockSummary({ beans, txs, portions });
   const delivery = deliveryDays(beans, settings?.deliveryDays);
   const roastLevel = nextRoastLevel(beans, shoppingCandidates({ beans, brews, tastings }));
   const restDays = restDaysFor(roastLevel);
@@ -100,7 +105,8 @@ export function restockText(plan) {
   if (plan.status === 'unknown') {
     return { title: '買い足しの目安', text: '2週間で2杯以上淹れると、注文の目安日を出します' };
   }
-  const stock = `在庫はあと約${plan.daysLeft}日分（1日${formatG(plan.gPerDay)}のペース${plan.incomingG > 0 ? '・入荷待ちを含む' : ''}）`;
+  const incl = [plan.frozenG > 0 ? '冷凍' : '', plan.incomingG > 0 ? '入荷待ち' : ''].filter(Boolean).join('・');
+  const stock = `在庫はあと約${plan.daysLeft}日分（1日${formatG(plan.gPerDay)}のペース${incl ? `・${incl}を含む` : ''}）`;
   if (plan.status === 'now') {
     return { title: '今日、注文しましょう', text: `${stock}。今日注文すると、${leadText(plan)}でちょうど切らさずに済みます` };
   }

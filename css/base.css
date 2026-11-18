@@ -540,3 +540,6 @@ p > a:not(.btn):only-child { display: inline-block; padding: 11px 0; }
 .top-links { margin: 0 0 8px; }
 .paste-card summary { cursor: pointer; color: var(--accent); font-weight: 700; padding: 6px 0; min-height: 44px; display: flex; align-items: center; }
 .paste-card textarea, #mail { width: 100%; box-sizing: border-box; font: inherit; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--fg); }
+
+/* ---- 2-3 冷凍・コスト・台帳 ---- */
+.pill.frozen { background: transparent; color: var(--stage-resting); border: 2px solid var(--stage-resting); }

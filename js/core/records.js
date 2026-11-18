@@ -13,6 +13,7 @@ export const TABLES = Object.freeze([
   'tastings', // Tasting 評価
   'suggestions', // Suggestion 提案ログ（DBの版2で追加）
   'orders', // Order 珈琲問屋への注文1回（DBの版3で追加）
+  'frozenPortions', // FrozenPortion 冷凍庫の小分けの袋1つ（DBの版4で追加）
   'settings', // Settings アプリ全体の設定（1件）
 ]);
 

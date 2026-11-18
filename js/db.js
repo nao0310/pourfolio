@@ -10,6 +10,8 @@ import { makeBackup, mergeRecords } from './core/backup.js';
 import { buildTasting, pickTasting, pickUnratedBrew } from './core/tastings.js';
 import { suggestNext, basePlanForNext, buildSuggestion, pickSuggestionForBrew, linkSuggestions } from './core/dialin.js';
 import { parseNumber } from './core/beans.js';
+import { nextLabelNos, buildPortions, freezeMemo, isInFreezer } from './core/frozen.js';
+import { localYmd } from './core/format.js';
 
 /** 本番のデータベース名（保存テストの pourfolio-storage-test とは別） */
 export const DB_NAME = 'pourfolio';
@@ -38,6 +40,10 @@ export function openDb(name = DB_NAME, options) {
   // 版3：珈琲問屋への注文（X29）の表を足す。豆の「入荷待ち」と orderId は検索に使わないので索引は足さない
   db.version(3).stores({
     orders: 'id, orderDate, updatedAt',
+  });
+  // 版4：冷凍の小分けの袋（C4）の表を足す。既存の表と記録はそのまま（移行で書き換える記録はない）
+  db.version(4).stores({
+    frozenPortions: 'id, beanId, updatedAt',
   });
   return db;
 }
@@ -136,12 +142,21 @@ export async function listAliveTx(db) {
   return (await db.table('inventoryTx').toArray()).filter(alive);
 }
 
-/** 豆1つと、その在庫履歴（削除の印が付いたものは除く）。豆がない・削除済みなら null */
+/**
+ * 豆1つと、その在庫履歴・冷凍の袋（削除の印が付いたものは除く。袋は取り出したものも含む）。
+ * 豆がない・削除済みなら null
+ */
 export async function getBeanWithTx(db, beanId) {
   const bean = await db.table('beans').get(beanId);
   if (!bean || !alive(bean)) return null;
   const txs = (await db.table('inventoryTx').where('beanId').equals(beanId).toArray()).filter(alive);
-  return { bean, txs };
+  const portions = (await db.table('frozenPortions').where('beanId').equals(beanId).toArray()).filter(alive);
+  return { bean, txs, portions };
+}
+
+/** 削除の印が付いていない冷凍の袋の全部（取り出したものも含む） */
+export async function listFrozenPortions(db) {
+  return (await db.table('frozenPortions').toArray()).filter(alive);
 }
 
 /**
@@ -240,13 +255,15 @@ export async function setBeanStatus(db, beanId, status, now = new Date()) {
   return next;
 }
 
-/** 豆を削除する（豆と在庫履歴に削除の印を付ける） */
+/** 豆を削除する（豆と在庫履歴・冷凍の袋に削除の印を付ける） */
 export async function deleteBean(db, beanId, now = new Date()) {
-  await db.transaction('rw', db.table('beans'), db.table('inventoryTx'), async () => {
+  await db.transaction('rw', db.table('beans'), db.table('inventoryTx'), db.table('frozenPortions'), async () => {
     const cur = await db.table('beans').get(beanId);
     if (cur && alive(cur)) await db.table('beans').put(markDeleted(cur, now));
     const txs = (await db.table('inventoryTx').where('beanId').equals(beanId).toArray()).filter(alive);
     if (txs.length) await db.table('inventoryTx').bulkPut(txs.map((t) => markDeleted(t, now)));
+    const portions = (await db.table('frozenPortions').where('beanId').equals(beanId).toArray()).filter(alive);
+    if (portions.length) await db.table('frozenPortions').bulkPut(portions.map((p) => markDeleted(p, now)));
   });
 }
 
@@ -288,10 +305,81 @@ export async function measureBean(db, beanId, measuredG, now = new Date()) {
   return tx;
 }
 
-/** 在庫履歴1件を取り消す（削除の印を付ける） */
+/**
+ * 在庫履歴1件を取り消す（削除の印を付ける）。
+ * - 冷凍：その時に作った袋も消す。取り出した袋があるときは取り消せない（エラー）
+ * - 冷凍から取り出し：袋を冷凍庫に戻す
+ */
 export async function deleteInventoryTx(db, txId, now = new Date()) {
-  const cur = await db.table('inventoryTx').get(txId);
-  if (cur && alive(cur)) await db.table('inventoryTx').put(markDeleted(cur, now));
+  await db.transaction('rw', db.table('inventoryTx'), db.table('frozenPortions'), async () => {
+    const cur = await db.table('inventoryTx').get(txId);
+    if (!cur || !alive(cur)) return;
+    if (cur.kind === 'freeze') {
+      const portions = (await db.table('frozenPortions').where('beanId').equals(cur.beanId).toArray()).filter(
+        (p) => alive(p) && p.freezeTxId === cur.id,
+      );
+      if (portions.some((p) => !isInFreezer(p))) throw new Error('取り出した袋があるため、この冷凍は取り消せません');
+      if (portions.length) await db.table('frozenPortions').bulkPut(portions.map((p) => markDeleted(p, now)));
+    }
+    if (cur.kind === 'thaw' && cur.portionId) {
+      const p = await db.table('frozenPortions').get(cur.portionId);
+      if (p && alive(p)) await db.table('frozenPortions').put(updateRecord(p, { takenOutAt: null, takenOutBrewId: null }, now));
+    }
+    await db.table('inventoryTx').put(markDeleted(cur, now));
+  });
+}
+
+// ---- 冷凍ストック（C4） ----
+
+/**
+ * 常温の豆を小分けにして冷凍する。常温から「冷凍」の履歴で袋の合計を引き、袋を作る。
+ * 未開封の豆なら開封済みにする。
+ * @param {object} value normalizeFreezeInput の value
+ * @returns {Promise<{tx:object, portions:object[]}>}
+ */
+export async function freezeBean(db, beanId, value, now = new Date()) {
+  let tx;
+  let portions;
+  await db.transaction('rw', db.table('beans'), db.table('inventoryTx'), db.table('frozenPortions'), async () => {
+    const bean = await db.table('beans').get(beanId);
+    if (!bean || !alive(bean)) throw new Error('豆が見つかりません');
+    if (bean.status === 'ordered') throw new Error('まだ届いていない豆は冷凍できません');
+    const txs = (await db.table('inventoryTx').where('beanId').equals(beanId).toArray()).filter(alive);
+    if (value.totalG > remainingG(txs) + 0.05) throw new Error('常温の残りより多くは冷凍できません');
+    const labelNos = nextLabelNos(await db.table('frozenPortions').toArray(), value.count);
+    // 今日冷凍したなら今の時刻、前の日付なら その日の昼12時にする
+    const at = localYmd(now) === value.frozenDate ? nowIso(now) : new Date(`${value.frozenDate}T12:00:00`).toISOString();
+    tx = await addInventoryTx(db, { beanId, deltaG: -value.totalG, kind: 'freeze', at, memo: freezeMemo(value, labelNos) }, now);
+    portions = buildPortions({ bean, value, labelNos, freezeTxId: tx.id }).map((p) => createRecord(p, now));
+    await db.table('frozenPortions').bulkPut(portions);
+    if (bean.status === 'unopened') await db.table('beans').put(updateRecord(bean, { status: 'open' }, now));
+  });
+  return { tx, portions };
+}
+
+/** 袋を取り出して常温に戻す（トランザクションの中で使う） */
+async function takeOut(db, portion, { at, brewId = null }, now) {
+  const tx = await addInventoryTx(
+    db,
+    { beanId: portion.beanId, deltaG: portion.grams, kind: 'thaw', at, portionId: portion.id, brewId, memo: `#${portion.labelNo}` },
+    now,
+  );
+  await db.table('frozenPortions').put(updateRecord(portion, { takenOutAt: at, takenOutBrewId: brewId }, now));
+  return tx;
+}
+
+/**
+ * 冷凍の袋を1つ取り出し、その量を常温に戻す
+ * @returns {Promise<object>} 足した在庫履歴
+ */
+export async function takeOutPortion(db, portionId, now = new Date()) {
+  let tx;
+  await db.transaction('rw', db.table('inventoryTx'), db.table('frozenPortions'), async () => {
+    const p = await db.table('frozenPortions').get(portionId);
+    if (!p || !isInFreezer(p)) throw new Error('冷凍庫にない袋です');
+    tx = await takeOut(db, p, { at: nowIso(now) }, now);
+  });
+  return tx;
 }
 
 // ---- 器具（D1） ----
@@ -414,7 +502,8 @@ export async function deleteRecipe(db, id, now = new Date()) {
 export async function saveBrew(db, fields, now = new Date()) {
   const brew = createRecord(fields, now);
   let tx = null;
-  await db.transaction('rw', db.table('beans'), db.table('inventoryTx'), db.table('brews'), db.table('suggestions'), async () => {
+  const tables = ['beans', 'inventoryTx', 'brews', 'suggestions', 'frozenPortions'].map((n) => db.table(n));
+  await db.transaction('rw', tables, async () => {
     await db.table('brews').put(brew);
     // 提案ログに「採用したか」と「次の抽出」を書く（自己較正と実績の表示に使う）
     const links = linkSuggestions(await db.table('suggestions').toArray(), brew);
@@ -426,6 +515,11 @@ export async function saveBrew(db, fields, now = new Date()) {
     if (!brew.beanId || !(doseG > 0)) return;
     const bean = await db.table('beans').get(brew.beanId);
     if (!bean || !alive(bean)) return;
+    // 冷凍の袋を使ったとき：先に袋を取り出して常温に戻し、そこから粉量を引く
+    if (brew.frozenPortionId) {
+      const p = await db.table('frozenPortions').get(brew.frozenPortionId);
+      if (p && isInFreezer(p) && p.beanId === bean.id) await takeOut(db, p, { at: brew.at, brewId: brew.id }, now);
+    }
     tx = await addInventoryTx(db, { beanId: bean.id, deltaG: -doseG, kind: 'brew', brewId: brew.id, at: brew.at }, now);
     if (bean.status === 'unopened') await db.table('beans').put(updateRecord(bean, { status: 'open' }, now));
   });

@@ -41,5 +41,5 @@ test('削除は印を付けるだけ', () => {
 });
 
 test('表は9つ（版2で提案、版3で注文を足した）', () => {
-  assert.deepEqual(TABLES, ['beans', 'inventoryTx', 'equipment', 'recipes', 'brews', 'tastings', 'suggestions', 'orders', 'settings']);
+  assert.deepEqual(TABLES, ['beans', 'inventoryTx', 'equipment', 'recipes', 'brews', 'tastings', 'suggestions', 'orders', 'frozenPortions', 'settings']);
 });

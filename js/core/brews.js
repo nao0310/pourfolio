@@ -7,6 +7,7 @@ import { ratioOf, parseSec, formatSec } from './recipes.js';
 import { autoAdvance } from './timer.js';
 import { daysBetween } from './freshness.js';
 import { localYmd } from './format.js';
+import { daysOffRoastFromPortion } from './frozen.js';
 
 /** 下書きの形の版。形を変えたら上げ、古い下書きは捨てる */
 export const DRAFT_VERSION = 1;
@@ -174,8 +175,9 @@ function plannedCopy(plan) {
  * 保存する抽出の記録の中身（id・日時の共通項目は db 側で付ける）
  * @param {{draft:object, value:object, at:string, bean?:object|null}} p
  *   value は normalizeActualInput の value、at は抽出の日時（ISO）、bean は選んだ豆（焙煎後日数の計算用）
+ * @param {object|null} [p.portion] 冷凍の袋を使ったとき、その袋（冷凍中の日数を焙煎後日数に数えない）
  */
-export function buildBrew({ draft, value, at, bean = null }) {
+export function buildBrew({ draft, value, at, bean = null, portion = null }) {
   const plan = draft.plan;
   const actual = {
     doseG: value.doseG,
@@ -188,13 +190,19 @@ export function buildBrew({ draft, value, at, bean = null }) {
     tdsPct: null,
   };
   const diff = brewDiff(plan, actual);
-  const daysOffRoast = bean?.roastDate ? daysBetween(bean.roastDate, localYmd(at)) : null;
+  const usePortion = portion && portion.beanId === value.beanId ? portion : null;
+  const daysOffRoast = usePortion
+    ? daysOffRoastFromPortion(usePortion, localYmd(at), localYmd(at))
+    : bean?.roastDate
+      ? daysBetween(bean.roastDate, localYmd(at))
+      : null;
   return {
     at,
     beanId: value.beanId,
     recipeId: plan.recipeId ?? null,
     recipeVersion: plan.recipeVersion ?? null,
     suggestionId: plan.suggestionId ?? null, // ダイヤルイン提案（F1）を入れた計画で淹れたとき、その提案
+    frozenPortionId: usePortion?.id ?? null, // 冷凍の袋（C4）を使ったとき、その袋（保存すると取り出したことになる）
     equipment: { ...(plan.equipment ?? {}), grinderId: plan.grind?.grinderId ?? null },
     planned: plannedCopy(plan),
     actual,
