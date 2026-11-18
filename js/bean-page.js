@@ -125,6 +125,7 @@ function renderTxList(txs) {
         ),
         el('div', { class: 'tx-sub muted' }, formatDateTimeJa(t.at), t.memo ? `　${t.memo}` : ''),
         t.kind !== 'in' &&
+          !(t.kind === 'thaw' && t.brewId) && // 抽出で使った袋の取り出しは取り消せない（2-8 の9番）
           el(
             'button',
             {

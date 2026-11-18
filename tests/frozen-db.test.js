@@ -90,6 +90,11 @@ test('完了の確認：抽出→冷凍→取り出し→冷凍の袋で抽出�
   const used = (await listFrozenPortions(db)).find((p) => p.id === portions[1].id);
   assert.equal(used.takenOutAt, brew.at);
   assert.equal(used.takenOutBrewId, brew.id);
+  // 抽出で使った袋の取り出しは取り消せない（取り消すと袋が冷凍庫に戻り、合計が粉量の分だけ増えてしまうため。2-8 の9番）
+  const { txs } = await getBeanWithTx(db, bean.id);
+  const usedThaw = txs.find((t) => t.kind === 'thaw' && t.brewId === brew.id);
+  await assert.rejects(deleteInventoryTx(db, usedThaw.id, later(31)), /抽出で使った袋の取り出しは取り消せません/);
+  assert.deepEqual(await stockOf(db, bean.id), { roomG: 139.7, frozenG: 30, frozenCount: 2, totalG: 169.7 });
 
   // 常温を量り直す（138g）：冷凍の袋は変わらない
   await measureBean(db, bean.id, 138, later(40));

@@ -363,6 +363,8 @@ export async function deleteInventoryTx(db, txId, now = new Date()) {
       if (portions.some((p) => !isInFreezer(p))) throw new Error('取り出した袋があるため、この冷凍は取り消せません');
       if (portions.length) await db.table('frozenPortions').bulkPut(portions.map((p) => markDeleted(p, now)));
     }
+    // 抽出で使った袋の取り出しは取り消せない。袋だけ冷凍庫に戻り、粉の分が二重に数えられるため（2-8 の9番）
+    if (cur.kind === 'thaw' && cur.brewId) throw new Error('抽出で使った袋の取り出しは取り消せません（抽出の記録とつながっています）');
     if (cur.kind === 'thaw' && cur.portionId) {
       const p = await db.table('frozenPortions').get(cur.portionId);
       if (p && alive(p)) await db.table('frozenPortions').put(updateRecord(p, { takenOutAt: null, takenOutBrewId: null }, now));
