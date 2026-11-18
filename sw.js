@@ -9,7 +9,7 @@
 // <manifest> npm run sw が書き込む（手で直さない）
 const MANIFEST = {
   "label": "3.6",
-  "version": "40004b0750df",
+  "version": "46a5d591c1f2",
   "files": {
     "aging.html": "e375c2c6820a60f3",
     "ai.html": "34607ec38ddc5690",
@@ -34,7 +34,7 @@ const MANIFEST = {
     "icons/apple-touch-icon.png": "d47279adae204755",
     "icons/icon-192.png": "bcb5cc1b418e8852",
     "icons/icon-512.png": "497d0329a3dad10a",
-    "index.html": "944ab91c614f9d66",
+    "index.html": "3c611e23ff2f1ab8",
     "js/aging-page.js": "31ddedd2ae860251",
     "js/ai-page.js": "39713c470946ed17",
     "js/analysis-data.js": "2f20437023503c41",
@@ -136,7 +136,7 @@ const MANIFEST = {
     "js/factors-page.js": "0a9101e6e3712b5e",
     "js/gift-page.js": "7946a2a117f1fa5c",
     "js/glossary-page.js": "01c87012f113801b",
-    "js/index-page.js": "934dd20da6f38896",
+    "js/index-page.js": "b6b86f6919b3b319",
     "js/life-page.js": "c0d67c8d6ad21e7e",
     "js/more-page.js": "1b2f722ab0b9c696",
     "js/optimize-page.js": "41fc5e6f125f204f",

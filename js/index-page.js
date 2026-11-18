@@ -353,7 +353,7 @@ function mtItem(s) {
     el(
       'div',
       { class: 'row' },
-      el('button', { type: 'button', class: 'btn', onclick: act(() => markMaintenanceDone(db, eq.id)) }, '済んだ'),
+      el('button', { type: 'button', class: 'btn secondary', onclick: act(() => markMaintenanceDone(db, eq.id)) }, '済んだ'),
       el('button', { type: 'button', class: 'btn secondary', onclick: act(() => snoozeMaintenance(db, eq.id)) }, `${SNOOZE_DAYS}日後に`),
     ),
   );

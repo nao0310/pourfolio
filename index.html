@@ -23,45 +23,6 @@
       <h1>Pourfolio</h1>
     </header>
 
-    <!-- 更新のあとに一度だけ出す「Ver ○ になりました」 -->
-    <div class="card whatsnew-card" id="whatsNewCard" hidden>
-      <p><strong id="whatsNewTitle"></strong></p>
-      <ul id="whatsNewList"></ul>
-      <div class="row">
-        <button class="btn secondary" type="button" id="whatsNewClose">閉じる</button>
-        <a class="link-more" href="data.html">更新履歴</a>
-      </div>
-    </div>
-
-    <!-- ホーム画面に追加していないときの警告（iPhone・iPad のブラウザ。spec 10.2） -->
-    <div class="card install-card" id="installCard" hidden>
-      <p><strong>ホーム画面に追加して使ってください</strong></p>
-      <p>このままSafariで使うと、7日ほど開かなかったときに<strong>記録が消えることがあります</strong>。ホーム画面のアプリなら消えません。</p>
-      <ol class="install-steps">
-        <li>画面の下（iPadは上）の<strong>共有ボタン</strong>（四角から上向きの矢印）を押す</li>
-        <li>「<strong>ホーム画面に追加</strong>」を押す（見つからなければ、下に動かすか「その他」の中）</li>
-        <li>右上の「追加」を押し、ホーム画面の<strong>Pourfolio</strong>から開く</li>
-      </ol>
-    </div>
-
-    <!-- 保存の促し（G2） -->
-    <div class="card backup-card" id="backupCard" hidden>
-      <p><strong>記録を書き出しましょう</strong></p>
-      <p class="muted" id="backupReason"></p>
-      <div class="row">
-        <a class="btn" href="data.html">書き出す</a>
-      </div>
-    </div>
-
-    <!-- 自動ファイル保存（X1、PC）が止まっているとき -->
-    <div class="card backup-card" id="autosaveCard" hidden>
-      <p><strong>自動ファイル保存が止まっています</strong></p>
-      <p class="muted" id="autosaveText"></p>
-      <div class="row">
-        <button class="btn" type="button" id="autosaveResume">再開する</button>
-      </div>
-    </div>
-
     <div class="card resume-card" id="resumeCard" hidden>
       <p><strong>淹れている途中の1杯があります</strong></p>
       <p class="muted" id="resumeWhen"></p>
@@ -119,6 +80,46 @@
       </div>
       <div class="stack" id="todayActions"></div>
     </section>
+
+    <!-- お知らせ（版・ホーム画面に追加・書き出し・自動保存）は「淹れる」のあとに置く。上に積むと主な操作が画面2つ分下になるため（総仕上げの63番） -->
+    <!-- 更新のあとに一度だけ出す「Ver ○ になりました」 -->
+    <div class="card whatsnew-card" id="whatsNewCard" hidden>
+      <p><strong id="whatsNewTitle"></strong></p>
+      <ul id="whatsNewList"></ul>
+      <div class="row">
+        <button class="btn secondary" type="button" id="whatsNewClose">閉じる</button>
+        <a class="link-more" href="data.html">更新履歴</a>
+      </div>
+    </div>
+
+    <!-- ホーム画面に追加していないときの警告（iPhone・iPad のブラウザ。spec 10.2） -->
+    <div class="card install-card" id="installCard" hidden>
+      <p><strong>ホーム画面に追加して使ってください</strong></p>
+      <p>このままSafariで使うと、7日ほど開かなかったときに<strong>記録が消えることがあります</strong>。ホーム画面のアプリなら消えません。</p>
+      <ol class="install-steps">
+        <li>画面の下（iPadは上）の<strong>共有ボタン</strong>（四角から上向きの矢印）を押す</li>
+        <li>「<strong>ホーム画面に追加</strong>」を押す（見つからなければ、下に動かすか「その他」の中）</li>
+        <li>右上の「追加」を押し、ホーム画面の<strong>Pourfolio</strong>から開く</li>
+      </ol>
+    </div>
+
+    <!-- 保存の促し（G2） -->
+    <div class="card backup-card" id="backupCard" hidden>
+      <p><strong>記録を書き出しましょう</strong></p>
+      <p class="muted" id="backupReason"></p>
+      <div class="row">
+        <a class="btn secondary" href="data.html">書き出す</a>
+      </div>
+    </div>
+
+    <!-- 自動ファイル保存（X1、PC）が止まっているとき -->
+    <div class="card backup-card" id="autosaveCard" hidden>
+      <p><strong>自動ファイル保存が止まっています</strong></p>
+      <p class="muted" id="autosaveText"></p>
+      <div class="row">
+        <button class="btn secondary" type="button" id="autosaveResume">再開する</button>
+      </div>
+    </div>
 
     <!-- 暑い日（X16）：今日の最高気温が線以上ならアイスをすすめる -->
     <section class="card" id="hotCard" hidden>
