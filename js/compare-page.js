@@ -381,7 +381,10 @@ async function init() {
   else await showList();
 }
 
-$('startForm').addEventListener('submit', onStart);
+$('startForm').addEventListener('submit', (e) => {
+  e.preventDefault(); // 処理中の2回目でも、ブラウザの送信は止める
+  onStart(e);
+});
 $('reveal').addEventListener('click', onReveal);
 $('remove').addEventListener('click', async () => {
   if (!confirm('この飲み比べをやめますか？淹れた抽出と評価は残ります')) return;

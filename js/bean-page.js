@@ -36,6 +36,31 @@ import { roastPreferences, preferenceForBean, preferenceText } from './core/comp
 import { $, el, queryParam, showMessage, freshnessPill, frozenPill, stepperField, svgElement } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
 import { showCard } from './dismiss-card.js';
+import { singleFlight } from './core/once.js';
+
+/**
+ * 送信の処理を、終わるまで2回目を受け付けない形にする（2-8 の13番：冷凍する・1杯淹れたなどの2度押しで2件できないように）。
+ * 処理中は送信ボタンを押せなくし、失敗したら赤い文で知らせる
+ */
+function guarded(handler, msgId) {
+  const run = singleFlight(async (event, form) => {
+    const buttons = [...form.querySelectorAll('button[type="submit"]')];
+    buttons.forEach((b) => (b.disabled = true));
+    try {
+      await handler(event);
+    } catch (err) {
+      console.error(err);
+      showMessage(err?.message ? `できませんでした：${err.message}` : 'できませんでした。もう一度押してください', 'error', msgId);
+    } finally {
+      buttons.forEach((b) => (b.disabled = false));
+    }
+  });
+  // 処理中の2回目でも、ブラウザの送信（画面の読み直し）は必ず止める
+  return (event) => {
+    event.preventDefault();
+    run(event, event.currentTarget);
+  };
+}
 
 const db = openDb();
 const beanId = queryParam('id');
@@ -305,11 +330,19 @@ function renderFrozen(inFreezer, parts) {
             {
               class: 'btn secondary small',
               type: 'button',
-              onclick: async () => {
-                await takeOutPortion(db, p.id);
+              onclick: singleFlight(async (ev) => {
+                ev.currentTarget.disabled = true; // 2度押しで「冷凍庫にない袋です」にならないように（2-8 の13番）
+                try {
+                  await takeOutPortion(db, p.id);
+                } catch (err) {
+                  console.error(err);
+                  showMessage(err.message, 'error', 'fzMsg');
+                  ev.currentTarget.disabled = false;
+                  return;
+                }
                 showMessage(`#${p.labelNo}（${formatG(p.grams)}）を取り出し、常温に戻しました`, 'ok', 'fzMsg');
                 await render();
-              },
+              }),
             },
             '取り出す',
           ),
@@ -328,8 +361,7 @@ function renderFrozen(inFreezer, parts) {
   renderFreezeTotal();
 }
 
-$('freezeForm').addEventListener('submit', async (event) => {
-  event.preventDefault();
+$('freezeForm').addEventListener('submit', guarded(async (event) => {
   const { value, errors } = normalizeFreezeInput(readFreezeForm(), { availableG: roomG });
   for (const span of event.target.querySelectorAll('.field-error')) span.textContent = errors[span.dataset.for] ?? '';
   if (!value) return;
@@ -343,7 +375,7 @@ $('freezeForm').addEventListener('submit', async (event) => {
   $('freezeDetails').open = false;
   fz.count.input.value = '';
   await render();
-});
+}, 'fzMsg'));
 
 /** 入荷待ち：注文日と、届く重さの目安 */
 async function renderArrival(bean) {
@@ -358,8 +390,7 @@ async function renderArrival(bean) {
   if (!$('arrivalDate').value) $('arrivalDate').value = localYmd();
 }
 
-$('arrivalForm').addEventListener('submit', async (event) => {
-  event.preventDefault();
+$('arrivalForm').addEventListener('submit', guarded(async (event) => {
   const form = event.target;
   const raw = Object.fromEntries(new FormData(form));
   const { value, errors } = arrivalChanges(raw);
@@ -369,19 +400,17 @@ $('arrivalForm').addEventListener('submit', async (event) => {
   form.reset();
   showMessage(`届いた豆を登録しました（${formatG(value.actualWeightG)}、焙煎日 ${formatYmdJa(value.roastDate)}）`);
   await render();
-});
+}));
 
-$('cupForm').addEventListener('submit', async (event) => {
-  event.preventDefault();
+$('cupForm').addEventListener('submit', guarded(async () => {
   const g = readGrams($('cupDose'), 100);
   if (g == null) return showMessage('粉の量は0より大きい数字（g）で入れてください', 'error');
   await recordCupUsage(db, beanId, g);
   showMessage(`${formatG(g)} 減らしました`);
   await render();
-});
+}));
 
-$('measureForm').addEventListener('submit', async (event) => {
-  event.preventDefault();
+$('measureForm').addEventListener('submit', guarded(async () => {
   const input = $('measured');
   const g = parseNumber(input.value);
   if (g == null || Number.isNaN(g) || g < 0 || g > 5000) return showMessage('今の重さを0以上の数字（g）で入れてください', 'error');
@@ -389,10 +418,9 @@ $('measureForm').addEventListener('submit', async (event) => {
   input.value = '';
   showMessage(tx ? `残量を ${formatG(g)} に合わせました（${tx.deltaG > 0 ? '+' : ''}${formatG(tx.deltaG)}）` : '残量と同じでした。変更はありません');
   await render();
-});
+}));
 
-$('outForm').addEventListener('submit', async (event) => {
-  event.preventDefault();
+$('outForm').addEventListener('submit', guarded(async (event) => {
   const g = readGrams($('outG'));
   if (g == null) return showMessage('減らす量を0より大きい数字（g）で入れてください', 'error');
   const kind = new FormData(event.target).get('outKind') === 'discard' ? 'discard' : 'gift';
@@ -400,7 +428,7 @@ $('outForm').addEventListener('submit', async (event) => {
   $('outG').value = '';
   showMessage(`${TX_KINDS[kind]}で ${formatG(g)} 減らしました`);
   await render();
-});
+}));
 
 $('toggleFinished').addEventListener('click', async (event) => {
   const next = event.target.dataset.status === 'finished' ? 'open' : 'finished';

@@ -819,7 +819,10 @@ $('speechToggle').addEventListener('click', async () => {
   if (!speechOn) cue.stopSpeaking();
   await updateSettings(db, { speechOn });
 });
-$('resultView').addEventListener('submit', onSave);
+$('resultView').addEventListener('submit', (e) => {
+  e.preventDefault(); // 保存中の2回目でも、ブラウザの送信は止める
+  onSave(e);
+});
 $('discard').addEventListener('click', discard);
 $('crumb').addEventListener('click', (e) => {
   if (draft && !confirm('記録せずに戻りますか？途中の内容は消えます')) {
