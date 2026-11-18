@@ -8,6 +8,7 @@
   --accent: #8b5a34;
   --accent-fg: #ffffff;
   --ok: #2e7d32;
+  --danger: #c62828;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -19,6 +20,7 @@
     --accent: #c98a55;
     --accent-fg: #1a1310;
     --ok: #81c784;
+    --danger: #ef9a9a;
   }
 }
 * { box-sizing: border-box; }
@@ -37,6 +39,7 @@ main {
   padding: max(24px, env(safe-area-inset-top)) 16px max(32px, env(safe-area-inset-bottom));
 }
 h1 { font-size: 1.6rem; margin: 0 0 4px; }
+h2 { font-size: 1.2rem; margin: 0 0 4px; }
 p { margin: 8px 0; }
 .muted { color: var(--muted); font-size: 0.9rem; }
 .card {
@@ -77,3 +80,15 @@ dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; f
 dt { color: var(--muted); }
 dd { margin: 0; }
 .ok { color: var(--ok); font-weight: 600; }
+.error { color: var(--danger); font-weight: 600; }
+.btn.danger { background: transparent; color: var(--danger); border: 2px solid var(--danger); }
+.danger-zone { border-color: var(--danger); }
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.btn:focus-visible, input:focus-visible + .btn, label.btn:focus-within { outline: 3px solid var(--accent); outline-offset: 2px; }
