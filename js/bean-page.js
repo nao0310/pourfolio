@@ -34,11 +34,15 @@ import { freshness, FRESHNESS_WINDOWS, FALLBACK_GROUP, STAGES } from './core/fre
 import { roastGroup, ROAST_GROUPS } from './core/roast.js';
 import { localYmd, formatYmdJa, formatG, formatDateTimeJa, formatDateJa } from './core/format.js';
 import { roastPreferences, preferenceForBean, preferenceText } from './core/compare.js';
-import { $, el, queryParam, showMessage, freshnessPill, frozenPill, stepperField, svgElement } from './ui.js';
+import { $, el, queryParam, showMessage as showBoxMessage, showToast, freshnessPill, frozenPill, stepperField, svgElement } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
 import { showCard } from './dismiss-card.js';
 import { singleFlight } from './core/once.js';
 import { askConfirm } from './confirm-box.js';
+
+// 豆の画面の知らせは、決まった場所（量り直しの下）に出すと上にいるとき見えないので、画面の上に浮かべて出す（2-8の30番）。
+// 冷凍の欄の知らせ（fzMsg）は押した所のすぐ下なので、そのまま
+const showMessage = (text, kind = 'ok', id = 'msg') => (id === 'msg' ? showToast(text, kind) : showBoxMessage(text, kind, id));
 
 /**
  * 送信の処理を、終わるまで2回目を受け付けない形にする（2-8 の13番：冷凍する・1杯淹れたなどの2度押しで2件できないように）。
