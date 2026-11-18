@@ -260,6 +260,7 @@ function renderCups() {
 function renderReveal() {
   const blind = exp.blind !== false;
   $('revealTitle').textContent = blind ? '3. 答え合わせ' : '3. 結果を見る';
+  $('reveal').textContent = blind ? '答え合わせをする' : '結果を見る'; // 見出しとボタンの言葉をそろえる（2-8の25番）
   $('revealHint').textContent = blind ? '全部に★を付けたら、カップの底を見て、番号ごとに焙煎度を選びます' : '全部に★を付けたら押します';
   $('answers').replaceChildren(
     ...(blind

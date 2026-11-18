@@ -13,7 +13,7 @@ export const FORGET_DAYS = 30;
 export const DISMISS_RULES = Object.freeze({
   cool: { days: null, label: 'この杯ではもう出しません' },
   unrated: { days: null, label: 'この杯ではもう出しません' },
-  resume: { days: null, label: 'この途中の抽出ではもう出しません（下書きは残っています）' },
+  resume: { days: null, label: 'この途中の1杯ではもう出しません（下書きは残っています）' },
   compare: { days: 1, label: '明日また出します' },
   alert: { days: null, label: '在庫の様子が変わったらまた出します' },
   restock: { days: null, label: '注文の目安が変わったらまた出します' },

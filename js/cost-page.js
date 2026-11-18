@@ -108,5 +108,5 @@ for (const r of document.querySelectorAll('input[name="groupBy"]')) {
 registerServiceWorker();
 render().catch((err) => {
   console.error(err);
-  $('summary').replaceChildren(el('dt', { class: 'error' }, '読み込みに失敗しました'));
+  $('summary').replaceChildren(el('dt', { class: 'error' }, '読み込めませんでした。開き直してください'));
 });

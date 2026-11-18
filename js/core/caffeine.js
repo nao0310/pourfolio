@@ -71,6 +71,6 @@ export function caffeineKeeper({ now, cutoff = null, mg = 0, limitMg = DAILY_CAF
   if (pastCutoff) sub = `${cutoff}を過ぎました。今日はカフェインレスか少なめにしましょう`;
   else if (over) sub = '目安に届きました。今日はカフェインレスか少なめにしましょう';
   else if (minutesLeft != null) sub = `控える時刻 ${cutoff} まで、あと${durationText(minutesLeft)}`;
-  else sub = '控える時刻は「今日の一杯」の画面で決められます';
+  else sub = '控える時刻は「今日の1杯」の画面で決められます';
   return { mg, limitMg, pct: Math.min(100, Math.round((mg / limitMg) * 100)), minutesLeft, late: pastCutoff || over, over, main, sub };
 }

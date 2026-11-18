@@ -85,5 +85,5 @@ async function render() {
 registerServiceWorker();
 render().catch((err) => {
   console.error(err);
-  $('list').replaceChildren(el('p', { class: 'error' }, '器具の読み込みに失敗しました'));
+  $('list').replaceChildren(el('p', { class: 'error' }, '器具を読み込めませんでした。開き直してください'));
 });

@@ -75,7 +75,7 @@ $('clear').addEventListener('click', async () => {
 
 registerServiceWorker();
 render().catch((err) => {
-  $('saved').textContent = '読み込みに失敗しました';
+  $('saved').textContent = '読み込めませんでした。開き直してください';
   console.error(err);
 });
 showStatus();

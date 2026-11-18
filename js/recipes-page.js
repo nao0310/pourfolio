@@ -22,7 +22,7 @@ function favButton(recipe) {
           await render();
         } catch (err) {
           console.error(err);
-          showMessage('保存に失敗しました', 'error');
+          showMessage('保存できませんでした。もう一度押してください', 'error');
         }
       },
     },
@@ -93,5 +93,5 @@ async function render() {
 registerServiceWorker();
 Promise.all([renderLast(), render()]).catch((err) => {
   console.error(err);
-  $('list').replaceChildren(el('p', { class: 'error' }, 'レシピの読み込みに失敗しました'));
+  $('list').replaceChildren(el('p', { class: 'error' }, 'レシピを読み込めませんでした。開き直してください'));
 });

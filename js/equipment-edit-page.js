@@ -201,7 +201,7 @@ form.addEventListener('submit', async (event) => {
     location.replace('equipment.html');
   } catch (err) {
     console.error(err);
-    showMessage('保存に失敗しました', 'error');
+    showMessage('保存できませんでした。もう一度押してください', 'error');
     $('save').disabled = false;
   }
 });
@@ -240,5 +240,5 @@ async function init() {
 registerServiceWorker();
 init().catch((err) => {
   console.error(err);
-  showMessage('読み込みに失敗しました', 'error');
+  showMessage('読み込めませんでした。開き直してください', 'error');
 });

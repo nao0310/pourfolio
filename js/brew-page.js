@@ -132,7 +132,7 @@ async function loadPlan() {
   }
   const brewId = queryParam('brew');
   if (brewId) {
-    // 今日の一杯（F3）：その豆で★がいちばん高かった杯の淹れ方（挽き目は実際に挽いた目盛り）
+    // 今日の1杯（F3）：その豆で★がいちばん高かった杯の淹れ方（挽き目は実際に挽いた目盛り）
     const src = await getBrew(db, brewId);
     return src ? loadFromBrew(src) : null;
   }
@@ -296,7 +296,7 @@ async function showPlan(loaded, lastBeanId) {
   const missing = askedBean && !usable.some((b) => b.id === askedBean);
   if (!$('bean').value && usable[0] && !missing) $('bean').value = usable[0].id;
   renderBeanNote(preferred);
-  if (missing) $('beanNote').textContent = '指定された豆が見つかりません（削除した豆です）。淹れる豆を選んでください';
+  if (missing) $('beanNote').textContent = '指定した豆が見つかりません。削除したのかもしれません。淹れる豆を選んでください';
   renderSuggestCard();
   renderAdjust();
   renderPlanBody();
@@ -392,7 +392,7 @@ function findGhost(recipeId, beanId) {
 /** 新しく始める。途中の抽出があれば、捨ててよいか確かめる */
 async function beginNew(withTimer) {
   if (!loadedPlan) return;
-  if (loadDraft() && !(await askConfirm('途中の抽出を捨てて、新しく始めますか？', { ok: '新しく始める', danger: true }))) return;
+  if (loadDraft() && !(await askConfirm('淹れている途中の1杯を捨てて、新しく始めますか？', { ok: '新しく始める', danger: true }))) return;
   draft = {
     ...newDraft(loadedPlan.plan, $('bean').value || null, withTimer ? Date.now() : null, precheck),
     returnSearch: location.search,
@@ -508,8 +508,8 @@ function renderTimer(v, sec) {
     count.textContent = `注ぎ終わりまで あと${v.secsLeft}秒`;
     if (v.secsLeft <= 3) count.classList.add('soon');
     $('tNext').textContent = v.flowGps != null ? `${v.pourSec}秒で注ぐ（流速 ${v.flowGps}g/秒）` : '';
-    $('tapLabel').textContent = v.isLast ? '注ぎ終えた' : '注湯完了';
-    $('tapSub').textContent = '注ぎ終えたら押します（画面の下半分のどこでもよい）';
+    $('tapLabel').textContent = '注湯完了';
+    $('tapSub').textContent = v.isLast ? '最後の注湯です。注ぎ終えたら押すと、落ち切り待ちになります' : '注ぎ終えたら押します（画面の下半分のどこでもよい）';
     return;
   }
 
@@ -530,8 +530,8 @@ function renderTimer(v, sec) {
   }
   if (v.canTap) {
     $('tNext').textContent = `${v.name}を注ぎ終えたら押してください`;
-    $('tapLabel').textContent = v.isLast ? '注ぎ終えた' : '注湯完了';
-    $('tapSub').textContent = v.isLast ? '押すと落ち切り待ちになります' : '押さなくても、次の注湯の時刻に進みます';
+    $('tapLabel').textContent = '注湯完了';
+    $('tapSub').textContent = v.isLast ? '最後の注湯です。押すと落ち切り待ちになります' : '押さなくても、次の注湯の時刻に進みます';
   } else {
     $('tNext').textContent = '';
     $('tapLabel').textContent = '待っています';
@@ -546,7 +546,7 @@ function onTap() {
   const sec = elapsedSec(draft, now);
   const v = timerView(draft.plan, draft.laps, sec);
   if (v.phase === 'drawdown') {
-    if (!canFinish(draft.laps, sec)) return; // 「注ぎ終えた」の2度押し（2-8 の5番）
+    if (!canFinish(draft.laps, sec)) return; // 最後の「注湯完了」の2度押し（2-8 の5番）
     draft = finishDraft(draft, now);
     saveDraft(draft);
     stopTimer();

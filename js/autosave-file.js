@@ -103,7 +103,7 @@ export async function autosaveAfterChange(db) {
       await writeNow(db, handle);
     } catch (err) {
       console.error(err);
-      await setLocal('lastError', err?.name === 'NotFoundError' ? 'フォルダが見つかりません' : '書き込みに失敗');
+      await setLocal('lastError', err?.name === 'NotFoundError' ? 'フォルダが見つかりません' : '書き込めませんでした');
     }
   })().catch((err) => console.error(err));
   await Promise.race([job, new Promise((r) => setTimeout(r, AUTOSAVE_WAIT_MS))]);

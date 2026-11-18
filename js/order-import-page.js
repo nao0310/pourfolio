@@ -135,7 +135,7 @@ $('save').addEventListener('click', async () => {
     location.replace(`beans.html?registered=${beans.length}`);
   } catch (err) {
     console.error(err);
-    showMessage('登録に失敗しました', 'error');
+    showMessage('登録できませんでした。もう一度押してください', 'error');
     $('save').disabled = false;
   }
 });

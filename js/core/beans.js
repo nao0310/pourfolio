@@ -121,7 +121,7 @@ export function normalizeBeanInput(raw) {
       flavorNotes: text('flavorNotes'),
       memo: text('memo'),
       status,
-      decaf: raw.decaf === 'on' || raw.decaf === true, // カフェインレス（今日の一杯 F3 で、控える時間に優先する）
+      decaf: raw.decaf === 'on' || raw.decaf === true, // カフェインレス（今日の1杯 F3 で、控える時間に優先する）
     },
     errors,
   };

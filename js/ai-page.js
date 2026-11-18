@@ -163,5 +163,5 @@ $('answerBean').addEventListener('change', renderLink);
 registerServiceWorker();
 init().catch((err) => {
   console.error(err);
-  showMessage('読み込みに失敗しました', 'error', 'copyMsg');
+  showMessage('読み込めませんでした。開き直してください', 'error', 'copyMsg');
 });

@@ -1,5 +1,5 @@
 // 焙煎所・店の台帳（C7、純粋関数）
-// 豆の「購入先」ごとに、買った袋の数・買った回数・使った金額・平均★・1杯の平均単価をまとめる。
+// 豆の「購入先」ごとに、買った袋の数・買った回数・買った額・平均★・1杯の平均単価をまとめる。
 // 店名は全角・半角、大文字・小文字、空白の違いを同じ店として数える。
 // お気に入りは設定（settings.favoriteShops：店の鍵の一覧）に覚える（表は増やさない）。
 
@@ -24,7 +24,7 @@ const displayName = (name) => String(name ?? '').trim().replace(/\s+/g, ' ');
 /**
  * 店の台帳
  * - 買った回数：注文ごとに1回。注文につながっていない豆は、買った日ごとに1回
- * - 使った金額：豆の価格の合計＋その店の注文の送料
+ * - 買った額：豆の価格の合計＋その店の注文の送料
  * @param {{beans:object[], orders?:object[], brews?:object[], tastings?:object[], favorites?:string[]}} p
  * @returns {{key:string, name:string, favorite:boolean, bags:number, purchases:number, spentJpy:number, unpricedBags:number,
  *   cups:number, avgStars:number|null, rated:number, avgCostJpy:number|null, yenPerStar:number|null,

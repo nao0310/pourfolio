@@ -24,7 +24,7 @@ function render(month) {
       { class: 'rp-stats' },
       stat('杯数', `${r.cups}杯`, `${r.days}日・${r.beansUsed}種類の豆`),
       stat('平均の★', r.avgStars != null ? `★${r.avgStars}` : '—', r.prevAvgStars != null ? `先月 ★${r.prevAvgStars}` : ''),
-      stat('使った額', `${yen(r.spend.drankJpy)}`, r.spend.uncostedCups ? `原価のない${r.spend.uncostedCups}杯を除く` : '飲んだ豆の原価'),
+      stat('飲んだ額', `${yen(r.spend.drankJpy)}`, r.spend.uncostedCups ? `原価のない${r.spend.uncostedCups}杯を除く` : '飲んだ豆の原価'),
       stat('買った額', `${yen(r.spend.boughtJpy)}`, `${r.spend.bags}袋${r.spend.unpricedBags ? `（価格なし${r.spend.unpricedBags}袋）` : ''}・送料込み`),
     ),
     el('section', {}, el('h3', {}, 'ベスト3'), r.best.length ? el('ol', { class: 'rp-best' }, ...r.best.map((b) => el('li', {}, el('span', { class: 'num' }, `★${b.stars}`), `　${b.beanName}${b.roastLevel ? `（${b.roastLevel}）` : ''}`, el('span', { class: 'muted num' }, `　${formatYmdJa(b.ymd)}${b.ratio ? `・1:${b.ratio}` : ''}`)))) : el('p', { class: 'muted' }, '★を付けた杯がありません')),

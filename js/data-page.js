@@ -104,7 +104,7 @@ $('export').addEventListener('click', async () => {
     await render();
   } catch (err) {
     console.error(err);
-    showMessage('書き出しに失敗しました', 'error');
+    showMessage('書き出せませんでした。もう一度押してください', 'error');
   }
 });
 
@@ -144,7 +144,7 @@ $('exportCsv').addEventListener('click', async () => {
     showMessage(`CSVを書き出しました（${files.map((f) => f.name).join('、')}）`);
   } catch (err) {
     console.error(err);
-    showMessage('CSVの書き出しに失敗しました', 'error');
+    showMessage('CSVを書き出せませんでした。もう一度押してください', 'error');
   }
 });
 
@@ -170,7 +170,7 @@ $('file').addEventListener('change', async (event) => {
     await render();
   } catch (err) {
     console.error(err);
-    showMessage(err instanceof BackupError ? err.message : '復元に失敗しました', 'error');
+    showMessage(err instanceof BackupError ? err.message : '復元できませんでした。ファイルを確かめて、もう一度選んでください', 'error');
   }
 });
 

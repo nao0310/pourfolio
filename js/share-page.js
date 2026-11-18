@@ -39,7 +39,7 @@ async function renderSend() {
 async function initSend(id) {
   [recipe, beans, equipment] = await Promise.all([getRecipe(db, id), listBeans(db), listEquipment(db)]);
   if (!recipe) {
-    $('emptyText').textContent = 'レシピが見つかりません。消したレシピかもしれません。';
+    $('emptyText').textContent = 'レシピが見つかりません。削除したのかもしれません。';
     $('empty').hidden = false;
     return;
   }
@@ -138,5 +138,5 @@ async function init() {
 registerServiceWorker();
 init().catch((err) => {
   console.error(err);
-  showMessage('読み込みに失敗しました。開き直してください', 'error');
+  showMessage('読み込めませんでした。開き直してください', 'error');
 });

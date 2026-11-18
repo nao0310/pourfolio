@@ -1,4 +1,4 @@
-// 今日の一杯（F3、spec 6.4）：手元の豆ごとに点数を付け、上位3つを理由と一緒に出す（純粋関数）
+// 今日の1杯（F3、spec 6.4）：手元の豆ごとに点数を付け、上位3つを理由と一緒に出す（純粋関数）
 // 点数＝予測評価（★の目安）＋飲み頃・在庫・気分（F4）・カフェインの補正。
 // 淹れ方は、その豆で★がいちばん高かった杯の計画。まだ淹れていない豆は初期レシピ（F2）。
 
@@ -124,7 +124,7 @@ function attrPrediction(bean, prefs) {
 }
 
 /**
- * 今日の一杯の候補（点数の高い順）。
+ * 今日の1杯の候補（点数の高い順）。
  * @param {{rows:object[], brews?:object[], tastings?:object[], beans?:object[], now?:Date, mood?:string|null,
  *   cutoff?:string|null, todayCaffeineMg?:number, n?:number}} p rows は home.js の beanRows の結果
  * @returns {{bean:object, score:number, predicted:number, reasons:string[], base:{kind:'brew', brewId:string}|{kind:'initial'}, cups:number, mood:string|null, n:number}[]}

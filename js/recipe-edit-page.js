@@ -416,7 +416,7 @@ form.addEventListener('submit', async (event) => {
     location.replace('recipes.html');
   } catch (err) {
     console.error(err);
-    showMessage('保存に失敗しました', 'error');
+    showMessage('保存できませんでした。もう一度押してください', 'error');
     $('save').disabled = false;
   }
 });
@@ -436,6 +436,7 @@ async function init() {
     if (!recipe) {
       $('title').textContent = 'レシピが見つかりません';
       form.hidden = true;
+      form.after(el('p', { class: 'muted' }, '削除したのかもしれません。'), el('p', {}, el('a', { class: 'btn block', href: 'recipes.html' }, 'レシピの一覧へ')));
       return;
     }
     document.title = 'レシピの編集 - Pourfolio';
@@ -467,5 +468,5 @@ async function init() {
 registerServiceWorker();
 init().catch((err) => {
   console.error(err);
-  showMessage('読み込みに失敗しました', 'error');
+  showMessage('読み込めませんでした。開き直してください', 'error');
 });
