@@ -9,6 +9,7 @@ import { daysBetween } from './freshness.js';
 import { localYmd } from './format.js';
 import { daysOffRoastFromPortion } from './frozen.js';
 import { normalizeTds } from './extraction.js';
+import { contextFromPlan } from './plan-adjust.js';
 
 /** 下書きの形の版。形を変えたら上げ、古い下書きは捨てる */
 export const DRAFT_VERSION = 1;
@@ -243,7 +244,7 @@ export function buildBrew({ draft, value, at, bean = null, portion = null }) {
     timerUsed: draft.startedAtMs != null,
     precheck: draft.precheck ? normalizePrecheck(draft.precheck) : null, // 抽出前チェック（A5）。チェックの欄を使わなかった杯は null
     beanState: null,
-    context: {},
+    context: contextFromPlan(plan), // 気分（F4）・杯数・氷（A6）。調整しなかった杯は {}
     derived: { ratio: ratioOf(actual.doseG, actual.waterG), daysOffRoast, diff },
     memo: value.memo,
   };
