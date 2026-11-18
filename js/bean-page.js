@@ -74,12 +74,17 @@ function readGrams(input, max = 5000) {
   return Math.round(g * 10) / 10;
 }
 
-/** 飲み頃の帯：4段階を横に並べ、今日の位置に印を付ける */
+/**
+ * 飲み頃の帯：4段階を横に並べ、今日の位置に印を付ける。
+ * 段階の名前は帯の中に入れると幅320・375で切れるので、帯の下に色の印と並べる（2-8の27番）
+ */
 function renderBand(f, group) {
   const w = FRESHNESS_WINDOWS[group];
   const total = w.pastUntil + 8; // 「早めに消費」も少し見せる
-  const seg = (stage, from, to) =>
-    el('span', { class: `seg stage-${stage}`, style: `flex-grow:${to - from}` }, to - from >= 3 ? STAGES[stage] : '');
+  const seg = (stage, from, to) => el('span', { class: `seg stage-${stage}`, style: `flex-grow:${to - from}` });
+  $('bandLegend').replaceChildren(
+    ...['resting', 'peak', 'past', 'useSoon'].map((stage) => el('span', { class: 'band-key' }, el('span', { class: `band-dot stage-${stage}` }), STAGES[stage])),
+  );
   const children = [
     seg('resting', 0, w.restUntil + 1),
     seg('peak', w.restUntil + 1, w.peakUntil + 1),
@@ -87,8 +92,9 @@ function renderBand(f, group) {
     seg('useSoon', w.pastUntil + 1, total),
   ];
   if (f) {
+    // 印が帯の端からはみ出さないよう、端から3px内側に収める
     const pos = Math.min(Math.max(f.days + 0.5, 0), total) / total;
-    children.push(el('span', { class: 'band-marker', style: `left:${(pos * 100).toFixed(1)}%` }));
+    children.push(el('span', { class: 'band-marker', style: `left:clamp(3px, ${(pos * 100).toFixed(1)}%, calc(100% - 3px))` }));
   }
   $('band').replaceChildren(...children);
 }

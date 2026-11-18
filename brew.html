@@ -179,7 +179,6 @@
   <section class="timer-screen" id="timerView" hidden aria-label="抽出タイマー">
     <div class="timer-bar">
       <button class="timer-small" type="button" id="cancel">やめる</button>
-      <button class="timer-small" type="button" id="speechToggle" aria-pressed="true">読み上げ オン</button>
     </div>
     <div class="timer-top">
       <p class="timer-elapsed num" id="tElapsed">0:00</p>
@@ -190,6 +189,10 @@
       <p class="timer-next muted" id="tNext"></p>
       <p class="timer-ghost num" id="tGhost"></p>
       <p class="timer-wake" id="tWake"></p>
+    </div>
+    <!-- 読み上げの切り替えは、片手の親指が届く真ん中の右に置く（2-8の34番）。下半分の「注湯完了」とは分ける -->
+    <div class="timer-tools">
+      <button class="timer-small" type="button" id="speechToggle" aria-pressed="true">読み上げ オン</button>
     </div>
     <button class="timer-tap" type="button" id="tap">
       <span id="tapLabel">注湯完了</span>
