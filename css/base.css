@@ -652,3 +652,7 @@ p > a:not(.btn):only-child { display: inline-block; padding: 11px 0; }
 .link-list { margin: 0; padding-left: 1.2em; }
 .link-list li { padding: 6px 0; }
 .pref-note { color: var(--accent); font-size: 0.9rem; font-weight: 700; }
+
+/* TDS（A8）：評価の画面であとから入れる */
+.tds-row input { max-width: 8em; font-size: 1.25rem; }
+.tds-row .btn { flex: 0 0 auto; margin-left: auto; }

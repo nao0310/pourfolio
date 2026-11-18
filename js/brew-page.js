@@ -49,6 +49,9 @@ let loadedPlan = null;
 let suggestions = [];
 let portions = [];
 let txs = [];
+/** 登録した器具と水（水は D3。実績の確認で選ぶ） */
+let equipmentList = [];
+const waters = () => equipmentList.filter((e) => e.kind === 'water');
 /** 抽出前チェック（A5）で押した項目 */
 let precheck = {};
 /** 焙煎度比較（X27）で淹れるときの飲み比べ（?compare=ID） */
@@ -427,6 +430,8 @@ function readForm() {
     grindSetting: $('rGrind').value,
     totalSec: $('rTotal').value,
     beverageG: fields.bev.input.value,
+    tdsPct: fields.tds.input.value,
+    waterId: $('rWaterRow').hidden ? '' : $('rWaterId').value,
     memo: $('rMemo').value,
     useFrozen: !$('rFrozenRow').hidden && $('rFrozen').checked,
   };
@@ -465,7 +470,18 @@ function buildResultForm() {
     hint: '量ったときだけ入れます',
     errorFor: 'beverageG',
   });
+  fields.tds = make('rTdsBox', {
+    id: 'rTds',
+    label: 'TDS（屈折計）',
+    unit: '%',
+    step: 0.01,
+    decimals: 2,
+    min: 0,
+    hint: '屈折計で測ったときだけ入れます。あとから評価の画面でも入れられます',
+    errorFor: 'tdsPct',
+  });
   for (const id of ['rBean', 'rGrind', 'rTotal', 'rMemo']) $(id).addEventListener('input', onFormInput);
+  $('rWaterId').addEventListener('change', onFormInput);
   $('rBean').addEventListener('change', () => {
     renderFrozenChoice();
     onFormInput();
@@ -482,6 +498,8 @@ function showResult() {
   fields.water.set(input.waterG);
   fields.temp.set(input.tempC);
   fields.bev.set(input.beverageG);
+  fields.tds.set(input.tdsPct ?? '');
+  fillWaterSelect(input.waterId);
   $('rGrind').value = input.grindSetting ?? '';
   $('rTotal').value = input.totalSec ?? '';
   $('rMemo').value = input.memo ?? '';
@@ -507,6 +525,20 @@ function showResult() {
   document.title = '実績の確認 - Pourfolio';
   renderDiff();
   window.scrollTo(0, 0);
+}
+
+/** 水（D3）を登録しているときだけ選べるようにする。初めは「いつも使う」水 */
+function fillWaterSelect(selected) {
+  const list = waters();
+  $('rWaterRow').hidden = list.length === 0;
+  if (!list.length) return;
+  const def = list.find((w) => w.isDefault) ?? list[0];
+  const cur = selected == null ? def.id : selected;
+  $('rWaterId').replaceChildren(
+    el('option', { value: '' }, '記録しない'),
+    ...list.map((w) => el('option', { value: w.id, selected: w.id === cur }, w.name)),
+  );
+  $('rWaterId').value = list.some((w) => w.id === cur) ? cur : '';
 }
 
 function showErrors(errors) {
@@ -559,7 +591,7 @@ async function init() {
   const settings = await getSettings(db);
   speechOn = settings.speechOn !== false;
   beans = await listBeans(db);
-  [portions, txs] = await Promise.all([listFrozenPortions(db), listAliveTx(db)]);
+  [portions, txs, equipmentList] = await Promise.all([listFrozenPortions(db), listAliveTx(db), listEquipment(db)]);
   const saved = loadDraft();
   const sameAsSaved = saved && (location.search === '' || location.search === saved.returnSearch);
 

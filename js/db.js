@@ -14,6 +14,7 @@ import { nextLabelNos, buildPortions, freezeMemo, isInFreezer } from './core/fro
 import { localYmd } from './core/format.js';
 import { buildPhoto, photosOfBrew } from './core/photos.js';
 import { attachBrew, tastingsToSave } from './core/compare.js';
+import { withTds } from './core/extraction.js';
 
 /** 本番のデータベース名（保存テストの pourfolio-storage-test とは別） */
 export const DB_NAME = 'pourfolio';
@@ -542,6 +543,15 @@ export async function getBrew(db, id) {
 /** 削除の印が付いていない抽出の一覧 */
 export async function listBrews(db) {
   return (await db.table('brews').toArray()).filter(alive);
+}
+
+/** あとから TDS（A8）を入れる・消す（null で消す）。抽出の記録の actual.tdsPct だけを書き換える */
+export async function setBrewTds(db, brewId, tdsPct, now = new Date()) {
+  const b = await getBrew(db, brewId);
+  if (!b) throw new Error('抽出が見つかりません');
+  const next = updateRecord(b, { actual: withTds(b, tdsPct) }, now);
+  await db.table('brews').put(next);
+  return next;
 }
 
 /** いちばん新しい抽出。なければ null */

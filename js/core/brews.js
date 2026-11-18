@@ -8,6 +8,7 @@ import { autoAdvance } from './timer.js';
 import { daysBetween } from './freshness.js';
 import { localYmd } from './format.js';
 import { daysOffRoastFromPortion } from './frozen.js';
+import { normalizeTds } from './extraction.js';
 
 /** 下書きの形の版。形を変えたら上げ、古い下書きは捨てる */
 export const DRAFT_VERSION = 1;
@@ -104,6 +105,8 @@ export function initialActualInput(draft) {
     grindSetting: p.grind?.setting ?? '',
     totalSec: draft.finishedSec != null ? formatSec(draft.finishedSec) : '',
     beverageG: '',
+    tdsPct: '',
+    waterId: null, // null＝いつも使う水を選んでおく
     memo: '',
   };
 }
@@ -137,6 +140,9 @@ export function normalizeActualInput(input) {
     beverageG = null;
   }
 
+  const tds = normalizeTds(input.tdsPct);
+  if (tds.error) errors.tdsPct = tds.error;
+
   let totalSec = typeof input.totalSec === 'number' ? input.totalSec : parseSec(input.totalSec);
   if (totalSec == null || Number.isNaN(totalSec) || totalSec <= 0 || totalSec > 3600) {
     errors.totalSec = '総時間を「3:30」のように入れてください';
@@ -152,6 +158,8 @@ export function normalizeActualInput(input) {
       grindSetting: clean(input.grindSetting),
       totalSec,
       beverageG,
+      tdsPct: tds.value,
+      waterId: clean(input.waterId) || null,
       memo: clean(input.memo),
     },
     errors,
@@ -212,7 +220,7 @@ export function buildBrew({ draft, value, at, bean = null, portion = null }) {
     pours: actualPours(plan, draft.laps),
     totalSec: value.totalSec,
     beverageG: value.beverageG,
-    tdsPct: null,
+    tdsPct: value.tdsPct ?? null, // 屈折計の値（A8）。あとから評価の画面でも入れられる
   };
   const diff = brewDiff(plan, actual);
   const usePortion = portion && portion.beanId === value.beanId ? portion : null;
@@ -229,7 +237,7 @@ export function buildBrew({ draft, value, at, bean = null, portion = null }) {
     suggestionId: plan.suggestionId ?? null, // ダイヤルイン提案（F1）を入れた計画で淹れたとき、その提案
     experimentId: draft.compareId ?? null, // 焙煎度比較（X27）で淹れたとき、その飲み比べ
     frozenPortionId: usePortion?.id ?? null, // 冷凍の袋（C4）を使ったとき、その袋（保存すると取り出したことになる）
-    equipment: { ...(plan.equipment ?? {}), grinderId: plan.grind?.grinderId ?? null },
+    equipment: { ...(plan.equipment ?? {}), grinderId: plan.grind?.grinderId ?? null, waterId: value.waterId ?? null },
     planned: plannedCopy(plan),
     actual,
     timerUsed: draft.startedAtMs != null,

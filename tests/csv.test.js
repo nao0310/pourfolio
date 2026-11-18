@@ -40,6 +40,10 @@ test('抽出の一覧：1杯1行で、豆・計画・実績・評価・提案が
   assert.equal(col('粉量g'), 20.1);
   assert.equal(col('原価円'), Math.round(20.1 * (1200 / 166.5) * 10) / 10, '粉量×（価格÷実重量）');
   assert.equal(col('冷凍の袋'), '');
+  assert.equal(col('TDS%'), ''); // 屈折計の値なし
+  assert.equal(col('抽出収率%'), '');
+  assert.equal(col('推定抽出液g'), ''); // 抽出液を量っている
+  assert.equal(col('カフェインmg'), 156); // 260g × 0.6 × 15 ÷ 15.0
   assert.equal(col('総時間'), '3:35');
   assert.equal(col('グラインダー'), 'サンプル 手挽きミル');
   assert.equal(col('★'), 4);
@@ -51,6 +55,19 @@ test('抽出の一覧：1杯1行で、豆・計画・実績・評価・提案が
   assert.equal(col('抽出ID'), data.brews[0].id);
   assert.equal(col('写真'), 1);
   assert.equal(col('飲み比べ'), ''); // 飲み比べで淹れた杯ではない
+});
+
+test('抽出の一覧（2-5）：TDS・抽出収率・推定抽出液・水', () => {
+  const brews = [
+    { id: 'b1', at: '2026-11-18T01:00:00Z', deletedAt: null, actual: { doseG: 20, waterG: 300, tdsPct: 1.35 }, equipment: { waterId: 'w1' } },
+  ];
+  const equipment = [{ id: 'w1', kind: 'water', name: '浄水', deletedAt: null }];
+  const [head, row] = brewRows({ brews, equipment });
+  const col = (name) => row[head.indexOf(name)];
+  assert.equal(col('TDS%'), 1.35);
+  assert.equal(col('抽出収率%'), 17.6); // 1.35 × (300 − 2×20) ÷ 20
+  assert.equal(col('推定抽出液g'), 260);
+  assert.equal(col('水'), '浄水');
 });
 
 test('抽出の一覧（2-4）：抽出前チェック・香味・雑味・強さと好み・温度帯ごとの★', () => {
