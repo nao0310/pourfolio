@@ -7,6 +7,8 @@ import { initialStockG } from './core/roast.js';
 import { remainingG, adjustDelta } from './core/inventory.js';
 import { makeBackup, mergeRecords } from './core/backup.js';
 import { buildTasting, pickTasting, pickUnratedBrew } from './core/tastings.js';
+import { suggestNext, basePlanForNext, buildSuggestion, pickSuggestionForBrew, linkSuggestions } from './core/dialin.js';
+import { parseNumber } from './core/beans.js';
 
 /** 本番のデータベース名（保存テストの pourfolio-storage-test とは別） */
 export const DB_NAME = 'pourfolio';
@@ -27,6 +29,10 @@ export function openDb(name = DB_NAME, options) {
     brews: 'id, at, beanId, recipeId, updatedAt',
     tastings: 'id, brewId, updatedAt',
     settings: 'id',
+  });
+  // 版2：提案ログ（F1）の表を足す。既存の表と記録はそのまま（移行で書き換える記録はない）
+  db.version(2).stores({
+    suggestions: 'id, brewId, beanId, updatedAt',
   });
   return db;
 }
@@ -363,14 +369,21 @@ export async function deleteRecipe(db, id, now = new Date()) {
 /**
  * 抽出を1件保存し、使った粉の分だけ豆の在庫を減らす（在庫の履歴に抽出とのつながり brewId を付ける）。
  * 未開封の豆なら開封済みにする。豆を選んでいなければ在庫は変えない。
+ * まだ次の抽出がない提案（この抽出で使った提案と、同じ豆の提案）に、この抽出をつなぐ。
  * @param {object} fields buildBrew（js/core/brews.js）で作った中身
  * @returns {Promise<{brew: object, tx: object|null}>}
  */
 export async function saveBrew(db, fields, now = new Date()) {
   const brew = createRecord(fields, now);
   let tx = null;
-  await db.transaction('rw', db.table('beans'), db.table('inventoryTx'), db.table('brews'), async () => {
+  await db.transaction('rw', db.table('beans'), db.table('inventoryTx'), db.table('brews'), db.table('suggestions'), async () => {
     await db.table('brews').put(brew);
+    // 提案ログに「採用したか」と「次の抽出」を書く（自己較正と実績の表示に使う）
+    const links = linkSuggestions(await db.table('suggestions').toArray(), brew);
+    for (const link of links) {
+      const s = await db.table('suggestions').get(link.id);
+      await db.table('suggestions').put(updateRecord(s, { adopted: link.adopted, nextBrewId: link.nextBrewId }, now));
+    }
     const doseG = brew.actual?.doseG;
     if (!brew.beanId || !(doseG > 0)) return;
     const bean = await db.table('beans').get(brew.beanId);
@@ -427,4 +440,67 @@ export async function saveTasting(db, brewId, value, now = new Date()) {
 export async function getUnratedBrew(db, now = new Date()) {
   const [brews, tastings] = await Promise.all([db.table('brews').toArray(), db.table('tastings').toArray()]);
   return pickUnratedBrew(brews, tastings, now);
+}
+
+// ---- ダイヤルイン提案（F1） ----
+
+/** 提案1件。ない・削除済みなら null */
+export async function getSuggestion(db, id) {
+  const s = await db.table('suggestions').get(id);
+  return s && alive(s) ? s : null;
+}
+
+/** その抽出の提案。なければ null */
+export async function getSuggestionForBrew(db, brewId) {
+  return pickSuggestionForBrew(await db.table('suggestions').where('brewId').equals(brewId).toArray(), brewId);
+}
+
+/** 削除の印が付いていない提案の一覧 */
+export async function listSuggestions(db) {
+  return (await db.table('suggestions').toArray()).filter(alive);
+}
+
+/**
+ * 抽出の評価から次の1杯の提案を作り、提案ログに保存する（1杯につき1件。評価を直したら作り直す）。
+ * すでに次の抽出に使った提案は、結果の記録なので作り直さずにそのまま返す。
+ * 判断する材料がなければ、まだ使っていない提案を消して null を返す。
+ * @returns {Promise<object|null>} 保存した提案
+ */
+export async function saveSuggestionForBrew(db, brewId, now = new Date()) {
+  const tables = ['brews', 'tastings', 'recipes', 'equipment', 'suggestions'].map((n) => db.table(n));
+  let saved = null;
+  await db.transaction('rw', tables, async () => {
+    const brew = await db.table('brews').get(brewId);
+    if (!brew || !alive(brew)) throw new Error('抽出の記録が見つかりません');
+    const tastings = await db.table('tastings').toArray();
+    const tasting = pickTasting(tastings, brewId);
+    const suggestions = (await db.table('suggestions').toArray()).filter(alive);
+    const cur = pickSuggestionForBrew(suggestions, brewId);
+    if (cur?.nextBrewId) {
+      saved = cur;
+      return;
+    }
+    const recipe = brew.recipeId ? await db.table('recipes').get(brew.recipeId) : null;
+    const plan = basePlanForNext(brew, recipe);
+    const grinder = plan.grind?.grinderId ? await db.table('equipment').get(plan.grind.grinderId) : null;
+    const step = parseNumber(grinder?.attrs?.step);
+    const result = tasting
+      ? suggestNext({
+          tasting,
+          plan,
+          grindStep: step > 0 ? step : undefined,
+          beanId: brew.beanId ?? null,
+          suggestions: suggestions.filter((s) => s.brewId !== brewId),
+          tastings,
+        })
+      : null;
+    if (!result) {
+      if (cur) await db.table('suggestions').put(markDeleted(cur, now));
+      return;
+    }
+    const fields = buildSuggestion({ brew, tasting, suggestion: result });
+    saved = cur ? updateRecord(cur, fields, now) : createRecord(fields, now);
+    await db.table('suggestions').put(saved);
+  });
+  return saved;
 }

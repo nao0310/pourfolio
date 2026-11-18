@@ -166,7 +166,7 @@ export function diffLines(diff, plan = {}, actual = {}) {
 
 /** 計画の写しから、抽出の記録に要らない項目（どこから写したか等）を外す */
 function plannedCopy(plan) {
-  const { source, fromBrewId, beanId, ratio, ...rest } = plan;
+  const { source, fromBrewId, beanId, ratio, suggestionId, ...rest } = plan;
   return JSON.parse(JSON.stringify(rest));
 }
 
@@ -194,6 +194,7 @@ export function buildBrew({ draft, value, at, bean = null }) {
     beanId: value.beanId,
     recipeId: plan.recipeId ?? null,
     recipeVersion: plan.recipeVersion ?? null,
+    suggestionId: plan.suggestionId ?? null, // ダイヤルイン提案（F1）を入れた計画で淹れたとき、その提案
     equipment: { ...(plan.equipment ?? {}), grinderId: plan.grind?.grinderId ?? null },
     planned: plannedCopy(plan),
     actual,

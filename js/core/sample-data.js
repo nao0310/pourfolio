@@ -103,6 +103,33 @@ export function makeSampleData(now = new Date()) {
     daysAgo(1),
   );
 
+  const suggestion = createRecord(
+    {
+      kind: 'dialin',
+      brewId: brew.id,
+      tastingId: tasting.id,
+      beanId: bean.id,
+      recipeId: recipe.id,
+      cell: { strength: 'ok', extraction: 'under' },
+      cellName: '酸っぱい・余韻が短い',
+      action: { kind: 'finer', variable: 'grind', from: '24', to: '23', unit: '', text: '挽き目を1目盛り細かく：挽き目 24 → 23', short: '挽き目 24 → 23' },
+      nextStep: null,
+      alt: 'または湯温を2℃上げる',
+      reasons: {
+        input: ['濃さ ちょうど', '酸味 やや強い', '苦味 ちょうど', '渋み ちょうど'],
+        theory: '濃さ「ちょうど」×抽出「抽出が足りない」のマス（酸っぱい・余韻が短い）。1杯で変えるのは1つだけ',
+        history: 'まだ実績がありません（提案どおりに淹れて評価すると、ここに貯まります）',
+        confidence: { level: 'mid', text: 'ちょうど良さで濃さと抽出の両方に答えている。実績はまだ少ない' },
+      },
+      confidence: 'mid',
+      jarBefore: { ...tasting.jar },
+      tagsBefore: [...tasting.tags],
+      adopted: null,
+      nextBrewId: null,
+    },
+    daysAgo(1),
+  );
+
   const inventoryTx = [
     createRecord({ beanId: bean.id, at: daysAgo(9).toISOString(), deltaG: 166.5, kind: 'in', brewId: null, memo: '' }, daysAgo(9)),
     createRecord({ beanId: bean.id, at: brew.at, deltaG: -20.1, kind: 'brew', brewId: brew.id, memo: '' }, daysAgo(1)),
@@ -117,6 +144,7 @@ export function makeSampleData(now = new Date()) {
     recipes: [recipe],
     brews: [brew],
     tastings: [tasting],
+    suggestions: [suggestion],
     settings: [settings],
   };
 }

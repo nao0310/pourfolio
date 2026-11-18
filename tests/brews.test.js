@@ -143,3 +143,13 @@ test('「前回と同じ」は、保存した抽出の実績ではなく計画�
   assert.equal(again.pours.length, plan.pours.length);
   assert.equal(again.source, 'lastBrew');
 });
+
+test('ダイヤルイン提案を入れた計画で淹れたら、抽出の記録に提案のIDを残す（計画の写しには入れない）', () => {
+  const draft = newDraft({ ...plan, suggestionId: 'sug1' }, 'b1', null);
+  const { value } = normalizeActualInput({ ...initialActualInput(draft), totalSec: '3:30' });
+  const brew = buildBrew({ draft, value, at: '2026-11-18T07:45:35+09:00' });
+  assert.equal(brew.suggestionId, 'sug1');
+  assert.equal(brew.planned.suggestionId, undefined);
+  const plain = buildBrew({ draft: newDraft(plan, 'b1', null), value, at: '2026-11-18T07:45:35+09:00' });
+  assert.equal(plain.suggestionId, null);
+});
