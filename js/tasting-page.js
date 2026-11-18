@@ -1,11 +1,10 @@
-// 味の評価の画面：クイック評価（B1）とちょうど良さ評価（JAR、B2）
+// 味の評価の画面：クイック評価（B1）、ちょうど良さ評価（JAR、B2）、詳細評価（B3）、香味と雑味（B4）
 // tasting.html?brew=<抽出のID>（抽出を保存した直後は &saved=1 が付き、豆の残量を上に出す）
 import { openDb, getBrew, getTastingForBrew, saveTasting, getBeanWithTx, getSettings, saveSuggestionForBrew } from './db.js';
 import { CONFIDENCE_LABELS, CHANGING_KINDS } from './core/dialin.js';
+import { renderStars, renderTags, renderJar, renderDetail, renderFlavors, renderDefects } from './tasting-parts.js';
 import {
-  STAR_MAX,
-  QUICK_TAGS,
-  JAR_ATTRS,
+  detailAnsweredCount,
   allJustJar,
   tastingInput,
   normalizeTastingInput,
@@ -25,92 +24,16 @@ let bean = null;
 /** 入力中の評価 { stars, tags, jar, memo } */
 let state = null;
 
-// ---- 入力の部品 ----
-
-function renderStars() {
-  const box = $('stars');
-  box.replaceChildren(
-    ...Array.from({ length: STAR_MAX }, (_, i) => {
-      const n = i + 1;
-      const on = state.stars != null && n <= state.stars;
-      return el(
-        'button',
-        {
-          type: 'button',
-          class: `star${on ? ' on' : ''}`,
-          'aria-label': `★${n}`,
-          'aria-pressed': String(state.stars === n),
-          onclick: () => {
-            state.stars = state.stars === n ? null : n; // 同じ★をもう一度押すと消える
-            renderStars();
-            clearErrors();
-          },
-        },
-        on ? '★' : '☆',
-      );
-    }),
-    el('span', { class: 'star-count num' }, state.stars != null ? `${state.stars} / ${STAR_MAX}` : '未選択'),
-  );
-}
-
-function renderTags() {
-  $('tags').replaceChildren(
-    ...QUICK_TAGS.map((t) =>
-      el(
-        'label',
-        { class: 'chip' },
-        el('input', {
-          type: 'checkbox',
-          checked: state.tags.includes(t),
-          onchange: (e) => {
-            state.tags = e.target.checked ? [...state.tags, t] : state.tags.filter((x) => x !== t);
-            clearErrors();
-          },
-        }),
-        el('span', {}, t),
-      ),
-    ),
-  );
-}
-
-function renderJar() {
-  $('jar').replaceChildren(
-    ...JAR_ATTRS.map((a) => {
-      const cur = state.jar[a.key];
-      return el(
-        'div',
-        { class: 'jar-row', role: 'group', 'aria-label': a.label },
-        el('div', { class: 'jar-label' }, el('strong', {}, a.label), el('span', { class: 'muted' }, cur == null ? '未回答' : a.words[cur + 2])),
-        el(
-          'div',
-          { class: 'seg5' },
-          ...a.words.map((w, i) => {
-            const v = i - 2;
-            return el(
-              'button',
-              {
-                type: 'button',
-                class: `seg${v === 0 ? ' just' : ''}`,
-                'aria-pressed': String(cur === v),
-                onclick: () => {
-                  state.jar[a.key] = cur === v ? null : v; // 同じボタンをもう一度押すと未回答に戻る
-                  renderJar();
-                  clearErrors();
-                },
-              },
-              w,
-            );
-          }),
-        ),
-      );
-    }),
-  );
-}
+// ---- 入力の部品（js/tasting-parts.js） ----
 
 function renderForm() {
-  renderStars();
-  renderTags();
-  renderJar();
+  renderStars($('stars'), state, clearErrors);
+  renderTags($('tags'), state, clearErrors);
+  renderJar($('jar'), state, clearErrors);
+  renderFlavors($('flavors'), state, clearErrors);
+  renderDefects($('defects'), state, clearErrors);
+  renderDetail($('detail'), state, clearErrors, $('detailCount'));
+  $('detailBox').open = detailAnsweredCount(state) > 0; // 入れてあれば開いておく
   $('memo').value = state.memo;
 }
 
@@ -242,7 +165,7 @@ $('formView').addEventListener('submit', onSave);
 $('memo').addEventListener('input', clearErrors);
 $('allJust').addEventListener('click', () => {
   state.jar = allJustJar();
-  renderJar();
+  renderJar($('jar'), state, clearErrors);
   clearErrors();
 });
 $('edit').addEventListener('click', showForm);

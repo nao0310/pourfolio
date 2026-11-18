@@ -15,6 +15,9 @@ import {
   pickTasting,
   pickUnratedBrew,
   tastingSummary,
+  DETAIL_KEYS,
+  LIKING_WORDS,
+  detailAnsweredCount,
 } from '../js/core/tastings.js';
 
 test('タグは7つ、ちょうど良さは渋みを含む6項目', () => {
@@ -63,14 +66,15 @@ test('何も入れていないと保存できない（メモだけならよい�
 
 test('保存した評価を入力の形に戻せる', () => {
   const saved = { id: 't1', brewId: 'b1', by: 'me', stage: 'warm', stars: 3, tags: ['苦い'], jar: { ...emptyJar(), bitterness: 1 }, memo: 'x' };
-  assert.deepEqual(tastingInput(saved), { stars: 3, tags: ['苦い'], jar: { ...emptyJar(), bitterness: 1 }, memo: 'x' });
+  // 2-3までの評価（詳細評価・香味がない）も読める。ない項目は未回答
+  assert.deepEqual(tastingInput(saved), { ...emptyTastingInput(), stars: 3, tags: ['苦い'], jar: { ...emptyJar(), bitterness: 1 }, memo: 'x' });
   assert.deepEqual(tastingInput(null), emptyTastingInput());
 });
 
 test('評価の記録は自分・温かいうち。spec 9章の形', () => {
   const { value } = normalizeTastingInput({ stars: 4, tags: ['酸っぱい'], jar: { acidity: 1 }, memo: '' });
   const t = buildTasting({ brewId: 'b1', value });
-  assert.deepEqual(Object.keys(t), ['brewId', 'by', 'stage', 'stars', 'tags', 'jar', 'memo']);
+  assert.deepEqual(Object.keys(t), ['brewId', 'by', 'stage', 'stars', 'tags', 'jar', 'intensity', 'liking', 'flavors', 'defects', 'memo']);
   assert.equal(t.by, 'me');
   assert.equal(t.stage, 'warm');
   assert.notEqual(t.jar, value.jar); // 写しを持つ
@@ -120,4 +124,35 @@ test('評価がまだの抽出：評価済み・24時間より前・削除済み
   assert.equal(pickUnratedBrew([brews[0], brews[1]], tastings, now), null);
   // 評価を消したら、また評価がまだになる
   assert.equal(pickUnratedBrew([brews[1]], [{ ...tastings[0], deletedAt: '2026-11-18T11:50:00Z' }], now).id, 'rated');
+});
+
+test('詳細評価（B3）：強さ0〜15と好み1〜9を項目ごとに別々に持つ（完了の確認）', () => {
+  const { value, errors } = normalizeTastingInput({ intensity: { acidity: 12, aroma: '０' }, liking: { acidity: 3, sweetness: 9 } });
+  assert.deepEqual(errors, {});
+  assert.equal(value.intensity.acidity, 12); // 酸味は強い
+  assert.equal(value.liking.acidity, 3); // けれど好みではない
+  assert.equal(value.intensity.aroma, 0); // 0（感じない）と未回答（null）は別
+  assert.equal(value.intensity.sweetness, null);
+  assert.equal(value.liking.sweetness, 9);
+  assert.deepEqual(DETAIL_KEYS, ['fragrance', 'aroma', 'flavor', 'aftertaste', 'acidity', 'sweetness', 'mouthfeel']);
+  assert.equal(detailAnsweredCount(value), 3);
+  assert.equal(LIKING_WORDS[4], 'どちらでもない');
+
+  for (const bad of [{ intensity: { acidity: 16 } }, { intensity: { acidity: -1 } }, { liking: { acidity: 0 } }, { liking: { acidity: 10 } }, { liking: { flavor: 4.5 } }]) {
+    assert.ok(normalizeTastingInput({ stars: 3, ...bad }).errors.detail, JSON.stringify(bad));
+  }
+  const t = buildTasting({ brewId: 'b1', value });
+  assert.equal(t.intensity.acidity, 12);
+  assert.equal(t.liking.acidity, 3);
+  assert.notEqual(t.intensity, value.intensity);
+});
+
+test('香味と雑味（B4）：詳細評価・香味・雑味のどれかだけでも保存でき、まとめに出る', () => {
+  assert.deepEqual(normalizeTastingInput({ liking: { flavor: 7 } }).errors, {});
+  assert.deepEqual(normalizeTastingInput({ flavors: ['fruity/citrus'] }).errors, {});
+  assert.deepEqual(normalizeTastingInput({ defects: ['えぐい'] }).errors, {});
+  const { value } = normalizeTastingInput({ stars: 4, flavors: ['floral/jasmine', 'nope', 'fruity/citrus'], defects: ['紙っぽい', '謎'] });
+  assert.deepEqual(value.flavors, ['floral/jasmine', 'fruity/citrus']);
+  assert.deepEqual(value.defects, ['紙っぽい']);
+  assert.equal(tastingSummary(value), '★4　ジャスミン・柑橘　雑味 紙っぽい');
 });

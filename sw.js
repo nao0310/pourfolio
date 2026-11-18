@@ -9,14 +9,14 @@
 // <manifest> npm run sw が書き込む（手で直さない）
 const MANIFEST = {
   "label": "2.3.1",
-  "version": "efccfd8d72d3",
+  "version": "a3f9ca9213ba",
   "files": {
     "bean-edit.html": "b4ab5c1cb88b2a27",
     "bean.html": "1ab119306642b2a3",
     "beans.html": "1436a81b24b74c0b",
     "brew.html": "44607f91d33e94eb",
     "cost.html": "7efaa229edbe76c3",
-    "css/base.css": "b261e9211dd84c7d",
+    "css/base.css": "8fe730aa3ad75005",
     "data.html": "23d354a1d5b2e33f",
     "equipment-edit.html": "42de8951a09272a3",
     "equipment.html": "ad84ca1c98692907",
@@ -36,6 +36,7 @@ const MANIFEST = {
     "js/core/csv.js": "118eb24c1f75be97",
     "js/core/dialin.js": "fbdeef29b0af89c8",
     "js/core/equipment.js": "1666ceecf4236724",
+    "js/core/flavors.js": "89fe07c6a438754f",
     "js/core/format.js": "68dfb9fe90fb5974",
     "js/core/freshness.js": "4d56dabbc6fc23b5",
     "js/core/frozen.js": "a3457f6e304eb9fb",
@@ -50,7 +51,7 @@ const MANIFEST = {
     "js/core/roast.js": "e713f66bb296aa2d",
     "js/core/sample-data.js": "980fa6092030b5b6",
     "js/core/shops.js": "5cea814d683272ae",
-    "js/core/tastings.js": "0788a597a8fd46f1",
+    "js/core/tastings.js": "55c6a0ad0b3029e7",
     "js/core/timer.js": "158a32d82adfeb48",
     "js/core/tonya.js": "faac59308d2b0ca5",
     "js/core/version.js": "43608b50b708ce6d",
@@ -68,7 +69,8 @@ const MANIFEST = {
     "js/shopping-page.js": "e939823319baec4d",
     "js/shops-page.js": "294280fbc9b1e6f0",
     "js/storage-test.js": "5000534b3289040c",
-    "js/tasting-page.js": "6ae138fe1502336e",
+    "js/tasting-page.js": "214037157617db60",
+    "js/tasting-parts.js": "d094ff267290f070",
     "js/ui.js": "403bfdf514e9a601",
     "js/wake-lock.js": "3d49196eb9e85b57",
     "manifest.webmanifest": "6ba74664b83078e8",
@@ -78,7 +80,7 @@ const MANIFEST = {
     "shopping.html": "995d1d9f9a84f317",
     "shops.html": "fd07a6b5b9c94a60",
     "storage-test.html": "55d68ef5a3e34561",
-    "tasting.html": "03d431c5f9aa1738",
+    "tasting.html": "a8db5700e35adcf6",
     "vendor/dexie/dexie.mjs": "c3ecb25376f4e2d1"
   }
 };

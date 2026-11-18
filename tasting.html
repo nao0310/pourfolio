@@ -21,7 +21,7 @@
       <p class="muted">削除された抽出です。トップに戻ってください。</p>
     </div>
 
-    <!-- 味の評価（B1・B2） -->
+    <!-- 味の評価（B1・B2・B3・B4） -->
     <form id="formView" hidden novalidate>
       <div class="card saved-card" id="savedCard" hidden>
         <p><strong>抽出を保存しました</strong></p>
@@ -48,6 +48,23 @@
         <div id="jar"></div>
         <span class="field-error" data-for="jar"></span>
       </div>
+
+      <!-- 香味と雑味（B4） -->
+      <div class="card">
+        <h2>香味</h2>
+        <p class="hint">感じた香りや味のなかまを押し、近い言葉を選びます。いくつ選んでもよい</p>
+        <div id="flavors"></div>
+        <h2 class="tags-head">雑味</h2>
+        <div class="chips" id="defects"></div>
+      </div>
+
+      <!-- 詳細評価（B3）。ふだんは閉じておく -->
+      <details class="card detail-card" id="detailBox">
+        <summary>詳しく評価する（強さと好み）<span class="detail-count muted" id="detailCount"></span></summary>
+        <p class="hint">「強さ」はどれだけ感じるか（0＝感じない、15＝とても強い）、「好み」はどれだけ好きか（1＝とても嫌い、5＝どちらでもない、9＝とても好き）。強くても好きとは限らないので、分けて入れます</p>
+        <div id="detail"></div>
+        <span class="field-error" data-for="detail"></span>
+      </details>
 
       <div class="card">
         <label class="field">

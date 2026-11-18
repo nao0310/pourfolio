@@ -1,8 +1,10 @@
-// 味の評価：クイック評価（B1）とちょうど良さ評価（JAR、B2）（純粋関数）
+// 味の評価：クイック評価（B1）、ちょうど良さ評価（JAR、B2）、詳細評価（B3）、香味と雑味（B4）（純粋関数）
 // 1杯につき「自分・温かいうち」の評価を1件持つ。開き直したらその1件を直す。
 // JARは −2（弱すぎ）〜 +2（強すぎ）。押していない項目は null（未回答）で、ちょうど（0）と区別する。
+// 詳細評価は CVA にならい、項目ごとの「強さ 0〜15」と「好み 1〜9」を別々に持つ（intensity と liking）。
 
 import { formatDateTimeJa } from './format.js';
+import { normalizeFlavors, normalizeDefects, flavorsText } from './flavors.js';
 
 /** 総合の★の最大 */
 export const STAR_MAX = 5;
@@ -22,6 +24,36 @@ export const JAR_ATTRS = Object.freeze([
 
 export const JAR_KEYS = Object.freeze(JAR_ATTRS.map((a) => a.key));
 
+/** 詳細評価（B3）の項目（CVAの記述と好みの評価に合わせた7つ） */
+export const DETAIL_ATTRS = Object.freeze([
+  { key: 'fragrance', label: '香り（粉）' },
+  { key: 'aroma', label: '香り（液）' },
+  { key: 'flavor', label: '風味' },
+  { key: 'aftertaste', label: '余韻' },
+  { key: 'acidity', label: '酸味' },
+  { key: 'sweetness', label: '甘さ' },
+  { key: 'mouthfeel', label: '口当たり' },
+]);
+
+export const DETAIL_KEYS = Object.freeze(DETAIL_ATTRS.map((a) => a.key));
+
+/** 強さの目盛り（0＝感じない 〜 15＝とても強い） */
+export const INTENSITY_MAX = 15;
+
+/** 好みの9段階（1〜9）の呼び方 */
+export const LIKING_WORDS = Object.freeze([
+  'とても嫌い',
+  'かなり嫌い',
+  'やや嫌い',
+  '少し嫌い',
+  'どちらでもない',
+  '少し好き',
+  'やや好き',
+  'かなり好き',
+  'とても好き',
+]);
+export const LIKING_MAX = LIKING_WORDS.length;
+
 /** 評価者と温度帯（MVPは自分・温かいうちだけ。B5・B7で増やす） */
 export const DEFAULT_BY = 'me';
 export const DEFAULT_STAGE = 'warm';
@@ -36,9 +68,14 @@ export function allJustJar() {
   return Object.fromEntries(JAR_KEYS.map((k) => [k, 0]));
 }
 
+/** すべて未回答の詳細評価（強さ・好みのどちらにも使う） */
+export function emptyDetail() {
+  return Object.fromEntries(DETAIL_KEYS.map((k) => [k, null]));
+}
+
 /** 何も入っていない入力 */
 export function emptyTastingInput() {
-  return { stars: null, tags: [], jar: emptyJar(), memo: '' };
+  return { stars: null, tags: [], jar: emptyJar(), intensity: emptyDetail(), liking: emptyDetail(), flavors: [], defects: [], memo: '' };
 }
 
 /** 保存した評価を入力の形にする（評価がなければ空の入力） */
@@ -89,14 +126,39 @@ export function normalizeTastingInput(input = {}, { allowEmpty = false } = {}) {
     else jar[k] = n;
   }
 
-  const memo = clean(input.memo);
-
-  const answered = stars != null || tags.length > 0 || JAR_KEYS.some((k) => jar[k] != null) || memo !== '';
-  if (!answered && !allowEmpty && !errors.stars && !errors.jar) {
-    errors.empty = '★・一言・ちょうど良さのどれか1つを入れてください';
+  const intensity = emptyDetail();
+  const liking = emptyDetail();
+  for (const k of DETAIL_KEYS) {
+    const i = intIn(input.intensity?.[k], 0, INTENSITY_MAX);
+    if (Number.isNaN(i)) errors.detail = `強さは0〜${INTENSITY_MAX}、好みは1〜${LIKING_MAX}で選んでください`;
+    else intensity[k] = i;
+    const l = intIn(input.liking?.[k], 1, LIKING_MAX);
+    if (Number.isNaN(l)) errors.detail = `強さは0〜${INTENSITY_MAX}、好みは1〜${LIKING_MAX}で選んでください`;
+    else liking[k] = l;
   }
 
-  return { value: { stars, tags, jar, memo }, errors };
+  const flavors = normalizeFlavors(input.flavors);
+  const defects = normalizeDefects(input.defects);
+  const memo = clean(input.memo);
+
+  const answered =
+    stars != null ||
+    tags.length > 0 ||
+    JAR_KEYS.some((k) => jar[k] != null) ||
+    detailAnsweredCount({ intensity, liking }) > 0 ||
+    flavors.length > 0 ||
+    defects.length > 0 ||
+    memo !== '';
+  if (!answered && !allowEmpty && !errors.stars && !errors.jar && !errors.detail) {
+    errors.empty = '★・一言・ちょうど良さなど、どれか1つを入れてください';
+  }
+
+  return { value: { stars, tags, jar, intensity, liking, flavors, defects, memo }, errors };
+}
+
+/** 詳細評価で強さか好みを入れた項目の数 */
+export function detailAnsweredCount(t) {
+  return DETAIL_KEYS.filter((k) => t?.intensity?.[k] != null || t?.liking?.[k] != null).length;
 }
 
 /** JARに答えた項目の数 */
@@ -116,6 +178,10 @@ export function buildTasting({ brewId, value }) {
     stars: value.stars,
     tags: [...value.tags],
     jar: { ...value.jar },
+    intensity: { ...value.intensity },
+    liking: { ...value.liking },
+    flavors: [...value.flavors],
+    defects: [...value.defects],
     memo: value.memo,
   };
 }
@@ -161,6 +227,9 @@ export function tastingSummary(t) {
   const off = JAR_ATTRS.filter((a) => t.jar?.[a.key] != null && t.jar[a.key] !== 0).map((a) => `${a.label} ${jarWord(a.key, t.jar[a.key])}`);
   if (off.length) parts.push(off.join('・'));
   else if (jarAnsweredCount(t.jar) > 0) parts.push('ちょうど良い');
+  const flavors = flavorsText(t.flavors, 3);
+  if (flavors) parts.push(flavors);
+  if (t.defects?.length) parts.push(`雑味 ${t.defects.join('・')}`);
   return parts.join('　');
 }
 
