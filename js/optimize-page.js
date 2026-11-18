@@ -32,7 +32,7 @@ import { analysisRows } from './core/analysis.js';
 import { DEFAULT_GRIND_STEP } from './core/dialin.js';
 import { orderRecipesForList, recipeSummary } from './core/recipes.js';
 import { formatDateTimeJa } from './core/format.js';
-import { $, el, queryParam, showMessage, showPageLoadError } from './ui.js';
+import { $, el, queryParam, showMessage, showPageLoadError, phrased, setPhrased, phraseStaticText } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
 import { singleFlight } from './core/once.js';
 import { askConfirm } from './confirm-box.js';
@@ -70,7 +70,7 @@ function fillRanges() {
   set('gLo', 'gHi', r.grind);
   set('rLo', 'rHi', r.ratio);
   set('tLo', 'tHi', r.tempC);
-  $('gHint').textContent = recipe ? `このレシピは挽き目 ${recipe.grind?.setting || '（なし）'}。1目盛り ${step} で動かします。数字が小さいほど細かい` : '';
+  setPhrased($('gHint'), recipe ? `レシピは挽き目 ${recipe.grind?.setting || '（なし）'}。1目盛り ${step} で動かします（小さいほど細かい）` : '');
 }
 
 async function showStart() {
@@ -120,7 +120,7 @@ function renderMap(points, next) {
   const table = predictionTable(exp, points, { tempC: next?.x?.tempC });
   $('mapCard').hidden = !table;
   if (!table) return;
-  $('mapNote').textContent = `★を付けた杯から予想した★です（この表の中で、濃いほど高い）。「次」が次に試す所、「済」が試した所です${table.tempC != null ? `。湯温 ${table.tempC}℃のとき` : ''}`;
+  setPhrased($('mapNote'), `予想の★です（この表の中で濃いほど高い）。「次」は次に試す所、「済」は試した所${table.tempC != null ? `。湯温 ${table.tempC}℃のとき` : ''}`);
   const tried = new Set(points.map((p) => `${p.x.grind}|${p.x.ratio}`));
   // 色は表の中の低い〜高いを5段階に分ける（予想の★は近い値が並ぶので、★そのままだと同じ色になる）
   const all = table.cells.flat();
@@ -165,9 +165,9 @@ async function renderOpt() {
   const bean = beans.find((b) => b.id === exp.beanId) ?? null;
   const points = optimizePoints(exp, analysisRows({ brews, beans, tastings }));
   const r = exp.ranges;
-  $('title').textContent = exp.title;
+  setPhrased($('title'), exp.title);
   document.title = `${exp.title} - Pourfolio`;
-  $('sub').textContent = [
+  setPhrased($('sub'), [
     beanLabel(bean),
     recipe ? `レシピ：${recipe.name}` : '（レシピを削除しました）',
     `挽き目 ${r.grind[0]}〜${r.grind[1]}`,
@@ -176,20 +176,20 @@ async function renderOpt() {
     exp.revealedAt ? '終えた' : '',
   ]
     .filter(Boolean)
-    .join('・');
+    .join('・'));
 
   const usable = bean && recipe && usableBeans([bean]).length > 0;
   const next = nextTrial(exp, points);
   $('nextCard').hidden = Boolean(exp.revealedAt);
-  $('nextText').textContent = trialText(next.x);
-  $('nextReason').textContent = usable ? next.reason : '豆を飲み切ったか、レシピを削除したので、この最適化では淹れられません';
+  setPhrased($('nextText'), trialText(next.x));
+  setPhrased($('nextReason'), usable ? next.reason : '豆を飲み切ったか、レシピを削除したので、淹れられません');
   $('nextBrew').hidden = !usable;
   if (usable) $('nextBrew').href = trialHref(exp, recipe, next.x);
 
   const best = bestKnown(exp, points);
   $('bestCard').hidden = !best;
   if (best) {
-    $('bestText').textContent = `${trialText(best.x)}（${points.length >= MIN_POINTS ? `予想 ★${best.mean}、` : ''}${best.n}杯：★${best.stars.join('・★')}）`;
+    setPhrased($('bestText'), `${trialText(best.x)}（${points.length >= MIN_POINTS ? `予想 ★${best.mean}、` : ''}${best.n}杯：★${best.stars.join('・★')}）`);
     $('bestBrew').hidden = !usable;
     if (usable) $('bestBrew').href = trialHref(exp, recipe, best.x);
   }
@@ -205,7 +205,7 @@ async function renderOpt() {
             'li',
             {},
             el('a', { href: `tasting.html?brew=${enc(p.brewId)}` }, `${formatDateTimeJa(p.at)}　★${p.y}`),
-            el('span', { class: 'muted small' }, `　${trialText(Object.fromEntries(dims.map((k) => [k, p.x[k]])))}`),
+            el('span', { class: 'muted small' }, ' ', ...phrased(trialText(Object.fromEntries(dims.map((k) => [k, p.x[k]]))))),
           ),
         )
       : [el('li', { class: 'muted' }, 'まだ試した杯はありません。「この条件で淹れる」で淹れて★を付けると表示します')]),
@@ -226,6 +226,7 @@ async function showOpt(id) {
 // ---- はじまり ----
 
 async function init() {
+  phraseStaticText(document.querySelector('main'));
   [beans, recipes, equipment] = await Promise.all([listBeans(db), listRecipes(db), listEquipment(db)]);
   beans = beans.filter((b) => b.deletedAt == null);
   const id = queryParam('id');

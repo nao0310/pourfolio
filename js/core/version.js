@@ -3,10 +3,19 @@
 // ステップを仕上げるときに APP_VERSION と CHANGELOG の先頭を足す。上げ忘れは tests/version.test.js が見つける。
 // sw.js の一覧（npm run sw）にも番号が入り、更新の知らせに新しい番号を出す。
 
-export const APP_VERSION = '3.1';
+export const APP_VERSION = '3.1.1';
 
 /** 更新履歴（新しい順）。items は利用者向けの短い文で、2〜3個まで */
 export const CHANGELOG = Object.freeze([
+  {
+    version: '3.1.1',
+    date: '2026-11-18',
+    items: [
+      'ボタンの文字が、どのボタンでも上下の真ん中に来るようになりました',
+      '実験の画面で、言葉の途中で改行されにくくなり、説明の文を短くしました',
+      'iPhoneで使い続けると、下のタブが画面の下に固定されずに動いてしまう不具合を直しました（画面を移るときのふわっとした動きはなくなります）',
+    ],
+  },
   {
     version: '3.1',
     date: '2026-11-18',

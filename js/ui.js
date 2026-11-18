@@ -1,5 +1,6 @@
 // 画面づくりの小さな共通部品（DOMを使うので js/core/ には置かない）
 // 利用者の入力は必ず textContent で入れる（innerHTML は使わない）
+import { splitPhrases } from './core/phrases.js';
 
 export const $ = (id) => document.getElementById(id);
 
@@ -24,6 +25,33 @@ export function el(tag, props = {}, ...children) {
     node.append(c instanceof Node ? c : String(c));
   }
   return node;
+}
+
+/**
+ * 文を言葉の切れ目で折れるようにした中身（まとまりは途中で折らない箱、空白はそのまま、3-1.1）
+ * el() の子にそのまま渡せる。textContent は元の文と同じ
+ * @param {string} text
+ * @returns {(Node|string)[]}
+ */
+export function phrased(text) {
+  return splitPhrases(text).map((t) => (/^\s+$/.test(t) ? t : el('span', { class: 'ph' }, t)));
+}
+
+/**
+ * 画面に書いてある説明の文（文字だけの p・span・legend）を、言葉の切れ目で折れる文にする（3-1.1）
+ * @param {ParentNode} root
+ * @param {string} [selector]
+ */
+export function phraseStaticText(root = document, selector = 'p, .hint, .label, legend, h1, h2') {
+  for (const node of root.querySelectorAll(selector)) {
+    if (node.children.length || !node.textContent.trim()) continue; // 中に部品がある所・空の所（あとで中身を入れる）は触らない
+    setPhrased(node, node.textContent);
+  }
+}
+
+/** 箱の中身を、言葉の切れ目で折れる文にする */
+export function setPhrased(node, text) {
+  if (node) node.replaceChildren(...phrased(text));
 }
 
 /** URLの ?id= の値 */

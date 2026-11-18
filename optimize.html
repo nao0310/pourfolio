@@ -21,7 +21,7 @@
     <!-- 始める（F7 最適化モード） -->
     <div id="startView" hidden>
       <h1>最適化を始める</h1>
-      <p class="muted">豆を1つ選び、挽き目と比率を動かす範囲を決めます。淹れて★を付けるたびに、記録から「次に試すと最も学べる条件」を選び直します（ベイズ最適化。計算はこの端末の中だけで行います）。</p>
+      <p class="muted">豆と、挽き目・比率を動かす範囲を決めます。★を付けるたびに、次に試す条件を選び直します（計算はこの端末の中だけ）。</p>
       <form class="card" id="optForm" novalidate>
         <label class="field">
           <span class="label">豆</span>
@@ -31,7 +31,7 @@
         <label class="field">
           <span class="label">レシピ</span>
           <select id="oRecipe"></select>
-          <span class="hint">粉量と注ぎ方はこのレシピのまま、挽き目と湯量（比率）だけを変えます</span>
+          <span class="hint">粉量と注ぎ方はそのまま、挽き目と湯量だけを変えます</span>
           <span class="field-error" data-for="recipeId"></span>
         </label>
         <fieldset class="field">
@@ -85,7 +85,7 @@
         <div class="row">
           <a class="btn" id="nextBrew">この条件で淹れる</a>
         </div>
-        <p class="muted small">淹れたら、いつものように★を付けてください。★を付けた杯から、次の条件を選び直します</p>
+        <p class="muted small">淹れたら★を付けてください。次の条件を選び直します</p>
       </section>
 
       <section class="card" id="bestCard" hidden>

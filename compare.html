@@ -21,7 +21,7 @@
     <!-- 一覧と、新しく始める（X27・F7・B6） -->
     <div id="listView" hidden>
       <h1>実験</h1>
-      <p class="muted">条件を1つだけ変えて飲み比べたり、豆を伏せて飲み比べたりして、好みを確かめます。</p>
+      <p class="muted">豆や条件を伏せて飲み比べ、好みを確かめます。</p>
 
       <div id="openList"></div>
 
@@ -43,7 +43,7 @@
 
         <!-- 豆の飲み比べ（X27・B6） -->
         <form id="startForm" novalidate hidden>
-          <p class="muted small">豆の飲み比べ：袋を2〜4つ選び、同じレシピで淹れて飲み比べます。焙煎度違いでも、銘柄違いでも比べられます</p>
+          <p class="muted small">袋を2〜4つ、同じレシピで飲み比べます（焙煎度違いでも、銘柄違いでも）</p>
           <div id="groups"></div>
           <fieldset class="field">
             <legend class="label">比べる豆（2〜4袋）</legend>
@@ -53,7 +53,7 @@
           <label class="field">
             <span class="label">レシピ</span>
             <select id="recipe"></select>
-            <span class="hint">1袋ずつ同じレシピで淹れます。量の少ないレシピ（粉10g前後）がおすすめです</span>
+            <span class="hint">量の少ないレシピ（粉10g前後）がおすすめです</span>
             <span class="field-error" data-for="recipeId"></span>
           </label>
           <label class="check-row">
@@ -68,7 +68,7 @@
 
         <!-- 条件の飲み比べ（F7） -->
         <form id="varForm" novalidate hidden>
-          <p class="muted small">条件の飲み比べ：同じ豆・同じレシピで、条件を1つだけ変えた2杯を淹れて飲み比べます</p>
+          <p class="muted small">同じ豆・同じレシピで、条件を1つだけ変えた2杯を比べます</p>
           <label class="field">
             <span class="label">豆</span>
             <select id="vBean"></select>
@@ -105,7 +105,7 @@
 
         <!-- トライアングルテスト（B6） -->
         <form id="triForm" novalidate hidden>
-          <p class="muted small">トライアングルテスト：AとBを1杯ずつ淹れて、それぞれ2つのカップに分けます。そのうち3つを並べ、1つだけ違うカップを当てます。違いが本当に分かるかを確かめられます</p>
+          <p class="muted small">AとBを1杯ずつ淹れて2つずつに分け、3つのカップから違う1つを当てます。違いが本当に分かるかを確かめます</p>
           <div class="seg5 seg2" id="tMode" role="group" aria-label="比べるもの"></div>
           <fieldset class="field" id="tBeansBox">
             <legend class="label">比べる豆（2袋）</legend>
@@ -143,7 +143,7 @@
 
       <section class="card" id="optCard">
         <h2>最適化</h2>
-        <p class="muted small">挽き目と比率の範囲を決めると、淹れて★を付けた杯から「次に試すと最も学べる条件」を出します。少ない杯数で好みの所に近づけます</p>
+        <p class="muted small">挽き目と比率の範囲を決めると、★を付けた杯から次に試す条件を出します。少ない杯数で好みに近づけます</p>
         <ul class="link-list" id="optList"></ul>
         <div class="row">
           <a class="btn secondary" href="optimize.html" id="optStart">最適化を始める</a>
@@ -189,7 +189,7 @@
       <!-- トライアングルテスト：当てる → 答え合わせ -->
       <section class="card" id="triCard" hidden>
         <h2>2. 当てる</h2>
-        <p class="hint" id="triHint"></p>
+        <ol class="install-steps" id="triHint"></ol>
         <fieldset class="field">
           <legend class="label">1つだけ違うと思うカップ</legend>
           <div class="seg3" id="triPicked" role="group" aria-label="違うと思うカップ"></div>
@@ -216,7 +216,7 @@
         <p class="suggest-action" id="outcome" hidden></p>
         <ol class="compare-results" id="results"></ol>
         <p class="suggest-action" id="prefText"></p>
-        <p class="muted small" id="resultNote">評価はそれぞれの抽出の「温かいうち」の評価として保存しました。押すと評価の画面で詳しく直せます</p>
+        <p class="muted small" id="resultNote">評価は各杯の「温かいうち」に保存しました。名前を押すと詳しく直せます</p>
         <div class="row" id="againRow" hidden>
           <button class="btn" type="button" id="again">同じ組でもう1回</button>
         </div>
