@@ -39,7 +39,7 @@ function render(month) {
             ...r.origins.map((o) => el('div', { class: 'rp-bar-row' }, el('span', { class: 'rp-bar-label' }, o.key), el('span', { class: 'rp-bar' }, el('span', { class: 'rp-bar-fill', style: `width:${Math.round((o.cups / maxOrigin) * 100)}%` })), el('span', { class: 'num' }, `${o.cups}杯`))),
             r.otherOrigins ? el('p', { class: 'muted' }, `ほか${r.otherOrigins}か国`) : '',
           )
-        : el('p', { class: 'muted' }, '記録がありません'),
+        : el('p', { class: 'muted' }, 'この月の記録はありません。淹れると表示します'),
     ),
     el('section', {}, el('h3', {}, '好みの変化（先月と比べて）'), el('ul', { class: 'rp-list' }, ...r.prefChange.map((t) => el('li', {}, t)))),
     r.caffeinePerDayMg != null ? el('p', { class: 'muted' }, `飲んだ日のカフェインは平均 約${r.caffeinePerDayMg}mg（カフェインレスを除く目安）`) : '',

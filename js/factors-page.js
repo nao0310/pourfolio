@@ -9,7 +9,7 @@ import { registerServiceWorker } from './pwa.js';
 
 function factorCard(f, grinderName) {
   const head = el('h2', {}, f.label);
-  if (!f.points.length) return el('section', { class: 'card' }, head, el('p', { class: 'muted' }, '記録がありません'));
+  if (!f.points.length) return el('section', { class: 'card' }, head, el('p', { class: 'muted' }, 'まだ記録はありません。豆を登録して、淹れて評価すると表示します'));
   const xs = f.points.map((p) => p.x);
   const lo = Math.min(...xs);
   const hi = Math.max(...xs);

@@ -11,7 +11,7 @@ function dimCard(rows, dim) {
   const list = preferenceBy(rows, dim.key);
   const card = el('section', { class: 'card' }, el('h2', {}, dim.label));
   if (!list.length) {
-    card.append(el('p', { class: 'muted' }, `${dim.label}を入れた豆の記録がありません`));
+    card.append(el('p', { class: 'muted' }, `まだ${dim.label}を入れた豆の記録はありません。豆の登録で${dim.label}を入れて淹れると表示します`));
     return card;
   }
   card.append(
@@ -37,7 +37,7 @@ function heatCard(rows, rowDim, title) {
   const hm = heatmap(rows, rowDim);
   const card = el('section', { class: 'card' }, el('h2', {}, title), el('p', { class: 'muted small' }, 'マスの濃さが嗜好スコア、数字が杯数です。空いているマスは、まだ飲んでいない組み合わせです。'));
   if (!hm.rows.length) {
-    card.append(el('p', { class: 'muted' }, '記録がありません'));
+    card.append(el('p', { class: 'muted' }, 'まだ記録はありません。豆を登録して、淹れて評価すると表示します'));
     return card;
   }
   const level = (s) => Math.max(1, Math.min(5, Math.round(s)));
