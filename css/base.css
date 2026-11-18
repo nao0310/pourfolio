@@ -144,7 +144,7 @@ main.with-bottom-bar { padding-bottom: calc(110px + env(safe-area-inset-bottom))
 .field-error { display: block; color: var(--danger); font-size: 0.9rem; font-weight: 600; }
 .field-error:empty { display: none; }
 .req { font-size: 0.75rem; color: var(--danger); border: 1px solid var(--danger); border-radius: 6px; padding: 0 4px; margin-left: 4px; vertical-align: middle; }
-input[type="url"], input[type="date"], select, textarea {
+input[type="url"], input[type="date"], input[type="time"], select, textarea {
   width: 100%;
   min-height: 52px;
   padding: 10px 14px;
@@ -155,7 +155,7 @@ input[type="url"], input[type="date"], select, textarea {
   background: var(--bg);
   color: var(--fg);
 }
-input[type="date"] { appearance: none; -webkit-appearance: none; display: block; }
+input[type="date"], input[type="time"] { appearance: none; -webkit-appearance: none; display: block; }
 textarea { min-height: 0; }
 select + input[type="text"] { margin-top: 8px; }
 .with-unit { display: flex; align-items: center; gap: 8px; }
@@ -812,3 +812,14 @@ body.timer-on .tabbar { display: none; }
   .timer-add, .timer-count { font-size: 1.05rem; }
   .timer-next, .timer-ghost { font-size: 0.85rem; }
 }
+
+/* 提案の理由（F2・F3）、量・アイス（A6）と気分（F4） */
+.reason-list { margin: 8px 0 0; padding-left: 1.2em; }
+.reason-list li { margin: 2px 0; line-height: 1.5; }
+p.label { font-weight: 600; margin: 12px 0 6px; }
+.adjust-ice { margin-top: 8px; }
+.adjust-ice > span { display: flex; flex-direction: column; }
+.today-pick { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+.cutoff-row { align-items: center; margin-top: 0; }
+.cutoff-row input { flex: 1; min-width: 0; }
+.ai-text { width: 100%; font-family: inherit; font-size: 0.85rem; line-height: 1.4; }

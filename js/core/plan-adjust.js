@@ -127,6 +127,26 @@ export function adjustPlan(plan, adj = {}) {
   return p;
 }
 
+/**
+ * アイスで淹れた杯の計画（お湯だけの量）を、氷を足した元の湯量に戻す。
+ * 「前回と同じ」などでアイスの杯を土台にするとき、もう一度アイスに分けられるようにする
+ * @param {object} plan 杯から写した計画
+ * @param {number} iceG その杯の氷（g）
+ */
+export function hotPlanOf(plan, iceG) {
+  if (!(iceG > 0) || !(plan?.waterG > 0)) return plan;
+  const waterG = plan.waterG + iceG;
+  return { ...plan, waterG, pours: scalePours(plan.pours, waterG, plan.flowGps), ratio: ratioOf(plan.doseG, waterG), template: null };
+}
+
+/**
+ * 計画をそのまま使い、氷の量だけを引き継ぐ（ダイヤルイン提案を入れた計画用。提案はお湯の量で計算してあるため）
+ */
+export function carryIce(plan, iceG) {
+  if (!(iceG > 0)) return plan;
+  return { ...plan, adjust: { mood: null, cups: 1, iceG, moodChange: null, base: { doseG: plan.doseG, waterG: plan.waterG + iceG } } };
+}
+
 /** 調整の説明（計画の画面に出す行） */
 export function adjustNotes(plan) {
   const a = plan?.adjust;
@@ -187,24 +207,25 @@ export function normalizeOverrides(raw = {}) {
 
 /**
  * URL の調整（?mood=wake&cups=2&iced=1&dose=20&water=300&temp=92&grind=24）を読む。
- * 知らない値・範囲の外の値は無視する。
+ * 知らない値・範囲の外の値は無視する。iced は 1＝アイス、0＝ホット、なし＝null（土台の杯に合わせる）
  * @param {(key:string)=>string|null} get
  */
 export function parseAdjustParams(get) {
   const mood = MOODS[get('mood')] ? get('mood') : null;
   const cupsN = Number(get('cups'));
   const cups = CUP_OPTIONS.includes(cupsN) ? cupsN : 1;
-  const iced = get('iced') === '1';
+  const iced = get('iced') === '1' ? true : get('iced') === '0' ? false : null; // null は「土台の杯に合わせる」
   const overrides = normalizeOverrides({ doseG: get('dose'), waterG: get('water'), tempC: get('temp'), grind: get('grind') });
   return { mood, cups, iced, overrides };
 }
 
-/** 調整を URL の文字にする（先頭の & なし。調整がなければ空文字） */
-export function adjustQuery({ mood = null, cups = 1, iced = false, overrides = {} } = {}) {
+/** 調整を URL の文字にする（先頭の & なし。調整がなければ空文字）。icedDefault は土台の杯がアイスだったとき true（ホットを iced=0 で残す） */
+export function adjustQuery({ mood = null, cups = 1, iced = false, overrides = {} } = {}, icedDefault = false) {
   const q = new URLSearchParams();
   if (MOODS[mood]) q.set('mood', mood);
   if (CUP_OPTIONS.includes(cups) && cups !== 1) q.set('cups', String(cups));
-  if (iced) q.set('iced', '1');
+  if (iced === true) q.set('iced', '1');
+  else if (iced === false && icedDefault) q.set('iced', '0');
   const o = normalizeOverrides(overrides);
   if (o.doseG != null) q.set('dose', String(o.doseG));
   if (o.waterG != null) q.set('water', String(o.waterG));

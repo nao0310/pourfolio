@@ -47,3 +47,14 @@ test('タイマーの1行：今の投のベストの時刻、押した後のず�
   assert.equal(ghostLine({ ...g, laps: [10] }, [11, 50], { phase: 'wait', index: 2 }, name), '');
   assert.equal(ghostLine(null, [], { phase: 'pour', index: 0 }, name), '');
 });
+
+test('アイスや杯数を変えた杯はゴーストに選ばない', () => {
+  const brews = [
+    brew('hot', '2026-11-01T00:00:00Z', { context: {} }),
+    brew('ice', '2026-11-02T00:00:00Z', { context: { iceG: 120 } }),
+    brew('two', '2026-11-03T00:00:00Z', { context: { cups: 2 } }),
+    brew('mood', '2026-11-04T00:00:00Z', { context: { mood: 'wake' } }),
+  ];
+  const tastings = [t('hot', 3), t('ice', 5), t('two', 5), t('mood', 4)];
+  assert.equal(pickGhost({ brews, tastings, recipeId: 'r1', beanId: 'A' }).brewId, 'mood');
+});

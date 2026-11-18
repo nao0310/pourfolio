@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>AIに相談 - Pourfolio</title>
+  <meta name="theme-color" content="#5a371f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Pourfolio">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/base.css">
+</head>
+<body>
+  <main>
+    <p class="crumb"><a href="more.html">その他</a></p>
+    <h1>AIに相談</h1>
+    <p class="muted">記録の要約と質問を1つの文章にします。コピーして、手元のチャットAI（ChatGPT・Claude・Geminiなど）に貼ってください。このアプリから自動で送ることはありません。</p>
+
+    <section class="card">
+      <h2>1. 質問を選ぶ</h2>
+      <div class="precheck" id="questions" role="radiogroup" aria-label="質問"></div>
+      <label class="field" id="beanRow" hidden>
+        <span class="label">豆</span>
+        <select id="bean"></select>
+      </label>
+      <label class="field">
+        <span class="label">付け足すこと（任意）</span>
+        <textarea id="extra" rows="2" placeholder="例：朝は時間がないので3分以内にしたい"></textarea>
+      </label>
+    </section>
+
+    <section class="card">
+      <h2>2. コピーしてAIに貼る</h2>
+      <div class="row">
+        <button class="btn block" type="button" id="copy">文章をコピーする</button>
+      </div>
+      <p id="copyMsg" role="status"></p>
+      <details class="sub-action">
+        <summary>コピーする文章を見る</summary>
+        <textarea class="ai-text" id="text" rows="14" readonly></textarea>
+      </details>
+      <p class="hint">メモ（自由に書いた文）は入れていません。貼る前に中身を確かめられます。</p>
+    </section>
+
+    <section class="card" id="answerCard">
+      <h2>3. AIの答えを貼り戻す</h2>
+      <p class="muted">答えの最後の「【提案レシピ】」の部分を含めて貼ると、粉量・湯量・湯温・挽き目を読み取って淹れられます。</p>
+      <label class="field">
+        <span class="label">AIの答え</span>
+        <textarea id="answer" rows="6"></textarea>
+      </label>
+      <div class="row">
+        <button class="btn secondary" type="button" id="parse">読み取る</button>
+      </div>
+      <div id="parsed" hidden>
+        <div class="plan-grid" id="parsedPlan"></div>
+        <p class="muted" id="parsedReason"></p>
+        <label class="field">
+          <span class="label">淹れる豆</span>
+          <select id="answerBean"></select>
+          <span class="hint" id="answerBase"></span>
+        </label>
+        <div class="row">
+          <a class="btn block" id="brewLink">この計画で淹れる</a>
+        </div>
+      </div>
+      <p id="msg" role="status"></p>
+    </section>
+  </main>
+  <script type="module" src="js/ai-page.js"></script>
+  <script type="module" src="js/tabbar.js"></script>
+</body>
+</html>

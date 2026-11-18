@@ -7,6 +7,7 @@ import { localYmd, formatYmdJa } from './format.js';
 
 /**
  * 比べる杯を選ぶ：同じレシピ・タイマーで淹れた・注湯完了の時刻がある・★がある杯のうち、★が高い→同じ豆→新しい順。
+ * アイスや杯数を変えた杯（量が違うのでペースも違う）は比べない。
  * @returns {{brewId:string, stars:number, ymd:string, laps:(number|null)[], totalSec:number|null, sameBean:boolean}|null}
  */
 export function pickGhost({ brews = [], tastings = [], recipeId = null, beanId = null } = {}) {
@@ -14,6 +15,7 @@ export function pickGhost({ brews = [], tastings = [], recipeId = null, beanId =
   const cands = [];
   for (const b of brews ?? []) {
     if (b.deletedAt != null || b.recipeId !== recipeId || !b.timerUsed) continue;
+    if (b.context?.iceG > 0 || (b.context?.cups ?? 1) !== 1) continue;
     const laps = (b.actual?.pours ?? []).map((p) => (Number.isFinite(p?.doneSec) ? p.doneSec : null));
     if (!laps.some((x) => x != null)) continue;
     const t = pickTasting(tastings, b.id);

@@ -132,3 +132,15 @@ test('CSVのファイル名は種類と日時入り', () => {
   const d = new Date(2026, 10, 18, 7, 5);
   assert.equal(csvFileName('brews', d), 'pourfolio-brews-20261118-0705.csv');
 });
+
+test('抽出の一覧：気分・杯数・氷の列（調整しなかった杯は空）', () => {
+  const data = makeSampleData(NOW);
+  const b = data.brews[0];
+  const brews = [{ ...b, context: { mood: 'wake', cups: 2, iceG: 120 } }, { ...b, id: 'other', at: '2099-01-01T00:00:00Z', context: {} }];
+  const [head, row, row2] = brewRows({ ...data, brews });
+  const col = (r, name) => r[head.indexOf(name)];
+  assert.equal(col(row, '気分'), '目覚め');
+  assert.equal(col(row, '杯数'), 2);
+  assert.equal(col(row, '氷g'), 120);
+  assert.deepEqual([col(row2, '気分'), col(row2, '杯数'), col(row2, '氷g')], ['', '', '']);
+});

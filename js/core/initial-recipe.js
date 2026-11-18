@@ -133,6 +133,7 @@ export function initialRecipe({ bean, beans = [], brews = [], tastings = [], gri
     const m = medians(simGood, grinderId, grinders, step);
     const used = similar.filter((x) => simGood.some((g) => g.brew.beanId === x.bean.id));
     const top = used[0];
+    const names = [...new Set(used.map((x) => x.bean.name))]; // 同じ銘柄を買い直した袋は1つの名前にまとめる
     return finish({
       source: 'similar',
       m,
@@ -142,7 +143,7 @@ export function initialRecipe({ bean, beans = [], brews = [], tastings = [], gri
       n: simGood.length,
       similar: used,
       reasons: [
-        `似た豆 ${used.length}袋（${used.map((x) => x.bean.name).slice(0, 3).join('、')}${used.length > 3 ? ' ほか' : ''}）で★${GOOD_STARS}以上だった${simGood.length}杯の中央値です`,
+        `似た豆 ${used.length}袋（${names.slice(0, 3).join('、')}${names.length > 3 ? ' ほか' : ''}）で★${GOOD_STARS}以上だった${simGood.length}杯の中央値です`,
         top ? `いちばん似ている豆：${top.bean.name}（${top.why.join('・')}）` : '',
       ],
     });

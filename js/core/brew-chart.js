@@ -1,6 +1,7 @@
 // 抽出チャート（E3）：TDS×抽出収率に自分の評価を重ね、自分の好きゾーンを出す（純粋関数）
 // 固定の理想ではなく自分の評価から学ぶ（spec 2.1）。昔からの理想の範囲（収率18〜22%・TDS 1.15〜1.35%）は参考に重ねる。
 
+import { isIced } from './plan-adjust.js';
 import { THRESHOLDS, readiness } from './analysis.js';
 import { quantile } from './chart-scale.js';
 import { DEFAULT_RETENTION } from './extraction.js';
@@ -24,7 +25,7 @@ const r1 = (n) => Math.round(n * 10) / 10;
  */
 export function chartPoints(rows) {
   return rows
-    .filter((r) => r.metrics.tdsPct != null && r.metrics.eyPct != null)
+    .filter((r) => r.metrics.tdsPct != null && r.metrics.eyPct != null && !isIced(r.brew)) // アイスは氷で薄まり、収率も比べられない
     .map((r) => ({
       x: r.metrics.eyPct,
       y: r.metrics.tdsPct,

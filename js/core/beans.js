@@ -120,6 +120,7 @@ export function normalizeBeanInput(raw) {
       flavorNotes: text('flavorNotes'),
       memo: text('memo'),
       status,
+      decaf: raw.decaf === 'on' || raw.decaf === true, // カフェインレス（今日の一杯 F3 で、控える時間に優先する）
     },
     errors,
   };
@@ -154,6 +155,7 @@ export function beanToFormValues(bean) {
     flavorNotes: str(bean.flavorNotes),
     memo: str(bean.memo),
     status: Object.hasOwn(BEAN_STATUS, bean.status) ? bean.status : 'unopened',
+    decaf: bean.decaf ? 'on' : '',
   };
 }
 

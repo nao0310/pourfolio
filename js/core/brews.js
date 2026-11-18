@@ -201,7 +201,7 @@ export function diffLines(diff, plan = {}, actual = {}) {
 
 /** 計画の写しから、抽出の記録に要らない項目（どこから写したか等）を外す */
 function plannedCopy(plan) {
-  const { source, fromBrewId, beanId, ratio, suggestionId, ...rest } = plan;
+  const { source, fromBrewId, beanId, ratio, suggestionId, adjust, ...rest } = plan; // 気分・杯数・氷は context に残す
   return JSON.parse(JSON.stringify(rest));
 }
 

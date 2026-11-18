@@ -12,6 +12,7 @@ export const TABS = Object.freeze([
 /** 画面のファイル名 → タブ。ここにない画面にはタブを出さない */
 const PAGE_TAB = Object.freeze({
   'index.html': 'home',
+  'today.html': 'home',
   'recipes.html': 'brew',
   'beans.html': 'beans',
   'bean.html': 'beans',
@@ -29,6 +30,7 @@ const PAGE_TAB = Object.freeze({
   'equipment.html': 'more',
   'compare.html': 'more',
   'data.html': 'more',
+  'ai.html': 'more',
 });
 
 /** タブを出さない画面（入力の途中・開発用） */

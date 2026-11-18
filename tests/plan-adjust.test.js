@@ -11,6 +11,8 @@ import {
   adjustQuery,
   moodForHour,
   cupsLabel,
+  hotPlanOf,
+  carryIce,
 } from '../js/core/plan-adjust.js';
 import { planFromRecipe, make46, makeBasic } from '../js/core/recipes.js';
 
@@ -154,7 +156,10 @@ test('URLの調整を読み書きする（知らない値は無視）', () => {
   const params = new URLSearchParams(q);
   assert.deepEqual(parseAdjustParams((k) => params.get(k)), { mood: 'relax', cups: 2, iced: true, overrides: { doseG: 18, grind: '22' } });
   const bad = new URLSearchParams('mood=sleepy&cups=9&iced=yes&dose=500');
-  assert.deepEqual(parseAdjustParams((k) => bad.get(k)), { mood: null, cups: 1, iced: false, overrides: {} });
+  assert.deepEqual(parseAdjustParams((k) => bad.get(k)), { mood: null, cups: 1, iced: null, overrides: {} });
+  assert.equal(parseAdjustParams((k) => (k === 'iced' ? '0' : null)).iced, false);
+  assert.equal(adjustQuery({ iced: false }, true), 'iced=0');
+  assert.equal(adjustQuery({ iced: false }, false), '');
   assert.equal(adjustQuery({}), '');
 });
 
@@ -164,4 +169,24 @@ test('時間帯から気分の初期値', () => {
   assert.equal(moodForHour(20), 'relax');
   assert.equal(moodForHour(1), 'relax');
   assert.equal(moodForHour(4), null);
+});
+
+test('アイスの杯の計画を元の湯量に戻すと、もう一度同じ量のアイスに分けられる', () => {
+  const iced = adjustPlan(plan46(20, 15), { iced: true });
+  const { adjust, ...copied } = iced; // 記録の計画には adjust を残さない
+  const hot = hotPlanOf(copied, adjust.iceG);
+  assert.equal(hot.waterG, 300);
+  assert.equal(lastToG(hot), 300);
+  const again = adjustPlan(hot, { iced: true });
+  assert.equal(again.waterG, 180);
+  assert.equal(again.adjust.iceG, 120);
+  assert.equal(hotPlanOf(copied, 0), copied);
+});
+
+test('氷の量だけ引き継ぐ（提案を入れた計画用）', () => {
+  const p = carryIce(planHand(15, 150), 100);
+  assert.equal(p.waterG, 150);
+  assert.deepEqual(contextFromPlan(p), { iceG: 100 });
+  assert.match(adjustNotes(p)[0], /お湯 150g.*氷 100g/);
+  assert.equal(carryIce(planHand(), null).adjust, undefined);
 });

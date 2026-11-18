@@ -2,6 +2,7 @@
 // Excelで開いても文字化けしないよう、先頭にBOMを付けたUTF-8にし、行の区切りはCRLFにする。
 // 2つのファイルを作る：抽出の一覧（1杯1行、豆・計画・実績・評価・提案を含む）と豆の一覧。
 
+import { MOODS } from './plan-adjust.js';
 import { pickTasting, JAR_ATTRS, jarWord, DETAIL_ATTRS } from './tastings.js';
 import { flavorsText } from './flavors.js';
 import { precheckText } from './brews.js';
@@ -71,6 +72,9 @@ export function brewRows({ brews = [], beans = [], recipes = [], equipment = [],
     '推定抽出液g',
     'カフェインmg',
     '水',
+    '気分',
+    '杯数',
+    '氷g',
     '原価円',
     '冷凍の袋',
     'タイマー',
@@ -132,6 +136,9 @@ export function brewRows({ brews = [], beans = [], recipes = [], equipment = [],
         m.beverageEstimated ? (m.beverageG ?? '') : '',
         m.caffeineMg ?? '',
         eqOf.get(b.equipment?.waterId)?.name ?? '',
+        MOODS[b.context?.mood]?.label ?? '',
+        b.context?.cups ?? '',
+        b.context?.iceG ?? '',
         brewCostJpy(b, bean, beans) ?? '',
         b.frozenPortionId ? '使った' : '',
         Boolean(b.timerUsed),
