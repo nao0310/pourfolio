@@ -592,7 +592,7 @@ p > a:not(.btn):only-child { display: inline-block; padding: 11px 0; }
 .detail-count { font-weight: 400; font-size: 0.9rem; }
 .detail-row { padding: 12px 0; border-top: 1px solid var(--line); }
 .detail-row:first-child { border-top: 0; }
-.detail-row .jar-label .link-btn { padding: 0 4px; min-height: 32px; margin-left: auto; }
+.detail-row .jar-label .link-btn { padding: 0 8px; min-height: 44px; min-width: 44px; margin-left: auto; } /* 「消す」も44px（2-8の21番の続き） */
 .detail-row .jar-label > .muted { flex: 1; text-align: right; }
 .intensity-line, .liking-line { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin-top: 6px; }
 .detail-kind { flex: 0 0 100%; }
@@ -804,6 +804,7 @@ body.timer-on .tabbar { display: none; }
 @media (orientation: landscape) and (max-height: 560px) {
   .timer-screen:not([hidden]) { flex-direction: row; flex-wrap: wrap; align-content: stretch; }
   .timer-bar { flex: 1 0 100%; padding: 4px max(16px, env(safe-area-inset-left)) 0; }
+  .timer-tools { position: absolute; top: calc(env(safe-area-inset-top) + 4px); right: max(16px, env(safe-area-inset-right)); padding: 0; } /* 横向きは「やめる」と同じ上の段の右 */
   .timer-top { flex: 1 1 55%; height: calc(100% - 52px); padding-left: max(16px, env(safe-area-inset-left)); }
   .timer-tap {
     flex: 1 1 40%;

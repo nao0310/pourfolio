@@ -726,7 +726,7 @@ const onSave = singleFlight(async (e) => {
     const { brew } = await saveBrew(db, buildBrew({ draft, value, at, bean, portion }));
     saved = brew;
     // 残りが0gになったら、飲み切りにするか聞く（2-8の32番）
-    if (stock.empty && bean && bean.status !== 'finished' && (await askConfirm('この豆の残りが0gになりました。飲み切りにしますか？', { ok: '飲み切りにする', cancel: 'まだ残っている' }))) {
+    if (stock.empty && bean && bean.status !== 'finished' && (await askConfirm('この豆の残りがなくなりました。飲み切りにしますか？', { ok: '飲み切りにする', cancel: 'まだ残っている' }))) {
       await setBeanStatus(db, bean.id, 'finished');
     }
     const { compareId, compareBeanId } = draft;
@@ -803,8 +803,8 @@ async function init() {
   }
   if (!loadedPlan) {
     const n = $('notFound');
-    if (!['recipe', 'bean', 'initial', 'brew', 'best', 'suggestion', 'compare', 'from'].some((k) => queryParam(k))) {
-      // 何も選ばずに開いた（下書きを消したあとの「続きに戻る」など、2-8の29番）
+    if (!['recipe', 'initial', 'brew', 'best', 'suggestion', 'from'].some((k) => queryParam(k))) {
+      // レシピを選ばずに開いた（豆だけ・下書きを消したあとの「続きに戻る」など、2-8の29番）
       n.querySelector('h1').textContent = '淹れるレシピを選んでください';
       n.querySelector('p').textContent = 'レシピの一覧から、淹れるレシピを選んでください。';
     } else if (queryParam('initial') || queryParam('brew') || queryParam('best')) {
