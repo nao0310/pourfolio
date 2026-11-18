@@ -74,6 +74,7 @@
         <label class="field">
           <span class="label">メモ</span>
           <textarea id="memo" rows="2"></textarea>
+          <span class="hint">iPhoneのキーボードのマイク（🎤）を押すと、話して入力できます</span>
         </label>
       </div>
 
@@ -124,6 +125,14 @@
         <a class="btn secondary" id="doneBean" hidden>豆を見る</a>
       </div>
     </div>
+
+    <!-- 写真（A7）。選ぶとすぐ保存する（評価の保存とは別） -->
+    <section class="card" id="photoCard" hidden>
+      <h2>写真</h2>
+      <p class="hint">撮るか、写真ライブラリから選びます。小さくしてこの端末にだけ保存します</p>
+      <div class="photo-grid" id="photos"></div>
+      <p id="photoMsg" role="status"></p>
+    </section>
   </main>
   <script type="module" src="js/tasting-page.js"></script>
 </body>

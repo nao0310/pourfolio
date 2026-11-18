@@ -1,7 +1,20 @@
 // 味の評価の画面：クイック評価（B1）、ちょうど良さ評価（JAR、B2）、詳細評価（B3）、香味と雑味（B4）
 // 冷め際の評価（B5）：温度帯（熱いうち・温かいうち・冷めてから）ごとに1件。&stage=cool で冷めてからの評価を開く
 // tasting.html?brew=<抽出のID>（抽出を保存した直後は &saved=1 が付き、豆の残量を上に出す）
-import { openDb, getBrew, getTastingsByStage, saveTasting, getBeanWithTx, getSettings, saveSuggestionForBrew } from './db.js';
+import {
+  openDb,
+  getBrew,
+  getTastingsByStage,
+  saveTasting,
+  getBeanWithTx,
+  getSettings,
+  saveSuggestionForBrew,
+  getPhotosForBrew,
+  savePhoto,
+  deletePhoto,
+} from './db.js';
+import { PHOTO_SLOTS } from './core/photos.js';
+import { shrinkImageFile } from './photo.js';
 import { CONFIDENCE_LABELS, CHANGING_KINDS } from './core/dialin.js';
 import { renderStars, renderTags, renderJar, renderDetail, renderFlavors, renderDefects } from './tasting-parts.js';
 import {
@@ -223,6 +236,63 @@ function showForm() {
   window.scrollTo(0, 0);
 }
 
+// ---- 写真（A7） ----
+
+async function renderPhotos() {
+  const by = await getPhotosForBrew(db, brew.id);
+  $('photos').replaceChildren(
+    ...PHOTO_SLOTS.map((slot) => {
+      const p = by[slot.key];
+      const inputId = `photo-${slot.key}`;
+      const input = el('input', {
+        type: 'file',
+        accept: 'image/*',
+        id: inputId,
+        class: 'visually-hidden',
+        onchange: (e) => onPickPhoto(slot, e.target.files?.[0]),
+      });
+      return el(
+        'div',
+        { class: 'photo-slot' },
+        el('strong', {}, slot.label),
+        p
+          ? el('img', {
+              src: p.dataUrl,
+              alt: `${slot.label}の写真`,
+              class: 'photo-thumb',
+              onclick: (e) => e.target.classList.toggle('zoom'), // 押すと大きく
+            })
+          : el('span', { class: 'photo-empty muted small' }, slot.hint),
+        el('label', { class: 'btn secondary small', for: inputId }, p ? '撮り直す' : '撮る・選ぶ'),
+        input,
+        p ? el('button', { type: 'button', class: 'link-btn small', onclick: () => onDeletePhoto(slot, p) }, '消す') : '',
+      );
+    }),
+  );
+  $('photoCard').hidden = false;
+}
+
+async function onPickPhoto(slot, file) {
+  if (!file) return;
+  showMessage('写真を小さくしています…', 'muted', 'photoMsg');
+  try {
+    const shrunk = await shrinkImageFile(file);
+    await savePhoto(db, { brewId: brew.id, slot: slot.key, ...shrunk });
+    showMessage(`${slot.label}の写真を保存しました`, 'ok', 'photoMsg');
+  } catch (err) {
+    console.error(err);
+    showMessage(err.message?.includes('写真') || err.message?.includes('画像') ? err.message : '写真を保存できませんでした', 'error', 'photoMsg');
+  }
+  await renderPhotos();
+}
+
+async function onDeletePhoto(slot, photo) {
+  if (!confirm(`${slot.label}の写真を消しますか？元に戻せません`)) return;
+  await deletePhoto(db, photo.id);
+  showMessage(`${slot.label}の写真を消しました`, 'ok', 'photoMsg');
+  await renderPhotos();
+}
+
 // ---- はじまり ----
 
 async function showSavedStock() {
@@ -255,6 +325,7 @@ async function init() {
   if (queryParam('saved') === '1' && !byStage.warm && stage === DEFAULT_STAGE) await showSavedStock();
   loadStage();
   $('formView').hidden = false;
+  await renderPhotos();
 }
 
 $('formView').addEventListener('submit', onSave);

@@ -37,7 +37,7 @@ test('サンプルデータは全部の表に記録がある', () => {
 });
 
 test('全部の表を合わせた件数。空のファイルは0件', () => {
-  assert.equal(totalRecords(makeSampleData(NOW)), 14);
+  assert.equal(totalRecords(makeSampleData(NOW)), 16); // 写真と飲み比べ（版5）で2件増えた
   const empty = parseBackup(JSON.stringify(makeBackup({}, NOW)));
   assert.equal(totalRecords(empty.tables), 0);
 });

@@ -9,6 +9,7 @@ import { TABLES, SETTINGS_ID } from './core/records.js';
 import { formatDateTimeJa } from './core/format.js';
 import { registerServiceWorker, requestPersistentStorage, getOfflineStatus } from './pwa.js';
 import { APP_VERSION, CHANGELOG, versionLabel } from './core/version.js';
+import { photoUsage, formatBytes, withoutPhotos } from './core/photos.js';
 
 const LABELS = {
   beans: '豆',
@@ -19,6 +20,9 @@ const LABELS = {
   tastings: '評価',
   suggestions: '提案',
   orders: '注文',
+  frozenPortions: '冷凍の袋',
+  photos: '写真',
+  experiments: '飲み比べ',
   settings: '設定',
 };
 
@@ -43,6 +47,9 @@ async function render() {
     dd.textContent = `${counts[name]} 件`;
     dl.append(dt, dd);
   }
+  const usage = photoUsage(await db.table('photos').toArray());
+  $('photoUsage').textContent = usage.count ? `写真 ${usage.count}枚・約${formatBytes(usage.bytes)}` : '';
+  $('noPhotosRow').hidden = usage.count === 0;
   const s = await db.table('settings').get(SETTINGS_ID);
   $('lastBackup').textContent = s?.lastBackupAt
     ? `最後に書き出した日時：${formatDateTimeJa(s.lastBackupAt)}`
@@ -72,7 +79,9 @@ function download(file) {
 $('export').addEventListener('click', async () => {
   try {
     const now = new Date();
-    const backup = await exportAll(db, now);
+    const all = await exportAll(db, now);
+    // 「写真を含めない」：ファイルを小さくしたいとき。写真は復元で戻らない（D-108）
+    const backup = !$('noPhotosRow').hidden && $('noPhotos').checked ? withoutPhotos(all) : all;
     const file = new File([JSON.stringify(backup, null, 1)], backupFileName(now), { type: 'application/json' });
     if (canShareFile(file)) {
       try {

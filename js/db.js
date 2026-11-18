@@ -12,6 +12,7 @@ import { suggestNext, basePlanForNext, buildSuggestion, pickSuggestionForBrew, l
 import { parseNumber } from './core/beans.js';
 import { nextLabelNos, buildPortions, freezeMemo, isInFreezer } from './core/frozen.js';
 import { localYmd } from './core/format.js';
+import { buildPhoto, photosOfBrew } from './core/photos.js';
 
 /** 本番のデータベース名（保存テストの pourfolio-storage-test とは別） */
 export const DB_NAME = 'pourfolio';
@@ -44,6 +45,11 @@ export function openDb(name = DB_NAME, options) {
   // 版4：冷凍の小分けの袋（C4）の表を足す。既存の表と記録はそのまま（移行で書き換える記録はない）
   db.version(4).stores({
     frozenPortions: 'id, beanId, updatedAt',
+  });
+  // 版5：写真（A7）と飲み比べ（X27）の表を足す。既存の表と記録はそのまま（移行で書き換える記録はない）
+  db.version(5).stores({
+    photos: 'id, brewId, updatedAt',
+    experiments: 'id, updatedAt',
   });
   return db;
 }
@@ -585,6 +591,44 @@ export async function getUnratedBrew(db, now = new Date()) {
 export async function getCoolPromptBrew(db, now = new Date()) {
   const [brews, tastings] = await Promise.all([db.table('brews').toArray(), db.table('tastings').toArray()]);
   return pickCoolPrompt(brews, tastings, now);
+}
+
+// ---- 写真（A7） ----
+
+/** その抽出の枠ごとの写真 { grounds, bed, liquid } */
+export async function getPhotosForBrew(db, brewId) {
+  return photosOfBrew(await db.table('photos').where('brewId').equals(brewId).toArray(), brewId);
+}
+
+/** 削除の印を付けて画像の文字を消す（端末の容量を空ける） */
+const erasePhoto = (p, now) => ({ ...markDeleted(p, now), dataUrl: null, bytes: 0 });
+
+/**
+ * 写真を保存する。同じ抽出・同じ枠の写真があれば、それを消して置き換える。
+ * @param {{brewId:string, slot:string, dataUrl:string, widthPx:number, heightPx:number}} input
+ * @returns {Promise<object>} 保存した写真
+ */
+export async function savePhoto(db, input, now = new Date()) {
+  const fields = buildPhoto(input);
+  let saved;
+  await db.transaction('rw', db.table('brews'), db.table('photos'), async () => {
+    const brew = await db.table('brews').get(fields.brewId);
+    if (!brew || !alive(brew)) throw new Error('抽出の記録が見つかりません');
+    const old = (await db.table('photos').where('brewId').equals(fields.brewId).toArray()).filter((p) => alive(p) && p.slot === fields.slot);
+    if (old.length) await db.table('photos').bulkPut(old.map((p) => erasePhoto(p, now)));
+    saved = createRecord(fields, now);
+    await db.table('photos').put(saved);
+  });
+  return saved;
+}
+
+/** 写真を消す（削除の印を付け、画像の文字も消す） */
+export async function deletePhoto(db, id, now = new Date()) {
+  const p = await db.table('photos').get(id);
+  if (!p || !alive(p)) return null;
+  const next = erasePhoto(p, now);
+  await db.table('photos').put(next);
+  return next;
 }
 
 // ---- ダイヤルイン提案（F1） ----

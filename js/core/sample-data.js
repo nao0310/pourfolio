@@ -7,6 +7,10 @@ import { createRecord, SETTINGS_ID } from './records.js';
  * @param {Date|string|number} [now]
  * @returns {Record<string, object[]>}
  */
+/** サンプルの写真（1×1の画像） */
+const SAMPLE_PHOTO =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+
 export function makeSampleData(now = new Date()) {
   const base = now instanceof Date ? now : new Date(now);
   const daysAgo = (d) => new Date(base.getTime() - d * 86400000);
@@ -162,6 +166,26 @@ export function makeSampleData(now = new Date()) {
     ),
   );
 
+  // 写真（A7）：抽出液の写真1枚（1×1の小さな画像）
+  const photo = createRecord(
+    { brewId: brew.id, slot: 'liquid', dataUrl: SAMPLE_PHOTO, widthPx: 1, heightPx: 1, bytes: 70 },
+    daysAgo(1),
+  );
+
+  // 焙煎度比較（X27）：始めたばかりの飲み比べ（1袋だけ淹れた）
+  const experiment = createRecord(
+    {
+      kind: 'roast',
+      title: `${bean.name} 焙煎度比較`,
+      blind: true,
+      recipeId: recipe.id,
+      entries: [{ beanId: bean.id, brewId: brew.id }],
+      ratings: [],
+      revealedAt: null,
+    },
+    daysAgo(1),
+  );
+
   const settings = createRecord({ id: SETTINGS_ID, lastBackupAt: null }, daysAgo(9));
 
   return {
@@ -174,6 +198,8 @@ export function makeSampleData(now = new Date()) {
     suggestions: [suggestion],
     orders: [order],
     frozenPortions,
+    photos: [photo],
+    experiments: [experiment],
     settings: [settings],
   };
 }
