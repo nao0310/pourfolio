@@ -1054,3 +1054,4 @@ h2 .term-help, h1 .term-help { margin-top: -10px; margin-bottom: -10px; }
 /* 記録の保存場所が使えないときの知らせ（js/storage-check.js、総仕上げの74番） */
 .storage-bar { border: 2px solid var(--danger); }
 .storage-bar strong { color: var(--danger); }
+.chip:has(input:disabled) { opacity: 0.45; }

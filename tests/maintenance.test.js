@@ -146,3 +146,18 @@ test('DB：済んだ・あとで を器具に書き、書き出し → 復元で
   assert.deepEqual([back.name, back.maintenance.everyDays, back.maintenance.lastDoneAt, back.maintenance.log.length], ['ミル2', 14, NOW.toISOString(), 1]);
   await assert.rejects(markMaintenanceDone(db, 'no-such', NOW));
 });
+
+test('「いつも使う」の器具を削除したら、同じ種類でいちばん新しく直したものを「いつも使う」にする（総仕上げの69番）', async () => {
+  const { IDBFactory, IDBKeyRange } = await import('fake-indexeddb');
+  const { deleteEquipment, listEquipment } = await import('../js/db.js');
+  const { defaultEquipmentIds } = await import('../js/core/equipment.js');
+  const db = openDb('pf-eq-default', { indexedDB: new IDBFactory(), IDBKeyRange });
+  const t = (m) => new Date(Date.UTC(2026, 10, 18, 0, m));
+  const a = await addEquipment(db, { kind: 'grinder', name: 'A', attrs: {}, isDefault: true }, t(0));
+  await addEquipment(db, { kind: 'grinder', name: 'B', attrs: {} }, t(1));
+  const c = await addEquipment(db, { kind: 'grinder', name: 'C', attrs: {} }, t(2));
+  await addEquipment(db, { kind: 'dripper', name: 'D', attrs: {} }, t(3));
+  await deleteEquipment(db, a.id, t(4));
+  assert.equal(defaultEquipmentIds(await listEquipment(db)).grinderId, c.id);
+  db.close();
+});

@@ -528,8 +528,17 @@ export async function updateEquipment(db, id, changes, now = new Date()) {
 
 /** 器具を削除する（印を付けるだけ。レシピや抽出の記録に残ったIDはそのまま） */
 export async function deleteEquipment(db, id, now = new Date()) {
-  const cur = await db.table('equipment').get(id);
-  if (cur && alive(cur)) await db.table('equipment').put(markDeleted(cur, now));
+  await db.transaction('rw', db.table('equipment'), async () => {
+    const cur = await db.table('equipment').get(id);
+    if (!cur || !alive(cur)) return;
+    await db.table('equipment').put(markDeleted(cur, now));
+    // 「いつも使う」を削除したら、同じ種類でいちばん新しく直したものを「いつも使う」にする（総仕上げの69番）
+    if (!cur.isDefault) return;
+    const rest = (await db.table('equipment').toArray()).filter((e) => alive(e) && e.kind === cur.kind);
+    if (rest.some((e) => e.isDefault)) return;
+    const next = [...rest].sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)))[0];
+    if (next) await db.table('equipment').put(updateRecord(next, { isDefault: true }, now));
+  });
 }
 
 /** お手入れ（D4）の「済んだ」：前回を今にする */

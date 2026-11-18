@@ -5,6 +5,7 @@ import { yen } from './core/cost.js';
 import { formatYmdJa } from './core/format.js';
 import { $, el, showMessage } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
+import { serialQueue } from './core/once.js';
 
 const db = openDb();
 const alive = (r) => r && r.deletedAt == null;
@@ -34,10 +35,26 @@ function shopCard(s, favorites) {
             class: 'fav-btn',
             'aria-pressed': s.favorite ? 'true' : 'false',
             'aria-label': s.favorite ? `${s.name}をお気に入りから外す` : `${s.name}をお気に入りにする`,
-            onclick: async () => {
-              await updateSettings(db, { favoriteShops: toggleFavorite(favorites, s.key) });
-              showMessage(s.favorite ? `${s.name}をお気に入りから外しました` : `${s.name}をお気に入りにしました`);
-              await render();
+            // 押したときの設定を読み直してから、1つずつ順番に保存する。押した☆は終わるまで押せない
+            //（続けて押すと、描いたときの古い値で上書きして1つ目が消えていた。総仕上げの64番）
+            onclick: (event) => {
+              const btn = event.currentTarget;
+              if (btn.disabled) return;
+              btn.disabled = true;
+              favQueue
+                .run(async () => {
+                  const cur = await getSettings(db);
+                  const list = Array.isArray(cur.favoriteShops) ? cur.favoriteShops : [];
+                  const was = list.includes(s.key);
+                  await updateSettings(db, { favoriteShops: toggleFavorite(list, s.key) });
+                  showMessage(was ? `${s.name}をお気に入りから外しました` : `${s.name}をお気に入りにしました`);
+                })
+                .catch((err) => {
+                  console.error(err);
+                  showMessage('お気に入りを保存できませんでした。もう一度押してください', 'error');
+                })
+                .then(() => favQueue.idle())
+                .then(() => render());
             },
           },
           s.favorite ? '★' : '☆',
@@ -46,6 +63,8 @@ function shopCard(s, favorites) {
     el('dl', { class: 'plan-numbers' }, ...facts.flatMap(([k, v]) => [el('dt', {}, k), el('dd', {}, v)])),
   );
 }
+
+const favQueue = serialQueue();
 
 async function render() {
   const [all, settings] = await Promise.all([readAll(db), getSettings(db)]);

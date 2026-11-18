@@ -688,6 +688,11 @@ await flow('編集で入荷待ちに戻す', 'empty', async (page, notes) => {
   await page.waitForTimeout(600);
   await page.goto(`${srv.base}/bean-edit.html?id=${id}`);
   await settle(page);
+  // 総仕上げの70番：使った記録がある豆は「入荷待ち」を選べない
+  if (await page.locator('[name=status][value=ordered]').isDisabled()) {
+    notes.push('（参考）1杯淹れたあとの編集：「入荷待ち」は選べない');
+    return;
+  }
   await page.evaluate(() => [...document.querySelectorAll('[name=status]')].forEach((r) => (r.checked = r.value === 'ordered')));
   await page.click('#save');
   await page.waitForURL(/bean\.html/);
