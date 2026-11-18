@@ -3,6 +3,7 @@
 
 import Dexie from '../vendor/dexie/dexie.mjs';
 import { TABLES, SETTINGS_ID, createRecord, updateRecord, markDeleted } from './core/records.js';
+import { beansFromOrder } from './core/orders.js';
 import { initialStockG } from './core/roast.js';
 import { remainingG, adjustDelta } from './core/inventory.js';
 import { makeBackup, mergeRecords } from './core/backup.js';
@@ -33,6 +34,10 @@ export function openDb(name = DB_NAME, options) {
   // 版2：提案ログ（F1）の表を足す。既存の表と記録はそのまま（移行で書き換える記録はない）
   db.version(2).stores({
     suggestions: 'id, brewId, beanId, updatedAt',
+  });
+  // 版3：珈琲問屋への注文（X29）の表を足す。豆の「入荷待ち」と orderId は検索に使わないので索引は足さない
+  db.version(3).stores({
+    orders: 'id, orderDate, updatedAt',
   });
   return db;
 }
@@ -145,7 +150,8 @@ export async function getBeanWithTx(db, beanId) {
  */
 async function syncInboundTx(db, bean, now) {
   const allBeans = await db.table('beans').toArray();
-  const stock = initialStockG(bean, allBeans);
+  // 入荷待ちの豆はまだ手元にないので、入庫の履歴を作らない（届いたときに作る）
+  const stock = bean.status === 'ordered' ? null : initialStockG(bean, allBeans);
   const txs = (await db.table('inventoryTx').where('beanId').equals(bean.id).toArray()).filter(alive);
   const inbound = txs.find((t) => t.kind === 'in');
   if (!stock) {
@@ -191,6 +197,38 @@ export async function updateBean(db, beanId, changes, now = new Date()) {
     await syncInboundTx(db, next, now);
   });
   return next;
+}
+
+// ---- 注文と入荷待ち（X29） ----
+
+/**
+ * 注文を1件保存し、品目から入荷待ちの豆を1袋ずつ登録する
+ * @param {object} order orderFields の値
+ * @param {object[]} items normalizeOrderItem の value の配列
+ * @returns {Promise<{order:object, beans:object[]}>}
+ */
+export async function addOrder(db, order, items, now = new Date()) {
+  const rec = createRecord(order, now);
+  const beans = beansFromOrder({ orderId: rec.id, orderDate: rec.orderDate, items }).map((b) => createRecord(b, now));
+  await db.transaction('rw', db.table('orders'), db.table('beans'), async () => {
+    await db.table('orders').put(rec);
+    await db.table('beans').bulkPut(beans);
+  });
+  return { order: rec, beans };
+}
+
+/** 削除の印が付いていない注文（新しい順） */
+export async function listOrders(db) {
+  const rows = (await db.table('orders').toArray()).filter(alive);
+  return rows.sort((a, b) => String(b.orderDate).localeCompare(String(a.orderDate)) || String(b.createdAt).localeCompare(String(a.createdAt)));
+}
+
+/**
+ * 入荷待ちの豆が届いた：実重量・到着日・焙煎日を入れて未開封にし、入庫の履歴を作る
+ * @param {object} changes arrivalChanges の value
+ */
+export async function markArrived(db, beanId, changes, now = new Date()) {
+  return updateBean(db, beanId, changes, now);
 }
 
 /** 豆の状態だけを変える（未開封・開封済み・飲み切り） */

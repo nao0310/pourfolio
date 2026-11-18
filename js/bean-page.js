@@ -9,7 +9,11 @@ import {
   deleteInventoryTx,
   setBeanStatus,
   deleteBean,
+  listBeans,
+  markArrived,
 } from './db.js';
+import { arrivalChanges } from './core/orders.js';
+import { initialStockG } from './core/roast.js';
 import { originText, BEAN_STATUS, WEIGHT_BASIS, parseNumber } from './core/beans.js';
 import { remainingG, cupsLeft, consumptionPace, emptyForecast, doseFromSettings, sortTxNewestFirst, TX_KINDS } from './core/inventory.js';
 import { freshness, FRESHNESS_WINDOWS, FALLBACK_GROUP, STAGES } from './core/freshness.js';
@@ -160,12 +164,46 @@ async function render() {
   $('editLink').href = `bean-edit.html?id=${encodeURIComponent(bean.id)}`;
   $('toggleFinished').textContent = bean.status === 'finished' ? '飲み切りを取り消す' : '飲み切りにする';
   $('toggleFinished').dataset.status = bean.status;
-  renderFreshness(bean);
-  renderStock(bean, txs);
-  renderTxList(txs);
+  // 入荷待ちの豆は、届くまで飲み頃・残量・在庫の操作を出さず「届いた」の入力だけにする
+  const ordered = bean.status === 'ordered';
+  for (const id of ['freshCard', 'stockCard', 'actions', 'txCard', 'toggleFinished']) $(id).hidden = ordered;
+  $('arrivalCard').hidden = !ordered;
+  if (ordered) {
+    await renderArrival(bean);
+  } else {
+    renderFreshness(bean);
+    renderStock(bean, txs);
+    renderTxList(txs);
+  }
   renderInfo(bean);
   $('content').hidden = false;
 }
+
+/** 入荷待ち：注文日と、届く重さの目安 */
+async function renderArrival(bean) {
+  const est = initialStockG(bean, await listBeans(db));
+  $('arrivalText').textContent = bean.orderDate
+    ? `${formatYmdJa(bean.orderDate)}に注文しました。届いたら、豆の重さを量って入れてください。`
+    : '届いたら、豆の重さを量って入れてください。';
+  $('arrivalHint').textContent =
+    est && bean.labelWeightG
+      ? `目安：${WEIGHT_BASIS[bean.labelWeightBasis] ?? ''}${formatG(bean.labelWeightG)} → 約${formatG(est.g)}`
+      : '';
+  if (!$('arrivalDate').value) $('arrivalDate').value = localYmd();
+}
+
+$('arrivalForm').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const form = event.target;
+  const raw = Object.fromEntries(new FormData(form));
+  const { value, errors } = arrivalChanges(raw);
+  for (const span of form.querySelectorAll('.field-error')) span.textContent = errors[span.dataset.for] ?? '';
+  if (Object.keys(errors).length) return;
+  await markArrived(db, beanId, value);
+  form.reset();
+  showMessage(`届いた豆を登録しました（${formatG(value.actualWeightG)}、焙煎日 ${formatYmdJa(value.roastDate)}）`);
+  await render();
+});
 
 $('cupForm').addEventListener('submit', async (event) => {
   event.preventDefault();

@@ -3,7 +3,7 @@ import { openDb, listBeans, listAliveTx, getSettings, updateSettings } from './d
 import { sortBeansForList, originText, BEAN_STATUS, parseNumber } from './core/beans.js';
 import { groupTxByBean, remainingG, cupsLeft, doseFromSettings } from './core/inventory.js';
 import { freshness } from './core/freshness.js';
-import { localYmd, formatG } from './core/format.js';
+import { localYmd, formatG, formatYmdJa } from './core/format.js';
 import { $, el, showMessage, freshnessPill } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
 
@@ -28,14 +28,21 @@ function beanCard(bean, txs, doseG, today) {
     { class: `card bean-card${bean.status === 'finished' ? ' finished' : ''}`, href: `bean.html?id=${encodeURIComponent(bean.id)}` },
     el('div', { class: 'bean-card-top' }, el('span', { class: 'bean-name' }, bean.name), freshnessPill(f)),
     sub && el('div', { class: 'muted' }, sub),
-    el(
-      'div',
-      { class: 'bean-card-stock' },
-      el('span', { class: 'num' }, formatG(Math.max(rest, 0))),
-      el('span', {}, `あと${cupsLeft(rest, doseG)}杯`),
-      daysText && el('span', { class: 'muted' }, daysText),
-      bean.status !== 'open' && el('span', { class: 'muted' }, BEAN_STATUS[bean.status] ?? ''),
-    ),
+    bean.status === 'ordered'
+      ? el(
+          'div',
+          { class: 'bean-card-stock' },
+          el('span', { class: 'ordered-pill' }, '入荷待ち'),
+          bean.orderDate && el('span', { class: 'muted' }, `${formatYmdJa(bean.orderDate)}に注文`),
+        )
+      : el(
+          'div',
+          { class: 'bean-card-stock' },
+          el('span', { class: 'num' }, formatG(Math.max(rest, 0))),
+          el('span', {}, `あと${cupsLeft(rest, doseG)}杯`),
+          daysText && el('span', { class: 'muted' }, daysText),
+          bean.status !== 'open' && el('span', { class: 'muted' }, BEAN_STATUS[bean.status] ?? ''),
+        ),
   );
 }
 

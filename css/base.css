@@ -516,3 +516,7 @@ p > a:not(.btn):only-child { display: inline-block; padding: 11px 0; }
 .changelog summary { cursor: pointer; color: var(--accent); padding: 10px 0; min-height: 44px; box-sizing: border-box; }
 .changelog h3 { font-size: 1rem; margin: 12px 0 4px; }
 .changelog ul { margin: 0; padding-left: 1.3em; line-height: 1.6; }
+
+/* 入荷待ち（2-2） */
+.ordered-pill { display: inline-block; padding: 2px 10px; border-radius: 999px; border: 2px solid var(--accent); color: var(--accent); font-weight: 700; font-size: 0.9rem; }
+.arrival-card { border: 2px solid var(--accent); }

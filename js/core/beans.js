@@ -9,6 +9,7 @@ export const VARIETY_OPTIONS = Object.freeze(['ティピカ', 'ブルボン', '�
 
 /** 豆の状態 */
 export const BEAN_STATUS = Object.freeze({
+  ordered: '入荷待ち',
   unopened: '未開封',
   open: '開封済み',
   finished: '飲み切り',

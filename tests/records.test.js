@@ -40,6 +40,6 @@ test('削除は印を付けるだけ', () => {
   assert.equal(isAlive(d), false);
 });
 
-test('表は7つ', () => {
-  assert.deepEqual(TABLES, ['beans', 'inventoryTx', 'equipment', 'recipes', 'brews', 'tastings', 'suggestions', 'settings']);
+test('表は9つ（版2で提案、版3で注文を足した）', () => {
+  assert.deepEqual(TABLES, ['beans', 'inventoryTx', 'equipment', 'recipes', 'brews', 'tastings', 'suggestions', 'orders', 'settings']);
 });

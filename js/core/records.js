@@ -12,6 +12,7 @@ export const TABLES = Object.freeze([
   'brews', // Brew 抽出1杯
   'tastings', // Tasting 評価
   'suggestions', // Suggestion 提案ログ（DBの版2で追加）
+  'orders', // Order 珈琲問屋への注文1回（DBの版3で追加）
   'settings', // Settings アプリ全体の設定（1件）
 ]);
 

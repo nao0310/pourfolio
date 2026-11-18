@@ -101,9 +101,9 @@ test('在庫アラート：残り3杯以下（4杯は出さない）と、早め
   assert.equal(by.noDate.freshness, null);
 });
 
-test('ホームの豆：飲み切りと削除済みは出さない。削除した在庫履歴は数えない', () => {
+test('ホームの豆：飲み切り・入荷待ち・削除済みは出さない。削除した在庫履歴は数えない', () => {
   const rows = beanRows({
-    beans: [bean('a'), bean('done', { status: 'finished' }), bean('gone', { deletedAt: daysAgo(1) })],
+    beans: [bean('a'), bean('done', { status: 'finished' }), bean('wait', { status: 'ordered' }), bean('gone', { deletedAt: daysAgo(1) })],
     txs: [tx('a', 100), tx('a', -50, { kind: 'brew', deletedAt: daysAgo(1) })],
     doseG: 15,
     today: '2026-11-18',

@@ -100,7 +100,8 @@ function renderSuggestCard() {
 
 /** 豆の選択肢（飲み切り以外） */
 function fillBeanSelect(select, selectedId) {
-  const usable = sortBeansForList(beans).filter((b) => b.status !== 'finished' || b.id === selectedId);
+  // 飲み切りと入荷待ち（まだ手元にない）の豆は選べない（選んであった豆は残す）
+  const usable = sortBeansForList(beans).filter((b) => (b.status !== 'finished' && b.status !== 'ordered') || b.id === selectedId);
   select.replaceChildren(
     el('option', { value: '' }, usable.length ? '（選ばない）' : '（豆が未登録）'),
     ...usable.map((b) => el('option', { value: b.id }, [b.name, b.roastLevel].filter(Boolean).join('　'))),

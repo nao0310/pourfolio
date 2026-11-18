@@ -18,6 +18,7 @@ const LABELS = {
   brews: '抽出',
   tastings: '評価',
   suggestions: '提案',
+  orders: '注文',
   settings: '設定',
 };
 

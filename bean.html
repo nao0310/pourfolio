@@ -25,14 +25,41 @@
       <h1 id="name"></h1>
       <p class="muted" id="sub"></p>
 
-      <div class="card">
+      <!-- 入荷待ちの豆が届いたとき（X29） -->
+      <div class="card arrival-card" id="arrivalCard" hidden>
+        <h2>入荷待ち</h2>
+        <p id="arrivalText"></p>
+        <form id="arrivalForm" novalidate>
+          <label class="field">
+            <span class="label">量った重さ（袋から出した豆）</span>
+            <span class="with-unit"><input type="text" inputmode="decimal" name="actualWeightG" id="arrivalWeight" autocomplete="off"><span>g</span></span>
+            <span class="hint" id="arrivalHint"></span>
+            <span class="field-error" data-for="actualWeightG"></span>
+          </label>
+          <label class="field">
+            <span class="label">到着日</span>
+            <input type="date" name="arrivalDate" id="arrivalDate">
+            <span class="field-error" data-for="arrivalDate"></span>
+          </label>
+          <label class="field">
+            <span class="label">焙煎日（袋に書いてあれば）</span>
+            <input type="date" name="roastDate">
+            <span class="hint">空のときは到着日の前日にします</span>
+            <span class="field-error" data-for="roastDate"></span>
+          </label>
+          <button class="btn block" type="submit">届いた</button>
+        </form>
+        <p id="arrivalMsg" role="status"></p>
+      </div>
+
+      <div class="card" id="freshCard">
         <div class="bean-card-top"><h2>飲み頃</h2><span id="pill"></span></div>
         <p id="freshText"></p>
         <div class="fresh-band" id="band" aria-hidden="true"></div>
         <p class="muted" id="freshNote"></p>
       </div>
 
-      <div class="card">
+      <div class="card" id="stockCard">
         <h2>残り</h2>
         <div class="stock-big">
           <span class="num" id="remain"></span>
@@ -83,7 +110,7 @@
         <p id="msg" role="status"></p>
       </div>
 
-      <div class="card">
+      <div class="card" id="txCard">
         <h2>在庫の履歴</h2>
         <ul class="tx-list" id="txList"></ul>
       </div>

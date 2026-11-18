@@ -78,13 +78,13 @@ export function freshnessBand(f) {
 }
 
 /**
- * ホームに出す豆の行（飲み切り・削除済みは出さない）。並びは豆の一覧と同じ。
+ * ホームに出す豆の行（飲み切り・入荷待ち・削除済みは出さない）。並びは豆の一覧と同じ。
  * @param {{beans:object[], txs:object[], doseG:number, today:string}} p
  * @returns {{bean:object, remainingG:number, cups:number, freshness:object|null, band:object|null, alerts:string[]}[]}
  */
 export function beanRows({ beans = [], txs = [], doseG, today }) {
   const byBean = groupTxByBean((txs ?? []).filter(alive));
-  return sortBeansForList((beans ?? []).filter((b) => alive(b) && b.status !== 'finished')).map((bean) => {
+  return sortBeansForList((beans ?? []).filter((b) => alive(b) && b.status !== 'finished' && b.status !== 'ordered')).map((bean) => {
     const rest = remainingG(byBean[bean.id] ?? []);
     const cups = cupsLeft(rest, doseG);
     const f = freshness(bean.roastDate, bean.roastLevel, today);
