@@ -26,6 +26,7 @@ import { showCard } from './dismiss-card.js';
 import { syncWeather } from './weather-sync.js';
 import { placeOf, hotLineOf, hotDay } from './core/weather.js';
 import { seasonReview } from './core/life.js';
+import { wrappedNotice } from './core/wrapped.js';
 
 registerServiceWorker();
 requestPersistentStorage();
@@ -168,6 +169,15 @@ function renderSeason(all) {
   $('seasonTitle').textContent = `${r.label}になりました`;
   $('seasonText').textContent = `${r.text}今年の${r.label}のレシピを見直してみませんか。`;
   showCard($('seasonCard'), 'season', r.key);
+}
+
+/** 年間まとめ（X5）：12月はその年、1月は前の年 */
+function renderWrapped(all) {
+  const n = wrappedNotice({ brews: all.brews, now: new Date() });
+  if (!n) return;
+  $('wrappedTitle').textContent = `${n.year}年のまとめができました`;
+  $('wrappedLink').href = `wrapped.html?year=${n.year}`;
+  showCard($('wrappedCard'), 'wrapped', n.key);
 }
 
 /** いつもの1杯（X15）。決まらないとき（レシピで淹れた杯がない）は出さない */
@@ -395,6 +405,7 @@ async function init() {
   renderRestock(all, settings);
   renderMaintenance(all.equipment, all.brews);
   renderSeason(all);
+  renderWrapped(all);
   await renderUnrated(beanName);
   await renderCool(beanName);
   renderCompare(all);

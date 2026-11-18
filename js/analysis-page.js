@@ -103,6 +103,7 @@ async function render() {
       ),
       entry(analysisHref('calendar.html'), 'カレンダーとカフェイン', rows.length ? '毎日の杯数とカフェインの目安' : '淹れた日から表示します', rows.length > 0),
       isDemo() ? null : entry('cost.html', 'コスト', '1杯の単価・月の支出・満足度あたりの値段', true),
+      entry(analysisHref('wrapped.html'), '年間まとめ', rows.length ? '1年の杯数・産地の地図・ベスト・成長・提案の効果をカードで振り返る' : '淹れると、1年のまとめができます', rows.length > 0),
       entry(analysisHref('report.html'), '月次レポート', '1か月の杯数・ベスト3・産地・支出・好みの変化を1枚に（印刷・PDF）', true),
       entry('glossary.html', '用語辞典', 'TDS・抽出収率・嗜好スコアなど、分析の言葉の意味', true),
     ),
