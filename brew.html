@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>抽出 - Pourfolio</title>
+  <meta name="theme-color" content="#5a371f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Pourfolio">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/base.css">
+</head>
+<body>
+  <main class="with-bottom-bar">
+    <p class="crumb"><a href="recipes.html">淹れる</a></p>
+    <div id="notFound" hidden>
+      <h1>レシピが見つかりません</h1>
+      <p class="muted">削除されたレシピです。「淹れる」の一覧から選び直してください。</p>
+    </div>
+
+    <div id="content" hidden>
+      <h1 id="name"></h1>
+      <p class="muted" id="sub"></p>
+
+      <div class="card">
+        <label class="field">
+          <span class="label">豆</span>
+          <select id="bean"></select>
+          <span class="hint" id="beanNote"></span>
+        </label>
+      </div>
+
+      <div class="card">
+        <h2>計画</h2>
+        <div class="plan-grid" id="plan"></div>
+        <dl id="equip"></dl>
+      </div>
+
+      <div class="card">
+        <h2>注湯の予定</h2>
+        <table class="pour-table">
+          <thead><tr><th>投</th><th>時間</th><th>累計</th><th>注ぐ量</th></tr></thead>
+          <tbody id="pourBody"></tbody>
+        </table>
+        <p class="muted" id="target"></p>
+      </div>
+
+      <p><a id="editLink">このレシピを編集する</a></p>
+      <p id="msg" role="status"></p>
+
+      <div class="bottom-bar">
+        <button class="btn block" type="button" id="start">スタート</button>
+      </div>
+    </div>
+  </main>
+  <script type="module" src="js/brew-page.js"></script>
+</body>
+</html>

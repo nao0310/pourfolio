@@ -91,7 +91,7 @@ export function equipmentToFormValues(eq) {
     name: str(eq.name),
     shape: str(a.shape),
     holes: str(a.holes),
-    material: str(a.material),
+    material: eq.kind === 'dripper' ? str(a.material) : '',
     filterMaterial: eq.kind === 'filter' ? str(a.material) : '',
     bleach: str(a.bleach),
     burr: str(a.burr),

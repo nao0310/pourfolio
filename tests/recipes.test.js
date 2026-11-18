@@ -167,6 +167,8 @@ test('要点と雛形の表示', () => {
   const { value } = normalizeRecipeInput({ ...newRecipeState(), name: 'a', grindSetting: '24' });
   assert.equal(recipeSummary(value), '20g・300g（1:15）・92℃・挽き目 24');
   assert.equal(templateLabel({ kind: '46', taste: 'sweet', strength: 'strong' }), '4:6メソッド・甘め・濃いめ');
+  assert.equal(templateLabel({ kind: '46', taste: 'standard', strength: 'light' }), '4:6メソッド・軽め');
+  assert.equal(templateLabel({ kind: '46', taste: 'standard', strength: 'standard' }), '4:6メソッド');
   assert.equal(templateLabel({ kind: 'basic', pourCount: 2 }), '基本形・2回注湯');
 });
 

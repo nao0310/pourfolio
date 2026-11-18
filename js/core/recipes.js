@@ -292,10 +292,13 @@ export function recipeSummary(r) {
     .join('・');
 }
 
-/** 雛形の説明「4:6メソッド・甘め・濃いめ」 */
+/** 雛形の説明「4:6メソッド・甘め・濃いめ」（標準は書かない） */
 export function templateLabel(t) {
   if (!t) return '';
-  if (t.kind === '46') return ['4:6メソッド', TASTES_46[t.taste], STRENGTHS_46[t.strength]].filter(Boolean).join('・');
+  if (t.kind === '46') {
+    const opt = (dict, v) => (v && v !== 'standard' ? dict[v] : '');
+    return ['4:6メソッド', opt(TASTES_46, t.taste), opt(STRENGTHS_46, t.strength)].filter(Boolean).join('・');
+  }
   if (t.kind === 'basic') return `基本形・${t.pourCount === 2 ? 2 : 3}回注湯`;
   return '';
 }
