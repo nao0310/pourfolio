@@ -9,7 +9,7 @@
 // <manifest> npm run sw が書き込む（手で直さない）
 const MANIFEST = {
   "label": "2.7",
-  "version": "87dcbbed6c8e",
+  "version": "8948aef6c5b9",
   "files": {
     "ai.html": "3c8af042c22bb904",
     "analysis.html": "95edaebc90b88064",
@@ -42,10 +42,10 @@ const MANIFEST = {
     "js/brew-chart-page.js": "1b79f27da2a171bf",
     "js/brew-draft.js": "d7586b9a8f874516",
     "js/brew-image.js": "7271711ef411af36",
-    "js/brew-page.js": "4299e44f0afcffbb",
+    "js/brew-page.js": "d483cc9dff591239",
     "js/calendar-page.js": "498481f8d95cf1e8",
     "js/chart.js": "bfe7bcfbcfd6aa36",
-    "js/compare-page.js": "8e4fbcd0f25de255",
+    "js/compare-page.js": "53cebc4e584f96ab",
     "js/core/ai-text.js": "5b786a522a1e48f4",
     "js/core/analysis.js": "165493d2d7d14e84",
     "js/core/autosave.js": "28cac450568ab71a",
@@ -79,7 +79,7 @@ const MANIFEST = {
     "js/core/inventory.js": "c41b0195f0272cae",
     "js/core/monthly.js": "a2bcc9fb361be9d6",
     "js/core/offline.js": "907135ce0abe78fb",
-    "js/core/once.js": "9a3bb13852957dd4",
+    "js/core/once.js": "65ced3a0a36e7800",
     "js/core/orders.js": "029a40c611f71c86",
     "js/core/photos.js": "92c3236ca612f895",
     "js/core/plan-adjust.js": "91901f6e8d9cfc96",

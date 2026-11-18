@@ -200,7 +200,8 @@ function planItem(label, value, changed = false) {
 /** 提案のカード。提案を入れた計画ならその説明、そうでなければ選んだ豆のまだ使っていない提案 */
 function renderSuggestCard() {
   const fromSuggestion = loadedPlan?.suggestion;
-  const s = fromSuggestion ?? pickPendingSuggestion(suggestions, $('bean').value || null, suggestBrews);
+  // 飲み比べ（X27）で淹れるときは、前回の提案を出さない。入れると飲み比べから外れ、ブラインドが崩れるため（2-8 の10番）
+  const s = fromSuggestion ?? (compare ? null : pickPendingSuggestion(suggestions, $('bean').value || null, suggestBrews));
   $('suggestCard').hidden = !s;
   if (!s) return;
   $('sText').textContent = s.action?.text ?? '';
@@ -709,8 +710,13 @@ const onSave = singleFlight(async (e) => {
     draft = null;
     if (compareId) {
       // 焙煎度比較（X27）：評価はあとで飲み比べの画面でまとめて入れる（ブラインドを崩さないため）
-      await attachBrewToExperiment(db, compareId, { brewId: brew.id, beanId: brew.beanId, targetBeanId: compareBeanId });
+      const attached = await attachBrewToExperiment(db, compareId, { brewId: brew.id, beanId: brew.beanId, targetBeanId: compareBeanId });
       await autosaveAfterChange(db);
+      if (!attached) {
+        // 淹れている途中で飲み比べがやめられていた：この杯は普通に評価する（2-8 の12番）
+        location.replace(`tasting.html?brew=${encodeURIComponent(brew.id)}&saved=1`);
+        return;
+      }
       location.replace(`compare.html?id=${encodeURIComponent(compareId)}&brewed=1`);
       return;
     }
