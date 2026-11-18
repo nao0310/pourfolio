@@ -229,3 +229,51 @@ details.sub-action { border-top: 1px solid var(--line); margin-top: 12px; paddin
 .tx-sub { font-size: 0.85rem; }
 .link-btn { background: none; border: 0; padding: 8px 0 0; color: var(--accent); font: inherit; font-size: 0.9rem; text-decoration: underline; cursor: pointer; min-height: 32px; }
 #info dd { white-space: pre-wrap; word-break: break-word; }
+
+/* ---- 1-3 器具とレシピ ---- */
+.pill.tag { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+.list { display: flex; flex-direction: column; }
+.list-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 56px; padding: 8px 0; border-bottom: 1px solid var(--line); color: inherit; text-decoration: none; }
+.list-row:last-child { border-bottom: 0; }
+.list-row:active { opacity: 0.7; }
+.list-row-main { display: flex; flex-direction: column; min-width: 0; }
+.list-row-title { font-weight: 600; }
+.chip-btn { min-height: 44px; padding: 4px 6px; border: 1px dashed var(--line); border-radius: 10px; background: transparent; color: var(--fg); font: inherit; font-size: 0.9rem; cursor: pointer; }
+#modelChips { margin: -8px 0 16px; }
+.chips + .hint { margin-top: 8px; }
+
+/* ±ボタン付きの数字の欄 */
+.stepper { display: flex; align-items: center; gap: 8px; }
+.stepper .with-unit { flex: 1; min-width: 0; }
+.stepper input { text-align: center; font-size: 1.25rem; font-weight: 700; }
+.step-btn { flex: 0 0 56px; height: 56px; border: 2px solid var(--accent); border-radius: 12px; background: var(--card); color: var(--accent); font-size: 1.6rem; font-weight: 700; line-height: 1; cursor: pointer; touch-action: manipulation; }
+.step-btn:active { background: var(--accent); color: var(--accent-fg); }
+label.label { display: block; font-weight: 600; margin-bottom: 4px; }
+
+/* レシピの注湯の表（編集） */
+.pour-row { border-top: 1px solid var(--line); padding: 10px 0; }
+.pour-row:first-child { border-top: 0; }
+.pour-head { display: flex; justify-content: space-between; gap: 8px; font-weight: 600; }
+.pour-inputs { display: grid; grid-template-columns: 1fr 1fr 1.2fr auto; gap: 6px; align-items: end; margin-top: 4px; }
+.mini { display: flex; flex-direction: column; min-width: 0; font-size: 0.8rem; color: var(--muted); }
+.mini input, .mini select { min-height: 48px; padding: 6px 8px; font-size: 1rem; text-align: center; font-variant-numeric: tabular-nums; }
+.icon-btn { width: 44px; height: 48px; border: 1px solid var(--line); border-radius: 10px; background: transparent; color: var(--muted); font-size: 1.3rem; cursor: pointer; }
+
+/* レシピの一覧 */
+.section-title { margin-top: 24px; }
+.num-line { font-variant-numeric: tabular-nums; font-weight: 600; margin-top: 4px; }
+.card-actions { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; margin-top: 12px; }
+.card-actions .btn { text-align: center; }
+.fav-btn { flex: 0 0 48px; height: 48px; border: 0; background: transparent; color: var(--muted); font-size: 1.6rem; cursor: pointer; }
+.fav-btn.on { color: var(--stage-past); }
+.last-card { border: 2px solid var(--accent); }
+.last-card .btn { margin-top: 12px; }
+
+/* 抽出の画面（入口） */
+.plan-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 8px 0 12px; }
+.plan-item { display: flex; flex-direction: column; }
+.plan-value { font-size: 1.3rem; }
+.pour-table { width: 100%; border-collapse: collapse; font-size: 1rem; }
+.pour-table th { text-align: left; color: var(--muted); font-weight: 600; font-size: 0.85rem; border-bottom: 1px solid var(--line); padding: 4px; }
+.pour-table td { padding: 8px 4px; border-bottom: 1px solid var(--line); }
+.pour-table tr:last-child td { border-bottom: 0; }
