@@ -799,14 +799,21 @@ async function init() {
     applyAdjust();
   }
   if (!loadedPlan) {
-    if (queryParam('initial') || queryParam('brew') || queryParam('best')) {
-      $('notFound').querySelector('h1').textContent = '豆か記録が見つかりません';
-      $('notFound').querySelector('p').textContent = '豆か抽出の記録が削除されています。トップに戻って選び直してください。';
+    const n = $('notFound');
+    if (!['recipe', 'bean', 'initial', 'brew', 'best', 'suggestion', 'compare', 'from'].some((k) => queryParam(k))) {
+      // 何も選ばずに開いた（下書きを消したあとの「続きに戻る」など、2-8の29番）
+      n.querySelector('h1').textContent = '淹れるレシピを選んでください';
+      n.querySelector('p').textContent = 'レシピの一覧から、淹れるレシピを選んでください。';
+    } else if (queryParam('initial') || queryParam('brew') || queryParam('best')) {
+      n.querySelector('h1').textContent = '豆か記録が見つかりません';
+      n.querySelector('p').textContent = '削除したのかもしれません。トップに戻って選び直してください。';
+      $('notFoundBtn').textContent = 'トップへ';
+      $('notFoundBtn').href = './';
     } else if (queryParam('suggestion')) {
-      $('notFound').querySelector('h1').textContent = '提案が見つかりません';
-      $('notFound').querySelector('p').textContent = '提案を出した抽出が削除されています。「淹れる」の一覧から選び直してください。';
+      n.querySelector('h1').textContent = '提案が見つかりません';
+      n.querySelector('p').textContent = '提案を出した抽出を削除したのかもしれません。レシピの一覧から選び直してください。';
     }
-    $('notFound').hidden = false;
+    n.hidden = false;
     return;
   }
   const last = await getLastBrew(db);
