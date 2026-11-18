@@ -47,7 +47,10 @@ export async function fetchWeather(place, { force = false, now = new Date() } = 
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
   try {
-    const res = await fetch(weatherUrl(place), { signal: ctrl.signal, cache: 'no-store' });
+    // cache などの指定や独自のヘッダーは付けない。Safari は cache: 'no-store' で Cache-Control・Pragma のヘッダーを足し、
+    // 事前の確認（CORSのプリフライト）が Open-Meteo に通らず「Load failed」になる（3-3 のiPhone確認）。
+    // 古い天気が返らないかは、問い合わせの間隔（needsFetch）と受け取った時刻で見る
+    const res = await fetch(weatherUrl(place), { signal: ctrl.signal });
     if (!res.ok) return { cache, error: `天気を受け取れませんでした（${res.status}）` };
     const next = parseWeather(await res.json(), place, now);
     if (!next) return { cache, error: '天気の中身を読めませんでした' };
@@ -55,7 +58,8 @@ export async function fetchWeather(place, { force = false, now = new Date() } = 
     return { cache: next, error: null };
   } catch (err) {
     console.warn('天気を取れませんでした', err);
-    return { cache, error: '天気を受け取れませんでした（通信を確かめてください）' };
+    const why = err?.name === 'AbortError' ? '時間切れ' : String(err?.message ?? err).slice(0, 60);
+    return { cache, error: `天気を受け取れませんでした（通信を確かめてください：${why}）` };
   } finally {
     clearTimeout(timer);
   }

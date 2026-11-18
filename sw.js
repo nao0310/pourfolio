@@ -8,8 +8,8 @@
 
 // <manifest> npm run sw が書き込む（手で直さない）
 const MANIFEST = {
-  "label": "3.3",
-  "version": "19375c9bcd12",
+  "label": "3.3.1",
+  "version": "3595cebda56d",
   "files": {
     "ai.html": "34607ec38ddc5690",
     "analysis.html": "97fad6697d25fa7e",
@@ -106,7 +106,7 @@ const MANIFEST = {
     "js/core/today.js": "1814a6c90e899543",
     "js/core/tonya.js": "faac59308d2b0ca5",
     "js/core/usual.js": "306c68f4420764a8",
-    "js/core/version.js": "373be11eea0377e1",
+    "js/core/version.js": "22260f734c4d25a5",
     "js/core/water.js": "26dace0c46b908b4",
     "js/core/weather.js": "c179c2e62f69cb9e",
     "js/core/wishlist.js": "6bf3695085913224",
@@ -143,7 +143,7 @@ const MANIFEST = {
     "js/ui.js": "7f0ee96367fc54c6",
     "js/wake-lock.js": "accb7f303160e088",
     "js/weather-page.js": "fefb36d00d8ba3f0",
-    "js/weather-sync.js": "1497cad2ea2b5242",
+    "js/weather-sync.js": "2554aae27880a823",
     "js/wishlist-page.js": "a76f89120d2d3446",
     "life.html": "142745f2678a3b4d",
     "manifest.webmanifest": "6ba74664b83078e8",
