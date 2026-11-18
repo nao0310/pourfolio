@@ -18,6 +18,15 @@ test('sw.js の一覧が今のファイルと合っている（合わなけれ�
   assert.equal(inSw.label, now.label, '番号（APP_VERSION）が変わっています。npm run sw を実行してください');
 });
 
+test('一覧の文字のファイルは改行がLFだけ（CRLFだと、手元で作った指紋と公開されるファイルの指紋がずれて新しい版に切り替わらない）', async () => {
+  const withCr = [];
+  for (const p of Object.keys(inSw.files)) {
+    if (!/\.(html|js|mjs|css|webmanifest|json|svg)$/.test(p)) continue;
+    if ((await readFile(path.join(ROOT, p), 'utf8')).includes('\r')) withCr.push(p);
+  }
+  assert.deepEqual(withCr, [], `改行がCRLFのファイル：${withCr.join('、')} → LFに直してから npm run sw を実行してください`);
+});
+
 test('全画面が読み込むファイルと、その import 先がすべて一覧に入っている', async () => {
   const files = inSw.files;
   const pages = Object.keys(files).filter((p) => p.endsWith('.html'));
