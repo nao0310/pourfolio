@@ -1,0 +1,18 @@
+<!doctype html>
+<!-- 一斉点検（audit.js）が問題を見つけられるかの確かめ用。わざと壊してある。アプリには含めない -->
+<html lang="ja">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>selftest</title></head>
+<body style="background:#fff;color:#000">
+  <p id="loading">読み込み中…</p>
+  <p>残り undefined g、比率 1:NaN</p>
+  <div style="width:2000px">はみ出す箱</div>
+  <p style="color:#ccc">薄すぎる文字</p>
+  <p style="font-size:9px">小さすぎる文字</p>
+  <button style="height:20px">小さいボタン</button>
+  <div style="width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">とても長い文字が切れているところ</div>
+  <script type="module" src="/js/no-such-module.js"></script>
+  <script type="module">import { nope } from '/js/core/format.js';</script>
+  <script type="module">throw new Error('わざとのエラー');</script>
+  <script type="module">Promise.reject(new Error('わざとの失敗'));</script>
+</body>
+</html>
