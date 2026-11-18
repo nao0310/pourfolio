@@ -4,7 +4,7 @@ import { beanRows } from './core/home.js';
 import { todayPicks, pickHref, baseText, caffeineState, normalizeCutoff, DAILY_CAFFEINE_MG } from './core/today.js';
 import { MOODS, moodForHour, cupsLabel } from './core/plan-adjust.js';
 import { analysisRows } from './core/analysis.js';
-import { dailyStats } from './core/calendar.js';
+import { todayCaffeine as caffeineToday, caffeineKeeper } from './core/caffeine.js';
 import { doseFromSettings } from './core/inventory.js';
 import { localYmd } from './core/format.js';
 import { $, el, queryParam, showMessage } from './ui.js';
@@ -18,7 +18,7 @@ const now = new Date();
 let mood = queryParam('mood') === 'none' ? null : MOODS[queryParam('mood')] ? queryParam('mood') : moodForHour(now.getHours());
 
 function todayCaffeine() {
-  return dailyStats(analysisRows(data)).get(localYmd(now))?.caffeineMg ?? 0;
+  return caffeineToday(analysisRows(data), now).mg;
 }
 
 function renderMood() {
@@ -70,7 +70,8 @@ function render() {
     $('picks').replaceChildren(...picks.map(pickCard));
   }
   const state = caffeineState({ now, cutoff: settings.caffeineCutoff ?? null, todayCaffeineMg: caf });
-  $('cafToday').textContent = `今日のカフェインは約${caf}mg（1日の目安 ${DAILY_CAFFEINE_MG}mg）。${state.late ? state.why : '今は控える時間ではありません'}`;
+  const keeper = caffeineKeeper({ now, cutoff: settings.caffeineCutoff ?? null, mg: caf });
+  $('cafToday').textContent = `今日のカフェインは約${caf}mg（1日の目安 ${DAILY_CAFFEINE_MG}mg、朝5時から）。${state.late ? state.why : keeper.minutesLeft != null ? keeper.sub : '今は控える時間ではありません'}`;
   $('cutoff').value = settings.caffeineCutoff ?? '';
   $('cutoffClear').hidden = !settings.caffeineCutoff;
 }

@@ -19,13 +19,13 @@ export function analysisHref(page, params = {}) {
 
 /**
  * 分析に使う表を読む（削除済みは除く）。
- * @returns {Promise<{demo:boolean, beans:object[], brews:object[], tastings:object[], suggestions:object[], equipment:object[], recipes:object[]}>}
+ * @returns {Promise<{demo:boolean, beans:object[], brews:object[], tastings:object[], suggestions:object[], equipment:object[], recipes:object[], orders?:object[]}>}
  */
 export async function loadAnalysisData() {
   if (isDemo()) return { demo: true, ...makeDemoData() };
   const all = await readAll(openDb());
   const out = { demo: false };
-  for (const k of ['beans', 'brews', 'tastings', 'suggestions', 'equipment', 'recipes']) out[k] = (all[k] ?? []).filter(alive);
+  for (const k of ['beans', 'brews', 'tastings', 'suggestions', 'equipment', 'recipes', 'orders']) out[k] = (all[k] ?? []).filter(alive);
   return out;
 }
 

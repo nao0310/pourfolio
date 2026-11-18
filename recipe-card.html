@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>レシピカード - Pourfolio</title>
+  <meta name="theme-color" content="#5a371f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Pourfolio">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/print.css">
+  <!-- 紙の大きさ（js で書き換える） -->
+  <style id="pageSize">@page { size: 91mm 55mm; margin: 0; }</style>
+</head>
+<body class="print-page">
+  <main>
+    <div class="no-print">
+      <p class="crumb"><a id="back" href="recipes.html">レシピ帳</a></p>
+      <h1 id="title">レシピカード</h1>
+      <section class="card">
+        <div class="seg5 seg2" id="sizeSeg" role="group" aria-label="大きさ"></div>
+        <p class="hint">「印刷する」→ プリンターを選ぶか、iPhoneは印刷の画面で2本指で広げると PDF になります（共有 →「ファイルに保存」）。PCでは送信先に「PDFに保存」を選びます。</p>
+        <button class="btn block" type="button" id="printBtn">印刷する</button>
+      </section>
+      <p class="muted">見本（実際の大きさに近い表示）</p>
+    </div>
+
+    <div class="print-area" id="sheet"></div>
+
+    <section class="card no-print" id="notFound" hidden>
+      <p>レシピか豆が見つかりません。消したのかもしれません。</p>
+      <a class="btn secondary" href="recipes.html">レシピ帳</a>
+    </section>
+  </main>
+  <script type="module" src="js/recipe-card-page.js"></script>
+  <script type="module" src="js/tabbar.js"></script>
+</body>
+</html>

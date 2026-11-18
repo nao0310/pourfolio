@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>QRを読む - Pourfolio</title>
+  <meta name="theme-color" content="#5a371f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Pourfolio">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/base.css">
+</head>
+<body>
+  <main>
+    <p class="crumb"><a href="more.html">その他</a></p>
+    <h1>QRを読む</h1>
+    <p class="muted">キャニスターのQRや、共有されたレシピのQRを読みます。iPhoneでは標準のカメラではなく、ここで読むとアプリの記録で開けます。</p>
+
+    <section class="card" id="camCard" hidden>
+      <div class="scan-view">
+        <video id="video" playsinline muted></video>
+        <div class="scan-frame" aria-hidden="true"></div>
+      </div>
+      <p class="muted" id="camState" role="status">カメラを準備しています…</p>
+      <div class="stack">
+        <button class="btn block" type="button" id="startBtn">カメラで読む</button>
+        <button class="btn block secondary" type="button" id="stopBtn" hidden>やめる</button>
+      </div>
+    </section>
+
+    <section class="card" id="noCam" hidden>
+      <p>このブラウザではカメラを使えません。下の欄にリンクを貼り付けてください。</p>
+    </section>
+
+    <section class="card result-card" id="resultCard" hidden>
+      <h2>読み取った文字</h2>
+      <p class="break-all" id="resultText"></p>
+      <p class="hint">Pourfolioの画面ではないので開きません。</p>
+    </section>
+
+    <section class="card">
+      <h2>リンクを貼り付けて開く</h2>
+      <label class="field">
+        <span class="label">リンク（https://… や share.html#r=…）</span>
+        <input id="pasteInput" type="url" inputmode="url" autocomplete="off" placeholder="ここに貼り付け">
+      </label>
+      <button class="btn block secondary" type="button" id="pasteBtn">開く</button>
+    </section>
+    <p id="msg" role="status"></p>
+  </main>
+  <script src="vendor/jsqr/jsQR.js"></script>
+  <script type="module" src="js/scan-page.js"></script>
+  <script type="module" src="js/tabbar.js"></script>
+</body>
+</html>

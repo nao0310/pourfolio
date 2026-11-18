@@ -52,6 +52,15 @@
       </div>
     </div>
 
+    <!-- 自動ファイル保存（X1、PC）が止まっているとき -->
+    <div class="card backup-card" id="autosaveCard" hidden>
+      <p><strong>自動ファイル保存が止まっています</strong></p>
+      <p class="muted" id="autosaveText"></p>
+      <div class="row">
+        <button class="btn" type="button" id="autosaveResume">再開する</button>
+      </div>
+    </div>
+
     <div class="card resume-card" id="resumeCard" hidden>
       <p><strong>途中の抽出があります</strong></p>
       <div class="row">
@@ -85,6 +94,15 @@
       </div>
     </div>
 
+    <!-- いつもの1杯（X15）：今の時間帯によく淹れる豆＋レシピ -->
+    <section class="card usual-card" id="usualCard" hidden>
+      <a class="btn block usual-btn" id="usualLink">
+        <span class="usual-label" id="usualLabel">いつもの1杯で淹れる</span>
+        <span class="usual-what" id="usualWhat"></span>
+      </a>
+      <p class="hint" id="usualWhy"></p>
+    </section>
+
     <!-- 今日の1杯 -->
     <section class="card" id="todayCard">
       <h2>今日の1杯</h2>
@@ -98,6 +116,19 @@
       </div>
       <div class="stack" id="todayActions"></div>
     </section>
+
+    <!-- カフェイン・タイムキーパー（X17） -->
+    <section class="card caffeine-card" id="cafCard" hidden>
+      <div class="sec-head">
+        <h2>カフェイン</h2>
+        <a href="today.html">控える時刻</a>
+      </div>
+      <p class="num" id="cafMain"></p>
+      <div class="caf-meter" role="img" id="cafMeter"><span class="caf-fill" id="cafFill"></span></div>
+      <p class="muted" id="cafSub"></p>
+    </section>
+
+    <p><a class="btn secondary block" href="scan.html">QRを読む（キャニスター・共有レシピ）</a></p>
 
     <!-- 在庫アラート -->
     <section class="card alert-card" id="alertCard" hidden>

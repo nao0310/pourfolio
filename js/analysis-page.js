@@ -83,6 +83,7 @@ async function render() {
       entry(analysisHref('profile.html'), '嗜好プロファイル', profileReady.ready ? `★のある${rated.length}杯から` : readinessText(profileReady), profileReady.ready),
       entry(analysisHref('calendar.html'), 'カレンダーとカフェイン', rows.length ? '毎日の杯数とカフェインの目安' : '淹れた日から表示します', rows.length > 0),
       isDemo() ? null : entry('cost.html', 'コスト', '1杯の単価・月の支出・満足度あたりの値段', true),
+      entry(analysisHref('report.html'), '月次レポート', '1か月の杯数・ベスト3・産地・支出・好みの変化を1枚に（印刷・PDF）', true),
     ),
   );
 

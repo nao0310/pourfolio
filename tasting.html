@@ -147,6 +147,20 @@
       <p class="num-line" id="tdsResult"></p>
       <p id="tdsMsg" role="status"></p>
     </section>
+
+    <!-- 抽出レポートの1枚画像（X3） -->
+    <section class="card" id="imageCard" hidden>
+      <h2>1枚の画像にする</h2>
+      <p class="hint">豆・条件・注湯の流れ・評価を1枚の画像（PNG）にします。iPhoneは「共有・保存」→「画像を保存」で写真に入ります</p>
+      <label class="check-row"><input type="checkbox" id="imageMemo"> メモも入れる</label>
+      <button class="btn block secondary" type="button" id="imageMake">画像を作る</button>
+      <img class="brew-image" id="imagePreview" alt="抽出レポートの画像" hidden>
+      <div class="stack" id="imageActions" hidden>
+        <button class="btn block" type="button" id="imageShare" hidden>共有・保存</button>
+        <a class="btn block secondary" id="imageDownload" download>ダウンロード</a>
+      </div>
+      <p id="imageMsg" role="status"></p>
+    </section>
   </main>
   <script type="module" src="js/tasting-page.js"></script>
   <script type="module" src="js/tabbar.js"></script>

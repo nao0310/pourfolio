@@ -15,7 +15,9 @@ import { openExperiments, experimentStatus, STATUS_LABELS } from './core/compare
 import { todayPicks, pickHref } from './core/today.js';
 import { MOODS, moodForHour } from './core/plan-adjust.js';
 import { analysisRows } from './core/analysis.js';
-import { dailyStats } from './core/calendar.js';
+import { todayCaffeine, caffeineKeeper } from './core/caffeine.js';
+import { usualCup, usualReason } from './core/usual.js';
+import { autosaveSupported, getAutosaveState, resumeAutosave } from './autosave-file.js';
 import { $, el, freshnessPill, frozenPill } from './ui.js';
 
 registerServiceWorker();
@@ -91,7 +93,7 @@ function renderToday(all, beanName, settings) {
 
   const mood = moodForHour(now.getHours());
   const rows = beanRows({ beans: all.beans, txs: all.inventoryTx, portions: all.frozenPortions, doseG: doseFromSettings(settings), today: localYmd(now) });
-  const caf = dailyStats(analysisRows(all)).get(localYmd(now))?.caffeineMg ?? 0;
+  const caf = todayCaffeine(analysisRows(all), now).mg;
   const pick = todayPicks({ rows, brews: all.brews, tastings: all.tastings, beans: all.beans, now, mood, cutoff: settings.caffeineCutoff ?? null, todayCaffeineMg: caf, n: 1 })[0];
   const pending = last ? pickPendingSuggestion(all.suggestions, last.beanId) : null;
 
@@ -129,6 +131,34 @@ function renderToday(all, beanName, settings) {
   }
   if (pick) actions.push(el('a', { class: 'link-more', href: 'today.html' }, 'ほかの候補・気分を変える'));
   $('todayActions').replaceChildren(...actions);
+}
+
+/** いつもの1杯（X15）。決まらないとき（レシピで淹れた杯がない）は出さない */
+function renderUsual(all, beanName, settings) {
+  const now = new Date();
+  const rows = beanRows({ beans: all.beans, txs: all.inventoryTx, portions: all.frozenPortions, doseG: doseFromSettings(settings), today: localYmd(now) });
+  const u = usualCup({ brews: all.brews, tastings: all.tastings, recipes: all.recipes, usableBeanIds: rows.filter((r) => r.cups >= 1).map((r) => r.bean.id), now });
+  $('usualCard').hidden = !u;
+  if (!u) return;
+  $('usualLink').href = u.href;
+  $('usualLabel').textContent = u.allDay ? 'いつもの1杯で淹れる' : `いつもの1杯（${u.band.label}）で淹れる`;
+  $('usualWhat').textContent = [u.recipe.name, u.beanId ? beanName(u.beanId) : '豆は選んでから'].filter(Boolean).join('・');
+  $('usualWhy').textContent = usualReason(u);
+}
+
+/** カフェイン・タイムキーパー（X17）。淹れた記録があるか、控える時刻を決めたときに出す */
+function renderCaffeine(all, settings) {
+  const now = new Date();
+  const cutoff = settings.caffeineCutoff ?? null;
+  if (!all.brews.some(alive) && !cutoff) return;
+  const { mg, unknown } = todayCaffeine(analysisRows(all), now);
+  const k = caffeineKeeper({ now, cutoff, mg });
+  $('cafMain').textContent = k.main;
+  $('cafFill').style.width = `${k.pct}%`;
+  $('cafFill').classList.toggle('over', k.late);
+  $('cafMeter').setAttribute('aria-label', `目安の${k.pct}%`);
+  $('cafSub').textContent = `${k.sub}${unknown ? `（量のわからない${unknown}杯を除く）` : ''}`;
+  $('cafCard').hidden = false;
 }
 
 /** 飲み頃の帯（4段階の色＋今日の印） */
@@ -242,11 +272,30 @@ function renderRestock(all, settings) {
   $('restockCard').hidden = false;
 }
 
+/** 自動ファイル保存（X1）が止まっていれば、再開のボタン（許可を聞くのでボタンで） */
+async function renderAutosave() {
+  if (!autosaveSupported()) return;
+  const st = await getAutosaveState();
+  $('autosaveCard').hidden = !(st.on && st.needsPermission);
+  $('autosaveText').textContent = 'ブラウザを開き直すと、フォルダに書き込む許可がいったん切れます。';
+}
+
+$('autosaveResume').addEventListener('click', async () => {
+  try {
+    if (await resumeAutosave(db)) $('autosaveCard').hidden = true;
+  } catch (err) {
+    console.error(err);
+    $('autosaveText').textContent = '再開できませんでした。「その他」→「データ」でフォルダを選び直してください。';
+  }
+});
+
 async function init() {
   const [all, settings] = await Promise.all([readAll(db), getSettings(db)]);
   const beanName = (id) => all.beans.find((b) => b.id === id)?.name ?? '';
   renderBackup(settings, all);
+  renderUsual(all, beanName, settings);
   renderToday(all, beanName, settings);
+  renderCaffeine(all, settings);
   renderBeans(beanRows({ beans: all.beans, txs: all.inventoryTx, portions: all.frozenPortions, doseG: doseFromSettings(settings), today: localYmd() }));
   renderRecent(all, beanName);
   renderRestock(all, settings);
@@ -254,6 +303,7 @@ async function init() {
   await renderCool(beanName);
   renderCompare(all);
   await renderWhatsNew(settings, all);
+  await renderAutosave().catch((err) => console.error(err));
 }
 
 init().catch((err) => {

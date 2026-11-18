@@ -44,6 +44,7 @@ function recipeCard(recipe) {
       { class: 'card-actions' },
       el('a', { class: 'btn', href: brewUrl(recipe.id) }, '淹れる'),
       el('a', { class: 'btn secondary', href: `recipe-edit.html?id=${encodeURIComponent(recipe.id)}` }, '編集'),
+      el('a', { class: 'btn secondary', href: `share.html?recipe=${encodeURIComponent(recipe.id)}` }, '共有・印刷'),
     ),
   );
 }

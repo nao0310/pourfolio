@@ -15,7 +15,12 @@ import {
   getPhotosForBrew,
   savePhoto,
   deletePhoto,
+  getRecipe,
+  listEquipment,
 } from './db.js';
+import { brewImageContent, imageFileName } from './core/report-image.js';
+import { drawBrewImage, canvasToFile } from './brew-image.js';
+import { autosaveAfterChange } from './autosave-file.js';
 import { PHOTO_SLOTS } from './core/photos.js';
 import { shrinkImageFile } from './photo.js';
 import { CONFIDENCE_LABELS, CHANGING_KINDS } from './core/dialin.js';
@@ -137,6 +142,7 @@ async function onSave(e) {
     const saved = await saveTasting(db, brew.id, value, new Date(), { stage });
     byStage = { ...byStage, [stage]: saved };
     dirty = false;
+    autosaveAfterChange(db); // PC の自動保存（X1）。画面は移らないので待たない
     let suggestion = null;
     if (stage === DEFAULT_STAGE) {
       // 次の1杯の直し方は、主な評価（温かいうち）からだけ出す（D-104）
@@ -311,6 +317,57 @@ async function renderTds() {
   $('tdsCard').hidden = false;
 }
 
+// ---- 抽出レポートの1枚画像（X3） ----
+
+let imageFile = null;
+let imageUrl = null;
+
+async function makeImage() {
+  $('imageMake').disabled = true;
+  try {
+    const [stages, brews, equipment, recipe] = await Promise.all([
+      getTastingsByStage(db, brew.id),
+      listBrews(db),
+      listEquipment(db),
+      brew.recipeId ? getRecipe(db, brew.recipeId) : null,
+    ]);
+    const content = brewImageContent({
+      brew,
+      bean,
+      tasting: stages[DEFAULT_STAGE] ?? null,
+      recipeName: recipe?.name ?? brew.planned?.name ?? '',
+      grinderName: equipment.find((e) => e.id === brew.actual?.grind?.grinderId)?.name ?? '',
+      metrics: brewMetrics(brew, retentionTable(brews)),
+      withMemo: $('imageMemo').checked,
+    });
+    const cv = drawBrewImage(content);
+    imageFile = await canvasToFile(cv, imageFileName(brew.at));
+    if (imageUrl) URL.revokeObjectURL(imageUrl);
+    imageUrl = URL.createObjectURL(imageFile);
+    $('imagePreview').src = imageUrl;
+    $('imagePreview').hidden = false;
+    $('imageDownload').href = imageUrl;
+    $('imageDownload').download = imageFile.name;
+    $('imageShare').hidden = !(navigator.canShare && navigator.canShare({ files: [imageFile] }));
+    $('imageActions').hidden = false;
+    $('imageMake').textContent = '作り直す';
+    showMessage('', 'ok', 'imageMsg');
+  } catch (err) {
+    console.error(err);
+    showMessage('画像を作れませんでした', 'error', 'imageMsg');
+  } finally {
+    $('imageMake').disabled = false;
+  }
+}
+
+async function shareImage() {
+  try {
+    await navigator.share({ files: [imageFile], title: imageFile.name });
+  } catch (err) {
+    if (err?.name !== 'AbortError') showMessage('共有できませんでした。「ダウンロード」を使ってください', 'error', 'imageMsg');
+  }
+}
+
 async function onSaveTds() {
   const { value, error } = normalizeTds($('tdsInput').value);
   if (error) {
@@ -356,7 +413,11 @@ async function init() {
   $('formView').hidden = false;
   await renderPhotos();
   await renderTds();
+  $('imageCard').hidden = false;
 }
+
+$('imageMake').addEventListener('click', makeImage);
+$('imageShare').addEventListener('click', shareImage);
 
 $('tdsSave').addEventListener('click', onSaveTds);
 $('formView').addEventListener('submit', onSave);

@@ -24,6 +24,8 @@ import { defaultEquipmentIds } from './core/equipment.js';
 import { normalizeFreezeInput, portionsOf, stockParts, stockPartsText, portionText, labelRange, MAX_PORTIONS } from './core/frozen.js';
 import { arrivalChanges } from './core/orders.js';
 import { initialStockG } from './core/roast.js';
+import { canisterUrl } from './core/scan-target.js';
+import { qrSvg } from './core/qr-code.js';
 import { originText, BEAN_STATUS, WEIGHT_BASIS, parseNumber } from './core/beans.js';
 import { gramPrice, yen, yenPerGText } from './core/cost.js';
 import { remainingG, cupsLeft, consumptionPace, emptyForecast, doseFromSettings, sortTxNewestFirst, TX_KINDS } from './core/inventory.js';
@@ -31,7 +33,7 @@ import { freshness, FRESHNESS_WINDOWS, FALLBACK_GROUP, STAGES } from './core/fre
 import { roastGroup, ROAST_GROUPS } from './core/roast.js';
 import { localYmd, formatYmdJa, formatG, formatDateTimeJa } from './core/format.js';
 import { roastPreferences, preferenceForBean, preferenceText } from './core/compare.js';
-import { $, el, queryParam, showMessage, freshnessPill, frozenPill, stepperField } from './ui.js';
+import { $, el, queryParam, showMessage, freshnessPill, frozenPill, stepperField, svgElement } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
 
 const db = openDb();
@@ -203,6 +205,17 @@ async function renderRoastPref(bean, allBeans) {
   $('compareLink').href = `compare.html?bean=${encodeURIComponent(bean.id)}`;
 }
 
+/** キャニスターの QR（X14）。開いたときだけ作る */
+function renderCanister(bean) {
+  $('canisterCard').hidden = bean.status === 'ordered';
+  $('canisterPrint').href = `recipe-card.html?canister=${encodeURIComponent(bean.id)}`;
+  $('canisterDetails').ontoggle = () => {
+    if (!$('canisterDetails').open || $('canisterQr').childElementCount) return;
+    const url = canisterUrl(new URL('./', location.href).href, bean.id);
+    $('canisterQr').replaceChildren(svgElement(qrSvg(url, { label: `${bean.name}のキャニスター用QR` })));
+  };
+}
+
 async function render() {
   const found = await getBeanWithTx(db, beanId ?? '');
   if (!found) {
@@ -238,6 +251,7 @@ async function render() {
   renderInfo(bean, allBeans);
   await renderInitial(bean, allBeans);
   await renderRoastPref(bean, allBeans);
+  renderCanister(bean);
   $('content').hidden = false;
 }
 

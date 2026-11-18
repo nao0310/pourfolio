@@ -170,3 +170,15 @@ test('デモデータ（80杯）でも、理由付きの候補が3つ出る', ()
     assert.ok(Number.isFinite(p.score));
   }
 });
+
+test('キャニスターのQR：その豆で★がいちばん高いホットの杯', async () => {
+  const { bestBrewForBean } = await import('../js/core/today.js');
+  const a = rated('qa', 3);
+  const b = rated('qa', 5);
+  const c = rated('qa', 5, { iced: true });
+  const d = rated('qz', 5);
+  const brews = [a, b, c, d].map((x) => x.brew);
+  const tastings = [a, b, c, d].map((x) => x.tasting);
+  assert.equal(bestBrewForBean(brews, tastings, 'qa').id, b.brew.id);
+  assert.equal(bestBrewForBean(brews, tastings, 'none'), null);
+});
