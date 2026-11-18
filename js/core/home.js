@@ -163,3 +163,22 @@ export function recordText(sec) {
   const r = s % 60;
   return `評価まで ${m}分${r ? `${r}秒` : ''}`;
 }
+
+/**
+ * 暑い日のカード（X16）の「急冷アイスで淹れる」の行き先：おすすめの1位 → 前回と同じ → レシピ帳（まだ淹れていない）
+ * @param {{pickHref?:string|null, hasLast?:boolean}} p pickHref は todayPicks の1位の pickHref
+ */
+export function icedHref({ pickHref = null, hasLast = false } = {}) {
+  if (pickHref) {
+    const [path, query = ''] = pickHref.split('?');
+    const q = new URLSearchParams(query);
+    q.set('iced', '1');
+    return `${path}?${q.toString()}`;
+  }
+  return hasLast ? 'brew.html?from=last&iced=1' : 'recipes.html';
+}
+
+/** 暑い日のカードの文（「最高気温31℃の予報です（東京都（新宿））」） */
+export function hotText({ maxC, line, placeName = '' }) {
+  return `${placeName ? `${placeName}は、` : ''}今日の最高気温${maxC}℃の予報です（線は${line}℃）。氷に直接落とす急冷アイスなら、香りを残したまま冷たく飲めます。`;
+}

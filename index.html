@@ -119,6 +119,25 @@
       <div class="stack" id="todayActions"></div>
     </section>
 
+    <!-- 暑い日（X16）：今日の最高気温が線以上ならアイスをすすめる -->
+    <section class="card" id="hotCard" hidden>
+      <h2 id="hotTitle">今日は暑い日です</h2>
+      <p class="muted" id="hotText"></p>
+      <div class="row">
+        <a class="btn" id="hotLink" href="brew.html?from=last&amp;iced=1">急冷アイスで淹れる</a>
+      </div>
+    </section>
+
+    <!-- 季節の変わり目（X20）：去年の同じ季節の好み -->
+    <section class="card" id="seasonCard" hidden>
+      <h2 id="seasonTitle">季節が変わりました</h2>
+      <p class="muted" id="seasonText"></p>
+      <div class="row">
+        <a class="btn secondary" href="life.html">季節ごとの好みを見る</a>
+        <a class="btn secondary" href="recipes.html">レシピを見直す</a>
+      </div>
+    </section>
+
     <!-- カフェイン・タイムキーパー（X17） -->
     <section class="card caffeine-card" id="cafCard" hidden>
       <div class="sec-head">

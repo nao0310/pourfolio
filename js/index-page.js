@@ -6,7 +6,7 @@ import { openDb, readAll, getSettings, setDeviceSettings, getUnratedBrew, getCoo
 import { APP_VERSION, versionLabel, whatsNew } from './core/version.js';
 import { restockPlan, restockText } from './core/restock.js';
 import { brewLine, tastingSummary } from './core/tastings.js';
-import { backupReminder, lastBackupText, beanRows, alertText, recentBrews, recordText } from './core/home.js';
+import { backupReminder, lastBackupText, beanRows, alertText, recentBrews, recordText, icedHref, hotText } from './core/home.js';
 import { pickPendingSuggestion } from './core/dialin.js';
 import { doseFromSettings } from './core/inventory.js';
 import { localYmd, formatG } from './core/format.js';
@@ -20,6 +20,9 @@ import { usualCup, usualReason } from './core/usual.js';
 import { autosaveSupported, getAutosaveState, resumeAutosave } from './autosave-file.js';
 import { $, el, freshnessPill, frozenPill } from './ui.js';
 import { showCard } from './dismiss-card.js';
+import { syncWeather } from './weather-sync.js';
+import { placeOf, hotLineOf, hotDay } from './core/weather.js';
+import { seasonReview } from './core/life.js';
 
 registerServiceWorker();
 requestPersistentStorage();
@@ -98,6 +101,7 @@ function renderToday(all, beanName, settings) {
   const caf = todayCaffeine(analysisRows(all), now).mg;
   const pick = todayPicks({ rows, brews: all.brews, tastings: all.tastings, beans: all.beans, now, mood, cutoff: settings.caffeineCutoff ?? null, todayCaffeineMg: caf, n: 1 })[0];
   const pending = last ? pickPendingSuggestion(all.suggestions, last.beanId, all.brews) : null;
+  todayPickHref = pick ? pickHref(pick) : null;
 
   $('todayPick').hidden = !pick;
   if (pick) {
@@ -133,6 +137,34 @@ function renderToday(all, beanName, settings) {
   }
   if (pick) actions.push(el('a', { class: 'link-more', href: 'today.html' }, 'ほかの候補・気分を変える'));
   $('todayActions').replaceChildren(...actions);
+}
+
+/** 今日の1杯の1位で淹れる URL（暑い日のカードでアイスにして使う） */
+let todayPickHref = null;
+
+/**
+ * 天気（X16）：必要なら問い合わせて、まだ天気のない杯に入れる。暑い日はアイスをすすめる。
+ * 通信できない・地点を決めていないときは何もしない（ほかのカードは先に出しておく）
+ */
+async function renderWeather(all, settings) {
+  const place = placeOf(settings);
+  if (!place) return;
+  const { cache } = await syncWeather(db, { settings, brews: all.brews });
+  const d = hotDay({ cache, now: new Date(), line: hotLineOf(settings) });
+  if (!d.hot) return;
+  $('hotTitle').textContent = `今日は暑い日です（最高${d.maxC}℃）`;
+  $('hotText').textContent = hotText({ maxC: d.maxC, line: d.line, placeName: place.name });
+  $('hotLink').href = icedHref({ pickHref: todayPickHref, hasLast: all.brews.some(alive) });
+  showCard($('hotCard'), 'hot', d.ymd);
+}
+
+/** 季節の変わり目（X20）：去年の同じ季節の好み */
+function renderSeason(all) {
+  const r = seasonReview({ rows: analysisRows(all), now: new Date() });
+  if (!r) return;
+  $('seasonTitle').textContent = `${r.label}になりました`;
+  $('seasonText').textContent = `${r.text}今年の${r.label}のレシピを見直してみませんか。`;
+  showCard($('seasonCard'), 'season', r.key);
 }
 
 /** いつもの1杯（X15）。決まらないとき（レシピで淹れた杯がない）は出さない */
@@ -302,11 +334,13 @@ async function init() {
   renderBeans(beanRows({ beans: all.beans, txs: all.inventoryTx, portions: all.frozenPortions, doseG: doseFromSettings(settings), today: localYmd() }));
   renderRecent(all, beanName);
   renderRestock(all, settings);
+  renderSeason(all);
   await renderUnrated(beanName);
   await renderCool(beanName);
   renderCompare(all);
   await renderWhatsNew(settings, all);
   await renderAutosave().catch((err) => console.error(err));
+  await renderWeather(all, settings).catch((err) => console.error(err));
 }
 
 init().catch((err) => {
