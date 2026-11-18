@@ -9,7 +9,7 @@
 // <manifest> npm run sw が書き込む（手で直さない）
 const MANIFEST = {
   "label": "3.6",
-  "version": "06a980843bfd",
+  "version": "856a3d2ed8e7",
   "files": {
     "aging.html": "e375c2c6820a60f3",
     "ai.html": "34607ec38ddc5690",
@@ -97,6 +97,7 @@ const MANIFEST = {
     "js/core/optimize.js": "8c9f6ad01dac34e3",
     "js/core/orders.js": "029a40c611f71c86",
     "js/core/origin-map.js": "a3ca5535b39b8f84",
+    "js/core/page-life.js": "5751d8c7b4821f5d",
     "js/core/photos.js": "92c3236ca612f895",
     "js/core/phrases.js": "2c6a36f68e5ebcfe",
     "js/core/plan-adjust.js": "94fe652d301b93f5",
@@ -139,9 +140,10 @@ const MANIFEST = {
     "js/more-page.js": "1b2f722ab0b9c696",
     "js/optimize-page.js": "41fc5e6f125f204f",
     "js/order-import-page.js": "bd07f807d74b25c4",
+    "js/page-life.js": "2da1f67b1a5b8fec",
     "js/photo.js": "c7fc369546686540",
     "js/profile-page.js": "0bdbcbac7549db89",
-    "js/pwa.js": "0a455ba0a3ad9be0",
+    "js/pwa.js": "e54d2c538eb34c67",
     "js/recipe-card-page.js": "8607ab34fd6de2a8",
     "js/recipe-edit-page.js": "c84dd55ed7058370",
     "js/recipes-page.js": "293a5ac2a7e7b196",

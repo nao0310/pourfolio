@@ -1,4 +1,5 @@
 // ホーム画面アプリ（PWA）まわりの共通処理：service worker の登録、新しい版の知らせ（G3）、消されにくい保存
+import { watchPageLife } from './page-life.js';
 
 /** ホーム画面から開いているか */
 export function isStandalone() {
@@ -66,6 +67,7 @@ function watchInstalling(worker) {
 
 /** service worker を登録し、新しい版が準備できたら知らせる（使えない環境では何もしない） */
 export async function registerServiceWorker() {
+  watchPageLife(); // 「戻る」や日の区切りのあとに戻ったときの読み直し（全画面で呼ばれるのでここで）
   if (!('serviceWorker' in navigator)) return false;
   try {
     const reg = await navigator.serviceWorker.register('./sw.js', { scope: './' });
