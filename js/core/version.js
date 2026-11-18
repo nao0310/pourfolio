@@ -3,10 +3,19 @@
 // ステップを仕上げるときに APP_VERSION と CHANGELOG の先頭を足す。上げ忘れは tests/version.test.js が見つける。
 // sw.js の一覧（npm run sw）にも番号が入り、更新の知らせに新しい番号を出す。
 
-export const APP_VERSION = '2.4';
+export const APP_VERSION = '2.5';
 
 /** 更新履歴（新しい順）。items は利用者向けの短い文で、2〜3個まで */
 export const CHANGELOG = Object.freeze([
+  {
+    version: '2.5',
+    date: '2026-11-18',
+    items: [
+      '下に「ホーム・抽出・豆と在庫・分析・その他」のタブが付きました',
+      '分析の画面で、ダイヤルインの道のり・抽出チャート・好みの産地や焙煎度・カレンダーとカフェインが見られます（デモでも見られます）',
+      'TDS（屈折計）と水の成分を記録でき、グラインダーの目盛りを別のミルに換算できます。タイマーに前回のベストとのずれが出ます',
+    ],
+  },
   {
     version: '2.4',
     date: '2026-11-18',
