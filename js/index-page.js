@@ -1,5 +1,6 @@
 // ホーム（E1）：保存の促し（G2）、途中の抽出、まだ評価していない1杯、今日の1杯、在庫アラート、豆の飲み頃、直近の抽出
-import { isStandalone, registerServiceWorker } from './pwa.js';
+import { isStandalone, registerServiceWorker, requestPersistentStorage } from './pwa.js';
+import { installAdvice } from './core/install.js';
 import { loadDraft } from './brew-draft.js';
 import { openDb, readAll, getSettings, getUnratedBrew } from './db.js';
 import { brewLine, tastingSummary } from './core/tastings.js';
@@ -11,13 +12,22 @@ import { STAGES } from './core/freshness.js';
 import { $, el, freshnessPill } from './ui.js';
 
 registerServiceWorker();
+requestPersistentStorage();
 
 const db = openDb();
 const alive = (r) => r && r.deletedAt == null;
 
-$('mode').textContent = isStandalone()
-  ? 'ホーム画面のアプリとして開いています'
-  : 'ブラウザで開いています（iPhoneでは「共有」→「ホーム画面に追加」で使ってください）';
+const advice = installAdvice({
+  userAgent: navigator.userAgent,
+  maxTouchPoints: navigator.maxTouchPoints,
+  standalone: isStandalone(),
+});
+$('installCard').hidden = advice !== 'ios-browser';
+$('mode').textContent = {
+  installed: 'ホーム画面のアプリとして開いています',
+  'ios-browser': 'ブラウザで開いています',
+  'other-browser': 'ブラウザで開いています（iPhoneでは「共有」→「ホーム画面に追加」で使ってください）',
+}[advice];
 
 const draft = loadDraft();
 if (draft) {

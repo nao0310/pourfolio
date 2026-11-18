@@ -7,7 +7,7 @@ import { parseBackup, backupFileName, totalRecords, BackupError } from './core/b
 import { makeSampleData } from './core/sample-data.js';
 import { TABLES, SETTINGS_ID } from './core/records.js';
 import { formatDateTimeJa } from './core/format.js';
-import { registerServiceWorker, requestPersistentStorage } from './pwa.js';
+import { registerServiceWorker, requestPersistentStorage, getOfflineStatus } from './pwa.js';
 
 const LABELS = {
   beans: '豆',
@@ -178,7 +178,21 @@ if (isDev) {
   });
 }
 
-registerServiceWorker();
+/** オフラインの準備の状況と、アプリの版（G3） */
+async function renderOffline() {
+  const st = await getOfflineStatus().catch(() => null);
+  let text;
+  if (!st?.supported) text = 'この開き方ではオフラインで使えません（GitHub Pages のアドレスで開いてください）';
+  else if (st.ready) text = '準備済み：通信がなくても開けます';
+  else text = '準備中：通信できる場所で、一度アプリを開き直してください';
+  $('offlineStatus').textContent = text;
+  const parts = [];
+  if (st?.version) parts.push(`アプリの版：${st.version}`);
+  if (st?.updateWaiting) parts.push('新しい版が準備できています（画面の上の「更新する」で切り替わります）');
+  $('appVersion').textContent = parts.join('　');
+}
+
+registerServiceWorker().then(() => navigator.serviceWorker?.ready).then(renderOffline, renderOffline);
 requestPersistentStorage();
 render().catch((err) => {
   console.error(err);

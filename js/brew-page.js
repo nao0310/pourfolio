@@ -32,7 +32,7 @@ import { loadDraft, saveDraft, clearDraft } from './brew-draft.js';
 import * as cue from './cue.js';
 import { createWakeLock } from './wake-lock.js';
 import { $, el, queryParam, showMessage, stepperField } from './ui.js';
-import { registerServiceWorker } from './pwa.js';
+import { registerServiceWorker, blockUpdatePrompt, recheckUpdatePrompt } from './pwa.js';
 
 const db = openDb();
 let draft = null;
@@ -217,6 +217,7 @@ function renderSpeechToggle() {
 }
 
 function startTimer() {
+  recheckUpdatePrompt(); // 計画の画面で出ていた「新しい版があります」を隠す
   $('timerView').hidden = false;
   document.body.classList.add('timer-on');
   renderSpeechToggle();
@@ -399,6 +400,7 @@ function buildResultForm() {
 }
 
 function showResult() {
+  recheckUpdatePrompt();
   buildResultForm();
   const input = draft.input ?? initialActualInput(draft);
   fillBeanSelect($('rBean'), input.beanId);
@@ -533,6 +535,8 @@ window.addEventListener('beforeunload', (e) => {
   if (draft?.stage === 'timer') e.preventDefault();
 });
 
+// タイマーと実績の確認の途中は、新しい版の知らせを出さない（押して読み込み直すと入力が途切れるため）
+blockUpdatePrompt(() => draft != null || loadDraft() != null);
 registerServiceWorker();
 init().catch((err) => {
   console.error(err);

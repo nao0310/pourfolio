@@ -483,3 +483,24 @@ p > a:not(.btn):only-child { display: inline-block; padding: 11px 0; }
   .star { width: 46px; }
   .stars { gap: 2px; }
 }
+
+/* ホーム画面に追加していないときの警告（2-1） */
+.install-card { border: 2px solid var(--danger); }
+.install-card p { margin: 0 0 8px; }
+.install-steps { margin: 8px 0 0; padding-left: 1.4em; line-height: 1.6; }
+.install-steps li { margin: 4px 0; }
+
+/* 新しい版の知らせ（2-1）：画面の一番上（下に固定のボタンがある画面と重ならないように） */
+.update-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 12px 0;
+  padding: 10px 12px 10px 16px;
+  background: var(--card);
+  border: 2px solid var(--accent);
+  border-radius: 14px;
+  font-weight: 700;
+}
+.update-bar .btn { flex: none; }
