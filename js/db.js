@@ -395,9 +395,11 @@ export async function measureBean(db, beanId, measuredG, now = new Date()) {
  * - 冷凍から取り出し：袋を冷凍庫に戻す
  */
 export async function deleteInventoryTx(db, txId, now = new Date()) {
-  await db.transaction('rw', db.table('inventoryTx'), db.table('frozenPortions'), async () => {
+  await db.transaction('rw', db.table('beans'), db.table('inventoryTx'), db.table('frozenPortions'), async () => {
     const cur = await db.table('inventoryTx').get(txId);
     if (!cur || !alive(cur)) return;
+    // 抽出の記録とつながった「抽出」は取り消せない。記録が残ったまま残りだけ増え、つじつまが合わなくなるため（総仕上げの57番）
+    if (cur.kind === 'brew' && cur.brewId) throw new Error('抽出の記録とつながっているため取り消せません。残りが違うときは「量り直す」で合わせてください');
     if (cur.kind === 'freeze') {
       const portions = (await db.table('frozenPortions').where('beanId').equals(cur.beanId).toArray()).filter(
         (p) => alive(p) && p.freezeTxId === cur.id,
@@ -412,6 +414,12 @@ export async function deleteInventoryTx(db, txId, now = new Date()) {
       if (p && alive(p)) await db.table('frozenPortions').put(updateRecord(p, { takenOutAt: null, takenOutBrewId: null }, now));
     }
     await db.table('inventoryTx').put(markDeleted(cur, now));
+    // 取り消して入庫だけになったら、開封済みを未開封に戻す（42番の飲み切りの取り消しと同じ決め方、総仕上げの94番）
+    const bean = await db.table('beans').get(cur.beanId);
+    if (bean && alive(bean) && bean.status === 'open') {
+      const rest = (await db.table('inventoryTx').where('beanId').equals(cur.beanId).toArray()).filter(alive);
+      if (statusAfterUnfinish(rest) === 'unopened') await db.table('beans').put(updateRecord(bean, { status: 'unopened' }, now));
+    }
   });
 }
 

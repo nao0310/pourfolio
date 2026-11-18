@@ -42,7 +42,7 @@ import { roastPreferences, preferenceForBean, preferenceText } from './core/comp
 import { variableFindings } from './core/experiment-plan.js';
 import { analysisRows } from './core/analysis.js';
 import { agingOf } from './core/aging.js';
-import { $, el, phrased, queryParam, showMessage as showBoxMessage, showToast, freshnessPill, frozenPill, stepperField, svgElement } from './ui.js';
+import { $, el, phrased, queryParam, showMessage as showBoxMessage, showToast, showPageLoadError, freshnessPill, frozenPill, stepperField, svgElement } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
 import { showCard } from './dismiss-card.js';
 import { singleFlight } from './core/once.js';
@@ -74,6 +74,26 @@ function guarded(handler, msgId) {
     event.preventDefault();
     run(event, event.currentTarget);
   };
+}
+
+/**
+ * 保存のあとの描き直し。保存はできているので、描き直しの失敗は「できませんでした」と分けて知らせる（押し直して2件にならないように、総仕上げの66番）
+ */
+async function rerender() {
+  try {
+    await render();
+  } catch (err) {
+    console.error(err);
+    showMessage('保存しました。画面を新しくできなかったので、開き直してください', 'error');
+  }
+}
+
+/** 残りより多く減らすときは確かめる（おすそ分けと同じ、総仕上げの68番）。続けてよければ true */
+async function confirmOverdraw(g, verb) {
+  const found = await getBeanWithTx(db, beanId);
+  const room = found ? remainingG(found.txs) : 0;
+  if (!found?.txs.length || g <= room + EMPTY_TOLERANCE_G) return true;
+  return askConfirm(`常温の残り（${formatG(Math.max(room, 0))}）より多く${verb}。このまま減らしますか？`, { ok: '減らす' });
 }
 
 const db = openDb();
@@ -174,6 +194,7 @@ function renderTxList(txs) {
         el('div', { class: 'tx-sub muted' }, formatDateTimeJa(t.at), txNote(t) ? `　${txNote(t)}` : ''),
         t.kind !== 'in' &&
           !(t.kind === 'thaw' && t.brewId) && // 抽出で使った袋の取り出しは取り消せない（2-8 の9番）
+          !(t.kind === 'brew' && t.brewId) && // 抽出の記録とつながった「抽出」も取り消せない（総仕上げの57番）
           el(
             'button',
             {
@@ -189,7 +210,7 @@ function renderTxList(txs) {
                   return;
                 }
                 showMessage('取り消しました');
-                await render();
+                await rerender();
               },
             },
             '取り消す',
@@ -286,7 +307,7 @@ $('noteForm').addEventListener('submit', guarded(async () => {
   await setHandoverNote(db, beanId, value);
   $('handoverNote').blur();
   showMessage(value ? '一言を保存しました。次に同じ豆や似た豆を開けたときに出ます' : '一言を消しました');
-  await render();
+  await rerender();
 }));
 
 /** 焙煎度比較（X27）でわかった、この豆の産地の好きな焙煎度と、条件の飲み比べ（F7）でわかったこと */
@@ -431,7 +452,7 @@ function renderFrozen(inFreezer, parts) {
                   return;
                 }
                 showMessage(`#${p.labelNo}（${formatG(p.grams)}）を取り出し、常温に戻しました`, 'ok', 'fzMsg');
-                await render();
+                await rerender();
               }),
             },
             '取り出す',
@@ -464,7 +485,7 @@ $('freezeForm').addEventListener('submit', guarded(async (event) => {
   }
   $('freezeDetails').open = false;
   fz.count.input.value = '';
-  await render();
+  await rerender();
 }, 'fzMsg'));
 
 /**
@@ -522,15 +543,16 @@ $('arrivalForm').addEventListener('submit', guarded(async (event) => {
   await markArrived(db, beanId, value);
   form.reset();
   showMessage(`届いた豆を登録しました（${formatG(value.actualWeightG)}、焙煎日 ${formatYmdJa(value.roastDate)}）`);
-  await render();
+  await rerender();
 }));
 
 $('cupForm').addEventListener('submit', guarded(async () => {
   const g = readGrams($('cupDose'), 100);
   if (g == null) return showMessage('粉の量は0より大きい数字（g）で入れてください', 'error');
+  if (!(await confirmOverdraw(g, '使います'))) return;
   await recordCupUsage(db, beanId, g);
   showMessage(`${formatG(g)} 減らしました`);
-  await render();
+  await rerender();
 }));
 
 $('measureForm').addEventListener('submit', guarded(async () => {
@@ -540,7 +562,7 @@ $('measureForm').addEventListener('submit', guarded(async () => {
   const tx = await measureBean(db, beanId, Math.round(g * 10) / 10);
   input.value = '';
   showMessage(tx ? `残量を ${formatG(g)} に合わせました（${tx.deltaG > 0 ? '+' : ''}${formatG(tx.deltaG)}）` : '残量と同じでした。変更はありません');
-  await render();
+  await rerender();
 }));
 
 /** おすそ分け・廃棄の切り替え：おすそ分けのときだけ相手とメモの欄を出す */
@@ -566,10 +588,11 @@ $('outForm').addEventListener('submit', guarded(async (event) => {
   if (kind === 'discard') {
     const g = readGrams($('outG'));
     if (g == null) return showMessage('減らす量を0より大きい数字（g）で入れてください', 'error');
+    if (!(await confirmOverdraw(g, '捨てます'))) return;
     await addInventoryTx(db, { beanId, deltaG: -g, kind });
     $('outG').value = '';
     showMessage(`${TX_KINDS[kind]}で ${formatG(g)} 減らしました`);
-    await render();
+    await rerender();
     return;
   }
   // おすそ分け（X34）
@@ -577,31 +600,41 @@ $('outForm').addEventListener('submit', guarded(async (event) => {
   for (const span of form.querySelectorAll('.field-error')) span.textContent = errors[span.dataset.for] ?? '';
   if (errors.g) return showMessage(errors.g, 'error');
   if (Object.keys(errors).length) return showMessage('入力を直してください', 'error');
-  const found = await getBeanWithTx(db, beanId);
-  const room = found ? remainingG(found.txs) : 0;
-  if (found?.txs.length && value.g > room + EMPTY_TOLERANCE_G) {
-    if (!(await askConfirm(`常温の残り（${formatG(Math.max(room, 0))}）より多く渡します。このまま減らしますか？`, { ok: '減らす' }))) return;
-  }
+  if (!(await confirmOverdraw(value.g, '渡します'))) return;
   await addGift(db, { beanId, ...value });
   $('outG').value = '';
   $('giftTo').value = '';
   $('giftMemo').value = '';
   showMessage(`おすそ分けで ${formatG(value.g)} 減らしました${value.recipient ? `（${value.recipient}）` : ''}`);
-  await render();
+  await rerender();
 }));
 
-$('toggleFinished').addEventListener('click', async (event) => {
-  const finishing = event.target.dataset.status !== 'finished';
-  if (finishing) await setBeanStatus(db, beanId, 'finished');
-  else await unfinishBean(db, beanId);
+// 飲み切り・その取り消し。処理中と、終わってから1秒は押せない（2度押しの2回目が逆の操作にならないように、総仕上げの56番）
+let finishedAt = 0;
+const toggleFinished = singleFlight(async (btn) => {
+  if (Date.now() - finishedAt < 1000) return;
+  const finishing = btn.dataset.status !== 'finished';
+  btn.disabled = true;
+  try {
+    if (finishing) await setBeanStatus(db, beanId, 'finished');
+    else await unfinishBean(db, beanId);
+  } catch (err) {
+    console.error(err);
+    btn.disabled = false;
+    showMessage(finishing ? '飲み切りにできませんでした。もう一度押してください' : '飲み切りを取り消せませんでした。もう一度押してください', 'error');
+    return;
+  }
+  finishedAt = Date.now();
   const noNote = finishing && !$('handoverNote').value.trim();
   showMessage(finishing ? (noNote ? '飲み切りにしました。次の自分への一言を書いておけます' : '飲み切りにしました') : '飲み切りを取り消しました');
-  await render();
+  await rerender();
+  setTimeout(() => (btn.disabled = false), Math.max(0, 1000 - (Date.now() - finishedAt)));
   // 飲み切りにしたら、次の自分への一言の欄へ（X32）。書かなくてもよい
   if (noNote) {
     $('noteCard').scrollIntoView({ block: 'center', behavior: 'smooth' });
   }
 });
+$('toggleFinished').addEventListener('click', (event) => toggleFinished(event.currentTarget));
 
 $('delete').addEventListener('click', async () => {
   if (!(await askConfirm('この豆と在庫の履歴を削除しますか？元に戻せません', { ok: '削除する', danger: true }))) return;
@@ -612,5 +645,5 @@ $('delete').addEventListener('click', async () => {
 registerServiceWorker();
 render().catch((err) => {
   console.error(err);
-  showMessage('読み込めませんでした。開き直してください', 'error');
+  showPageLoadError(err); // 文の欄は隠れた箱の中にあるため、見える所に出す（15番と同じ、総仕上げの65番）
 });

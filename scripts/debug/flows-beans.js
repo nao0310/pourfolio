@@ -219,16 +219,32 @@ await flow('残り0とマイナス', 'empty', async (page, notes) => {
   await page.fill('#cupDose', '15');
   await page.locator('#cupForm button[type=submit]').click();
   await page.waitForTimeout(800);
+  // 総仕上げの68番：残りより多いときは確認の箱が出る。「いいえ」なら減らない、「減らす」なら減る
+  const cupBox = await page.locator('dialog.confirm-box[open]').count();
+  if (!cupBox) notes.push('10gの豆で15gの「1杯淹れた」：確認の箱が出ない');
+  else {
+    await page.locator('dialog.confirm-box[open] button', { hasText: 'いいえ' }).click();
+    await page.waitForTimeout(400);
+    if ((await remainOf(page, id)) !== 10) notes.push('「いいえ」なのに減った');
+    await page.locator('#cupForm button[type=submit]').click();
+    await page.waitForTimeout(500);
+    await page.locator('dialog.confirm-box[open] button', { hasText: '減らす' }).click();
+    await page.waitForTimeout(800);
+  }
   const r = await remainOf(page, id);
   const shown = await page.textContent('#remain');
   const cups = await page.textContent('#cups');
   const fc = await page.textContent('#forecast');
-  notes.push(`（参考）10gの豆で15gの「1杯淹れた」：確かめなしで保存、記録 ${r}g・画面 ${shown}・${cups}・${fc}`);
+  notes.push(`（参考）10gの豆で15gの「1杯淹れた」：確認の箱 ${cupBox ? 'あり' : 'なし'}、記録 ${r}g・画面 ${shown}・${cups}・${fc}`);
   await chooseDiscard(page);
   await page.fill('#outG', '50');
   await page.locator('#outForm button[type=submit]').click();
   await page.waitForTimeout(800);
-  const dlg = await page.locator('dialog.confirm-box').count();
+  const dlg = await page.locator('dialog.confirm-box[open]').count();
+  if (dlg) {
+    await page.locator('dialog.confirm-box[open] button', { hasText: '減らす' }).click();
+    await page.waitForTimeout(800);
+  } else notes.push(`残り${r}gで廃棄50g：確認の箱が出ない`);
   notes.push(`（参考）残り${r}gで廃棄50g：確認の箱 ${dlg ? 'あり' : 'なし'}、記録 ${await remainOf(page, id)}g`);
   await openSub(page, '量り直す');
   await page.fill('#measured', '0');

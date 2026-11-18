@@ -417,4 +417,5 @@ async function init() {
 init().catch((err) => {
   console.error(err);
   $('todayText').textContent = '記録を読み込めませんでした。開き直してください';
+  $('todayText').className = 'error'; // 赤い文で（総仕上げの74番）
 });

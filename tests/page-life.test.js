@@ -41,3 +41,18 @@ test('全画面で呼ぶ registerServiceWorker が読み直しの見張りを始
   const pwa = await readFile(new URL('../js/pwa.js', import.meta.url), 'utf8');
   assert.match(pwa, /export async function registerServiceWorker\(\) \{\n {2}watchPageLife\(\);/);
 });
+
+test('全画面で、記録の保存場所が使えないかを確かめる（総仕上げの74番）', async () => {
+  const pwa = await readFile(new URL('../js/pwa.js', import.meta.url), 'utf8');
+  assert.match(pwa, /checkStorage\(\);/);
+  const sc = await readFile(new URL('../js/storage-check.js', import.meta.url), 'utf8');
+  assert.match(sc, /pourfolio-probe/); // 記録の保存場所（pourfolio）には触らない
+  assert.match(sc, /deleteDatabase\('pourfolio-probe'\)/);
+});
+
+test('豆の画面：飲み切りは2度押しを受け付けない。読み込みの失敗は見える所に出す（56・65番）', async () => {
+  const s = await readFile(new URL('../js/bean-page.js', import.meta.url), 'utf8');
+  assert.match(s, /const toggleFinished = singleFlight\(/);
+  assert.match(s, /render\(\)\.catch\(\(err\) => \{\n {2}console\.error\(err\);\n {2}showPageLoadError\(err\);/);
+  assert.match(s, /!\(t\.kind === 'brew' && t\.brewId\)/);
+});

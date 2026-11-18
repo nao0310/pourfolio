@@ -5,7 +5,7 @@ import { recipeCardText, canisterLabelText, CARD_SIZES } from './core/card-text.
 import { sharePayload, encodeShare, shareUrl, QR_MAX_CHARS } from './core/share-code.js';
 import { canisterUrl } from './core/scan-target.js';
 import { qrSvg } from './core/qr-code.js';
-import { $, el, queryParam, svgElement } from './ui.js';
+import { $, el, queryParam, svgElement, showPageLoadError } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
 
 const db = openDb();
@@ -100,8 +100,11 @@ async function initCanister(beanId) {
 }
 
 async function init() {
-  const ok = queryParam('canister') ? await initCanister(queryParam('canister')) : await initRecipe(queryParam('recipe') ?? '');
+  const canister = queryParam('canister');
+  const ok = canister ? await initCanister(canister) : await initRecipe(queryParam('recipe') ?? '');
   if (!ok) {
+    // どちらが見つからないかを書く（総仕上げの85番）
+    $('notFoundText').textContent = canister ? '豆が見つかりません。削除したのかもしれません。' : 'レシピが見つかりません。削除したのかもしれません。';
     $('notFound').hidden = false;
     $('printBtn').disabled = true;
     return;
@@ -113,5 +116,5 @@ $('printBtn').addEventListener('click', () => window.print());
 registerServiceWorker();
 init().catch((err) => {
   console.error(err);
-  $('notFound').hidden = false;
+  showPageLoadError(); // 読み込みの失敗を「見つかりません」と言わない（総仕上げの74番）
 });

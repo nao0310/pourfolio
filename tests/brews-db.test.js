@@ -12,6 +12,7 @@ import {
   getBrew,
   getLastBrew,
   deleteBean,
+  deleteInventoryTx,
   exportAll,
   clearAll,
   restoreBackup,
@@ -104,4 +105,15 @@ test('書き出し→全削除→復元で、抽出と在庫の履歴が戻り�
 
   assert.deepEqual(await getBrew(db, brew.id), brew);
   assert.equal(remainingG((await getBeanWithTx(db, bean.id)).txs), before);
+});
+
+test('抽出の記録とつながった「抽出」の在庫の行は取り消せない（総仕上げの57番）', async () => {
+  const db = freshDb();
+  const bean = await addBean(db, beanInput(), NOW);
+  const recipe = await addRecipe(db, recipeInput(), NOW);
+  const { tx } = await saveBrew(db, brewFields(recipe, bean.id), later(5));
+  const before = remainingG((await getBeanWithTx(db, bean.id)).txs);
+  await assert.rejects(deleteInventoryTx(db, tx.id, later(6)), /抽出の記録とつながっているため取り消せません/);
+  assert.equal(remainingG((await getBeanWithTx(db, bean.id)).txs), before);
+  db.close();
 });

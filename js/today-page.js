@@ -94,5 +94,5 @@ async function init() {
 registerServiceWorker();
 init().catch((err) => {
   console.error(err);
-  $('picks').replaceChildren(el('p', { class: 'muted' }, '読み込めませんでした。開き直してください'));
+  $('picks').replaceChildren(el('p', { class: 'error' }, '読み込めませんでした。開き直してください'));
 });
