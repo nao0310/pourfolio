@@ -158,3 +158,11 @@ test('冷凍ストック：残量と杯数は常温＋冷凍。常温が0で冷�
   assert.equal(by.mixed.roomG, 15);
   assert.equal(by.mixed.frozenOnly, false);
 });
+
+test('評価までの時間：分と秒で出す（「記録 437秒」では分からないため。2-8 の23番）', async () => {
+  const { recordText } = await import('../js/core/home.js');
+  assert.equal(recordText(437), '評価まで 7分17秒');
+  assert.equal(recordText(25), '評価まで 25秒');
+  assert.equal(recordText(120), '評価まで 2分');
+  assert.equal(recordText(null), '');
+});

@@ -117,6 +117,10 @@ export async function decodeShare(code) {
   }
   if (payload?.app !== 'pourfolio' || !payload.recipe) return { ok: false, error: 'Pourfolioのレシピのリンクではありません' };
   if (payload.v > SHARE_VERSION) return { ok: false, error: 'アプリを新しい版に更新してから開いてください' };
+  // 受け取る側でも、商品ページのURLは https:// か http:// のものだけ残す（他人のリンクに javascript: などが入っていても開かない。2-8 の14番）
+  if (payload.bean && typeof payload.bean === 'object' && !/^https?:\/\/\S+$/i.test(String(payload.bean.productUrl ?? ''))) {
+    payload = { ...payload, bean: { ...payload.bean, productUrl: '' } };
+  }
   return { ok: true, payload };
 }
 

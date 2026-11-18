@@ -20,7 +20,7 @@ import {
   listTastings,
   listRecipes,
 } from './db.js';
-import { adjustPlan, adjustNotes, parseAdjustParams, adjustQuery, hotPlanOf, carryIce, isIced, MOODS, CUP_OPTIONS, cupsLabel } from './core/plan-adjust.js';
+import { adjustPlan, adjustNotes, parseAdjustParams, adjustQuery, hotPlanOf, carryIce, isIced, cupsOf, perCupPlan, perCupIceG, MOODS, CUP_OPTIONS, cupsLabel } from './core/plan-adjust.js';
 import { initialRecipe, initialPlan, baseRecipe } from './core/initial-recipe.js';
 import { defaultEquipmentIds } from './core/equipment.js';
 import { doseFromSettings } from './core/inventory.js';
@@ -30,7 +30,7 @@ import { basePlanForNext, applyAction, pickPendingSuggestion } from './core/dial
 import { planFromRecipe, planFromBrew, formatSec, POUR_STYLES, ratioOf } from './core/recipes.js';
 import { sortBeansForList } from './core/beans.js';
 import { formatG } from './core/format.js';
-import { timerView, cuesBetween, addLap, autoAdvance, pourName, pourEndSec } from './core/timer.js';
+import { timerView, cuesBetween, addLap, autoAdvance, pourName, pourEndSec, canFinish } from './core/timer.js';
 import {
   newDraft,
   elapsedSec,
@@ -48,7 +48,8 @@ import * as cue from './cue.js';
 import { createWakeLock } from './wake-lock.js';
 import { bestBrewForBean } from './core/today.js';
 import { autosaveAfterChange } from './autosave-file.js';
-import { $, el, queryParam, showMessage, stepperField } from './ui.js';
+import { $, el, queryParam, showMessage, stepperField, showPageLoadError } from './ui.js';
+import { singleFlight } from './core/once.js';
 import { registerServiceWorker, blockUpdatePrompt, recheckUpdatePrompt } from './pwa.js';
 
 const db = openDb();
@@ -57,6 +58,8 @@ let beans = [];
 let speechOn = true;
 let loadedPlan = null;
 let suggestions = [];
+/** 提案のカードで、もっと新しい杯がある古い提案を出さないための抽出の一覧（2-8 の8番） */
+let suggestBrews = [];
 let portions = [];
 let txs = [];
 /** 登録した器具と水（水は D3。実績の確認で選ぶ） */
@@ -69,9 +72,12 @@ let compare = null;
 
 // ---- 計画（スタート前） ----
 
-/** アイスで淹れた杯を土台にするときは、元の湯量に戻し、アイスを初めから選んでおく */
+/**
+ * 杯を土台にするとき：1杯分の計画（basePlanForNext か perCupPlan 済み）を受け取り、
+ * アイスの杯なら1杯分の氷を足して元の湯量に戻し、アイスを初めから選んでおく。杯数は1杯から（2-8 の7番）
+ */
 function fromBrewPlan(plan, src) {
-  return isIced(src) ? { plan: hotPlanOf(plan, src.context.iceG), icedDefault: true } : { plan, icedDefault: false };
+  return isIced(src) ? { plan: hotPlanOf(plan, perCupIceG(src)), icedDefault: true } : { plan, icedDefault: false };
 }
 
 /** 杯の淹れ方を土台にする（挽き目は実際に挽いた目盛り） */
@@ -105,7 +111,7 @@ async function loadPlan() {
     if (!src) return null;
     const recipe = src.recipeId ? await getRecipe(db, src.recipeId) : null;
     // 提案はお湯の量で計算してあるので、アイスの杯なら氷の量だけ引き継ぐ（気分・杯数は選べない）
-    const plan = carryIce({ ...applyAction(basePlanForNext(src, recipe), suggestion.action), source: 'suggestion', suggestionId: suggestion.id }, src.context?.iceG);
+    const plan = carryIce({ ...applyAction(basePlanForNext(src, recipe), suggestion.action), source: 'suggestion', suggestionId: suggestion.id }, perCupIceG(src));
     return { plan, base: plan, recipe, suggestion, fixed: true };
   }
   const recipeId = queryParam('recipe');
@@ -136,7 +142,7 @@ async function loadPlan() {
     const last = await getLastBrew(db);
     if (!last) return null;
     const recipe = last.recipeId ? await getRecipe(db, last.recipeId) : null;
-    const { plan, icedDefault } = fromBrewPlan(planFromBrew(last, recipe), last);
+    const { plan, icedDefault } = fromBrewPlan(perCupPlan(planFromBrew(last, recipe), cupsOf(last)), last);
     return { base: plan, recipe, icedDefault };
   }
   return null;
@@ -194,7 +200,8 @@ function planItem(label, value, changed = false) {
 /** 提案のカード。提案を入れた計画ならその説明、そうでなければ選んだ豆のまだ使っていない提案 */
 function renderSuggestCard() {
   const fromSuggestion = loadedPlan?.suggestion;
-  const s = fromSuggestion ?? pickPendingSuggestion(suggestions, $('bean').value || null);
+  // 飲み比べ（X27）で淹れるときは、前回の提案を出さない。入れると飲み比べから外れ、ブラインドが崩れるため（2-8 の10番）
+  const s = fromSuggestion ?? (compare ? null : pickPendingSuggestion(suggestions, $('bean').value || null, suggestBrews));
   $('suggestCard').hidden = !s;
   if (!s) return;
   $('sText').textContent = s.action?.text ?? '';
@@ -266,6 +273,12 @@ async function showPlan(loaded, lastBeanId) {
     $('name').textContent = `AIの提案：${recipe?.name ?? plan.name}`;
     $('sub').textContent = 'AIの答えから読み取った数字（粉量・湯量・湯温・挽き目）を、この注ぎ方に入れました';
   }
+  // 評価のあとの「代わりの案」から来たとき（2-8 の22番）
+  if (queryParam('via') === 'alt') {
+    $('name').textContent = `代わりの案：${recipe?.name ?? plan.name}`;
+    $('sub').textContent = '評価した杯の計画のまま、湯温だけを上げました';
+    document.title = `${$('name').textContent} - Pourfolio`;
+  }
   if (plan.recipeId && recipe) $('editLink').href = `recipe-edit.html?id=${encodeURIComponent(plan.recipeId)}`;
   else $('editLink').hidden = true;
   // 初期レシピ（F2）は、どこから決めたかを出す
@@ -275,8 +288,12 @@ async function showPlan(loaded, lastBeanId) {
   // 豆：初期値は ?bean= の豆（焙煎度比較）、前回の豆、一覧の先頭の順
   const preferred = queryParam('bean') ?? queryParam('best') ?? plan.beanId ?? lastBeanId ?? null;
   const usable = fillBeanSelect($('bean'), preferred);
-  if (!$('bean').value && usable[0]) $('bean').value = usable[0].id;
+  // URL で指定した豆（?bean=）が見つからない（削除済み・飲み切り）ときは、黙って別の豆にせず「選ばない」にして知らせる（2-8 の19番）
+  const askedBean = queryParam('bean');
+  const missing = askedBean && !usable.some((b) => b.id === askedBean);
+  if (!$('bean').value && usable[0] && !missing) $('bean').value = usable[0].id;
   renderBeanNote(preferred);
+  if (missing) $('beanNote').textContent = '指定された豆が見つかりません（削除した豆です）。淹れる豆を選んでください';
   renderSuggestCard();
   renderAdjust();
   renderPlanBody();
@@ -526,6 +543,7 @@ function onTap() {
   const sec = elapsedSec(draft, now);
   const v = timerView(draft.plan, draft.laps, sec);
   if (v.phase === 'drawdown') {
+    if (!canFinish(draft.laps, sec)) return; // 「注ぎ終えた」の2度押し（2-8 の5番）
     draft = finishDraft(draft, now);
     saveDraft(draft);
     stopTimer();
@@ -676,8 +694,10 @@ function showErrors(errors) {
   for (const node of document.querySelectorAll('#resultView .field-error')) node.textContent = errors[node.dataset.for] ?? '';
 }
 
-async function onSave(e) {
+// 2度押しで抽出が2件でき、在庫も2回減らないように、保存中は受け付けない（2-8 の4番）
+const onSave = singleFlight(async (e) => {
   e.preventDefault();
+  if (!draft) return; // 保存が済んで画面を移る途中
   const { value, errors } = normalizeActualInput(readForm());
   showErrors(errors);
   if (Object.keys(errors).length) {
@@ -689,15 +709,24 @@ async function onSave(e) {
   const at = new Date(draft.startedAtMs ?? Date.now()).toISOString();
   // 冷凍の袋を使う：保存すると袋を取り出したことになる（C4）
   const portion = readForm().useFrozen ? frozenChoice({ portions, beanId: value.beanId, roomG: 0, doseG: 0 }).portion : null;
+  const submit = $('resultView').querySelector('button[type="submit"]');
+  submit.disabled = true;
+  let saved = null;
   try {
     const { brew } = await saveBrew(db, buildBrew({ draft, value, at, bean, portion }));
+    saved = brew;
     const { compareId, compareBeanId } = draft;
     clearDraft();
     draft = null;
     if (compareId) {
       // 焙煎度比較（X27）：評価はあとで飲み比べの画面でまとめて入れる（ブラインドを崩さないため）
-      await attachBrewToExperiment(db, compareId, { brewId: brew.id, beanId: brew.beanId, targetBeanId: compareBeanId });
+      const attached = await attachBrewToExperiment(db, compareId, { brewId: brew.id, beanId: brew.beanId, targetBeanId: compareBeanId });
       await autosaveAfterChange(db);
+      if (!attached) {
+        // 淹れている途中で飲み比べがやめられていた：この杯は普通に評価する（2-8 の12番）
+        location.replace(`tasting.html?brew=${encodeURIComponent(brew.id)}&saved=1`);
+        return;
+      }
       location.replace(`compare.html?id=${encodeURIComponent(compareId)}&brewed=1`);
       return;
     }
@@ -707,9 +736,15 @@ async function onSave(e) {
     location.replace(`tasting.html?brew=${encodeURIComponent(brew.id)}&saved=1`);
   } catch (err) {
     console.error(err);
+    if (saved) {
+      // 抽出は保存できた（そのあとの飲み比べへのつなぎや自動保存で失敗）。押し直すと2件になるので、評価の画面へ進む
+      location.replace(`tasting.html?brew=${encodeURIComponent(saved.id)}&saved=1`);
+      return;
+    }
+    submit.disabled = false;
     showMessage('保存できませんでした。もう一度押してください', 'error', 'rMsg');
   }
-}
+});
 
 function discard() {
   if (!confirm('記録せずにやめますか？入れた内容は消えます')) return;
@@ -737,7 +772,7 @@ async function init() {
     return;
   }
 
-  suggestions = await listSuggestions(db);
+  [suggestions, suggestBrews] = await Promise.all([listSuggestions(db), listBrews(db)]);
   compare = queryParam('compare') ? await getExperiment(db, queryParam('compare')) : null;
   if (compare) {
     $('crumb').textContent = '飲み比べ';
@@ -794,7 +829,10 @@ $('speechToggle').addEventListener('click', async () => {
   if (!speechOn) cue.stopSpeaking();
   await updateSettings(db, { speechOn });
 });
-$('resultView').addEventListener('submit', onSave);
+$('resultView').addEventListener('submit', (e) => {
+  e.preventDefault(); // 保存中の2回目でも、ブラウザの送信は止める
+  onSave(e);
+});
 $('discard').addEventListener('click', discard);
 $('crumb').addEventListener('click', (e) => {
   if (draft && !confirm('記録せずに戻りますか？途中の内容は消えます')) {
@@ -815,5 +853,5 @@ blockUpdatePrompt(() => draft != null || loadDraft() != null);
 registerServiceWorker();
 init().catch((err) => {
   console.error(err);
-  showMessage('読み込みに失敗しました', 'error');
+  showPageLoadError(); // エラーの文の欄は隠れた箱の中にあるため、見える所に出す（2-8 の15番）
 });

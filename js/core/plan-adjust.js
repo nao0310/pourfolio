@@ -181,6 +181,30 @@ export function contextFromPlan(plan) {
 /** アイス（急冷）で淹れた杯か */
 export const isIced = (brew) => brew?.context?.iceG > 0;
 
+/** 杯数（A6）を変えて淹れた杯の杯数（0.7・2・3・4）。変えていなければ 1 */
+export function cupsOf(brew) {
+  const c = Number(brew?.context?.cups);
+  return CUP_OPTIONS.includes(c) ? c : 1;
+}
+
+/**
+ * 杯数を変えて淹れた杯の計画を、1杯分に戻す（2-8 の7番）。
+ * 「2杯」「少なめ」で淹れた杯を土台にしても、次の計画が倍（0.7倍）の量のままにならないように
+ * @param {object} plan 杯から写した計画
+ * @param {number} cups その杯の杯数（cupsOf）
+ */
+export function perCupPlan(plan, cups) {
+  if (!(cups > 0) || cups === 1 || !(plan?.doseG > 0) || !(plan?.waterG > 0)) return plan;
+  const doseG = round1(plan.doseG / cups);
+  const waterG = Math.round(plan.waterG / cups);
+  return { ...plan, doseG, waterG, pours: scalePours(plan.pours, waterG, plan.flowGps), ratio: ratioOf(doseG, waterG), template: null };
+}
+
+/** その杯の1杯分の氷（g）。アイスでなければ null */
+export function perCupIceG(brew) {
+  return isIced(brew) ? Math.round(brew.context.iceG / cupsOf(brew)) : null;
+}
+
 const RANGES = Object.freeze({ doseG: [3, 80], waterG: [30, 1500], tempC: [60, 100] });
 
 /** 範囲の中の数か。外なら null */

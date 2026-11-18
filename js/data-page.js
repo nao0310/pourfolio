@@ -178,7 +178,13 @@ $('clear').addEventListener('click', async () => {
   if (!confirm('本当に消しますか？ 元に戻せません。')) return;
   // 設定もここでは作り直さない（作り直すと、復元したときにファイルの設定より新しいと判定されてしまう）
   await clearAll(db);
-  showMessage('全部消しました');
+  // 自動ファイル保存も止める。続けると、復元する前の保存でフォルダのファイルが空の中身に替わるため（2-8 の18番）
+  let stopped = false;
+  if (autosaveSupported() && (await getAutosaveState().catch(() => null))?.on) {
+    await stopAutosave().catch((err) => console.error(err));
+    stopped = true;
+  }
+  showMessage(stopped ? '全部消しました。自動ファイル保存も止めました（フォルダのファイルはそのまま残っています）' : '全部消しました');
   await render();
 });
 

@@ -65,7 +65,20 @@ export function addLap(pours, laps, elapsedSec) {
   if (elapsedSec < pours[cur.length].atSec) return cur;
   const lastTap = [...cur].reverse().find((x) => x != null);
   if (lastTap != null && elapsedSec - lastTap < LAP_GUARD_SEC) return cur;
+  // スタートの2度押し：スタートから LAP_GUARD_SEC 以内の最初のタップは押し間違いとして無視する（2-8 の17番）
+  if (lastTap == null && elapsedSec < LAP_GUARD_SEC) return cur;
   return [...cur, round1(elapsedSec)];
+}
+
+/**
+ * 落ち切り待ちで「落ち切った」を押したとき、終わりにしてよいか（2-8 の5番）。
+ * 最後の投の「注ぎ終えた」を押してから LAP_GUARD_SEC 以内は、2度押しとして無視する（D-036 を終わりにも当てる）
+ * @param {(number|null)[]} laps
+ * @param {number} elapsedSec
+ */
+export function canFinish(laps, elapsedSec) {
+  const lastTap = [...(laps ?? [])].reverse().find((x) => x != null);
+  return lastTap == null || elapsedSec - lastTap >= LAP_GUARD_SEC;
 }
 
 /**

@@ -56,9 +56,11 @@ function renderJourney(j) {
   );
 }
 
-function select(beanId) {
+function select(beanId, notice = null) {
   const j = journeys.find((x) => x.bean.id === beanId) ?? journeys[0];
   $('beanSelect').value = j.bean.id;
+  $('missingNote').textContent = notice ?? '';
+  $('missingNote').hidden = !notice;
   history.replaceState(null, '', analysisHref('dialin-history.html', { bean: j.bean.id }));
   renderJourney(j);
 }
@@ -83,9 +85,16 @@ async function render() {
         ...journeys.map((j) => el('option', { value: j.bean.id }, `${j.bean.name}（${j.cups.length}杯）`)),
       ),
     ),
+    el('p', { class: 'muted', id: 'missingNote', role: 'status', hidden: true }),
     el('section', { class: 'card', id: 'journey' }),
   );
-  select(queryParam('bean'));
+  // 指定した豆にまだ記録がないときは、黙って別の豆にせず知らせる（2-8 の19番）
+  const asked = queryParam('bean');
+  const askedName = asked && !journeys.some((j) => j.bean.id === asked) ? (data.beans ?? []).find((b) => b.id === asked && b.deletedAt == null)?.name : null;
+  const notice = asked && !journeys.some((j) => j.bean.id === asked)
+    ? `${askedName ? `「${askedName}」` : '指定された豆'}は、まだ道のりがありません（淹れて評価すると、ここに並びます）。いまは「${journeys[0].bean.name}」を出しています`
+    : null;
+  select(asked, notice);
 }
 
 registerServiceWorker();

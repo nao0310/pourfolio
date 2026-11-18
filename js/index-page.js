@@ -2,11 +2,11 @@
 import { isStandalone, registerServiceWorker, requestPersistentStorage } from './pwa.js';
 import { installAdvice } from './core/install.js';
 import { loadDraft } from './brew-draft.js';
-import { openDb, readAll, getSettings, updateSettings, getUnratedBrew, getCoolPromptBrew } from './db.js';
+import { openDb, readAll, getSettings, setDeviceSettings, getUnratedBrew, getCoolPromptBrew } from './db.js';
 import { APP_VERSION, versionLabel, whatsNew } from './core/version.js';
 import { restockPlan, restockText } from './core/restock.js';
 import { brewLine, tastingSummary } from './core/tastings.js';
-import { backupReminder, lastBackupText, beanRows, alertText, recentBrews } from './core/home.js';
+import { backupReminder, lastBackupText, beanRows, alertText, recentBrews, recordText } from './core/home.js';
 import { pickPendingSuggestion } from './core/dialin.js';
 import { doseFromSettings } from './core/inventory.js';
 import { localYmd, formatG } from './core/format.js';
@@ -19,6 +19,7 @@ import { todayCaffeine, caffeineKeeper } from './core/caffeine.js';
 import { usualCup, usualReason } from './core/usual.js';
 import { autosaveSupported, getAutosaveState, resumeAutosave } from './autosave-file.js';
 import { $, el, freshnessPill, frozenPill } from './ui.js';
+import { showCard } from './dismiss-card.js';
 
 registerServiceWorker();
 requestPersistentStorage();
@@ -31,7 +32,7 @@ const advice = installAdvice({
   maxTouchPoints: navigator.maxTouchPoints,
   standalone: isStandalone(),
 });
-$('installCard').hidden = advice !== 'ios-browser';
+if (advice === 'ios-browser') showCard($('installCard'), 'install');
 $('mode').textContent = {
   installed: 'ホーム画面のアプリとして開いています',
   'ios-browser': 'ブラウザで開いています',
@@ -40,7 +41,7 @@ $('mode').textContent = {
 
 const draft = loadDraft();
 if (draft) {
-  $('resumeCard').hidden = false;
+  showCard($('resumeCard'), 'resume', `${draft.startedAtMs ?? ''}${draft.returnSearch ?? ''}`);
   $('resumeLink').href = `brew.html${draft.returnSearch ?? ''}`;
 }
 
@@ -49,7 +50,7 @@ const enc = encodeURIComponent;
 function renderBackup(settings, all) {
   const hasRecords = all.beans.some(alive) || all.brews.some(alive);
   const r = backupReminder({ lastBackupAt: settings.lastBackupAt, brews: all.brews, hasRecords });
-  $('backupCard').hidden = !r.due;
+  if (r.due) showCard($('backupCard'), 'backup');
   $('backupReason').textContent = r.reason;
   $('lastBackup').textContent = lastBackupText(settings.lastBackupAt);
 }
@@ -59,7 +60,7 @@ async function renderUnrated(beanName) {
   if (!brew) return;
   $('unratedText').textContent = [beanName(brew.beanId) || '豆なし', brewLine(brew)].join('　');
   $('unratedLink').href = `tasting.html?brew=${enc(brew.id)}`;
-  $('unratedCard').hidden = false;
+  showCard($('unratedCard'), 'unrated', brew.id);
 }
 
 /** 焙煎度の飲み比べ（X27）の途中（いちばん新しい1つ） */
@@ -68,16 +69,16 @@ function renderCompare(all) {
   if (!e) return;
   $('compareText').textContent = `${e.title}（${STATUS_LABELS[experimentStatus(e)]}）`;
   $('compareLink').href = `compare.html?id=${enc(e.id)}`;
-  $('compareCard').hidden = false;
+  showCard($('compareCard'), 'compare', e.id);
 }
 
-/** 冷めた味の評価（B5）：落ち切って15分〜3時間で、冷めてからの評価がまだの1杯 */
+/** 冷めた味の評価（B5）：落ち切って15分〜1時間で、冷めてからの評価がまだの1杯。閉じた杯には出さない（2-8） */
 async function renderCool(beanName) {
   const brew = await getCoolPromptBrew(db);
   if (!brew) return;
   $('coolText').textContent = [beanName(brew.beanId) || '豆なし', brewLine(brew)].join('　');
   $('coolLink').href = `tasting.html?brew=${enc(brew.id)}&stage=cool`;
-  $('coolCard').hidden = false;
+  showCard($('coolCard'), 'cool', brew.id);
 }
 
 /**
@@ -95,7 +96,7 @@ function renderToday(all, beanName, settings) {
   const rows = beanRows({ beans: all.beans, txs: all.inventoryTx, portions: all.frozenPortions, doseG: doseFromSettings(settings), today: localYmd(now) });
   const caf = todayCaffeine(analysisRows(all), now).mg;
   const pick = todayPicks({ rows, brews: all.brews, tastings: all.tastings, beans: all.beans, now, mood, cutoff: settings.caffeineCutoff ?? null, todayCaffeineMg: caf, n: 1 })[0];
-  const pending = last ? pickPendingSuggestion(all.suggestions, last.beanId) : null;
+  const pending = last ? pickPendingSuggestion(all.suggestions, last.beanId, all.brews) : null;
 
   $('todayPick').hidden = !pick;
   if (pick) {
@@ -175,7 +176,8 @@ function bandNode(row) {
 
 function renderBeans(rows) {
   const alerts = rows.filter((r) => r.alerts.length);
-  $('alertCard').hidden = !alerts.length;
+  // 知らせの種類（残り少ない・なくなった・早めに消費）か豆が変わったら、閉じていてもまた出す（1杯ごとの残量の変化では出し直さない）
+  if (alerts.length) showCard($('alertCard'), 'alert', alerts.map((r) => `${r.bean.id}=${r.alerts.join('+')}`).join('|'));
   $('alerts').replaceChildren(
     ...alerts.map((r) =>
       el('li', {}, el('a', { href: `bean.html?id=${enc(r.bean.id)}` }, el('strong', {}, r.bean.name), el('span', { class: 'alert-text' }, alertText(r)))),
@@ -229,7 +231,7 @@ function renderRecent(all, beanName) {
           el(
             'span',
             { class: 'muted' },
-            [tasting ? tastingSummary(tasting) || 'メモだけ' : '未評価', recordSec != null ? `記録 ${recordSec}秒` : ''].filter(Boolean).join('　'),
+            [tasting ? tastingSummary(tasting) || 'メモだけ' : '未評価', recordText(recordSec)].filter(Boolean).join('　'),
           ),
         ),
       ),
@@ -246,7 +248,7 @@ async function renderWhatsNew(settings, all) {
     $('whatsNewList').replaceChildren(...news.items.map((t) => el('li', {}, t)));
     $('whatsNewCard').hidden = false;
   }
-  if (settings.lastSeenVersion !== APP_VERSION) await updateSettings(db, { lastSeenVersion: APP_VERSION });
+  if (settings.lastSeenVersion !== APP_VERSION) await setDeviceSettings(db, { lastSeenVersion: APP_VERSION });
 }
 
 $('appVersion').textContent = versionLabel();
@@ -269,14 +271,14 @@ function renderRestock(all, settings) {
   const t = restockText(plan);
   $('restockTitle').textContent = t.title;
   $('restockText').textContent = t.text;
-  $('restockCard').hidden = false;
+  showCard($('restockCard'), 'restock', `${t.title}|${t.text}`);
 }
 
 /** 自動ファイル保存（X1）が止まっていれば、再開のボタン（許可を聞くのでボタンで） */
 async function renderAutosave() {
   if (!autosaveSupported()) return;
   const st = await getAutosaveState();
-  $('autosaveCard').hidden = !(st.on && st.needsPermission);
+  if (st.on && st.needsPermission) showCard($('autosaveCard'), 'autosave');
   $('autosaveText').textContent = 'ブラウザを開き直すと、フォルダに書き込む許可がいったん切れます。';
 }
 

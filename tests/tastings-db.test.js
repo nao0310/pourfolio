@@ -103,11 +103,12 @@ test('冷め際の評価（B5）：温度帯ごとに1件ずつ。主な評価�
   assert.equal((await getTastingForBrew(db, brew.id, 'cool')).id, cool.id);
 });
 
-test('冷めた味の促し：主な評価がまだなら出さない（先に「評価する」を出す）。3時間を過ぎたら出さない', async () => {
+test('冷めた味の促し：主な評価がまだなら出さない（先に「評価する」を出す）。落ち切って1時間を過ぎたら出さない（2-8で3時間から短縮）', async () => {
   const db = freshDb();
   const { brew } = await saveBrew(db, brewFields(), NOW);
   assert.equal(await getCoolPromptBrew(db, later(30)), null);
   await saveTasting(db, brew.id, input({ stars: 4 }), later(31));
   assert.equal((await getCoolPromptBrew(db, later(32))).id, brew.id);
-  assert.equal(await getCoolPromptBrew(db, later(3.5 + 181)), null);
+  assert.equal((await getCoolPromptBrew(db, later(3.5 + 59))).id, brew.id);
+  assert.equal(await getCoolPromptBrew(db, later(3.5 + 61)), null);
 });

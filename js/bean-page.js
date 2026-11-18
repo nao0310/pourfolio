@@ -35,6 +35,32 @@ import { localYmd, formatYmdJa, formatG, formatDateTimeJa } from './core/format.
 import { roastPreferences, preferenceForBean, preferenceText } from './core/compare.js';
 import { $, el, queryParam, showMessage, freshnessPill, frozenPill, stepperField, svgElement } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
+import { showCard } from './dismiss-card.js';
+import { singleFlight } from './core/once.js';
+
+/**
+ * 送信の処理を、終わるまで2回目を受け付けない形にする（2-8 の13番：冷凍する・1杯淹れたなどの2度押しで2件できないように）。
+ * 処理中は送信ボタンを押せなくし、失敗したら赤い文で知らせる
+ */
+function guarded(handler, msgId) {
+  const run = singleFlight(async (event, form) => {
+    const buttons = [...form.querySelectorAll('button[type="submit"]')];
+    buttons.forEach((b) => (b.disabled = true));
+    try {
+      await handler(event);
+    } catch (err) {
+      console.error(err);
+      showMessage(err?.message ? `できませんでした：${err.message}` : 'できませんでした。もう一度押してください', 'error', msgId);
+    } finally {
+      buttons.forEach((b) => (b.disabled = false));
+    }
+  });
+  // 処理中の2回目でも、ブラウザの送信（画面の読み直し）は必ず止める
+  return (event) => {
+    event.preventDefault();
+    run(event, event.currentTarget);
+  };
+}
 
 const db = openDb();
 const beanId = queryParam('id');
@@ -124,6 +150,7 @@ function renderTxList(txs) {
         ),
         el('div', { class: 'tx-sub muted' }, formatDateTimeJa(t.at), t.memo ? `　${t.memo}` : ''),
         t.kind !== 'in' &&
+          !(t.kind === 'thaw' && t.brewId) && // 抽出で使った袋の取り出しは取り消せない（2-8 の9番）
           el(
             'button',
             {
@@ -183,8 +210,8 @@ function renderInfo(bean, allBeans) {
 async function renderInitial(bean, allBeans) {
   const [brews, tastings, recipes, equipment, settings] = await Promise.all([listBrews(db), listTastings(db), listRecipes(db), listEquipment(db), getSettings(db)]);
   const show = bean.status !== 'ordered' && bean.status !== 'finished' && !brews.some((b) => b.beanId === bean.id);
-  $('initCard').hidden = !show;
-  if (!show) return;
+  $('initCard').hidden = true;
+  if (!show || !showCard($('initCard'), 'init', bean.id)) return;
   const recipe = baseRecipe(recipes, brews);
   const grinderId = recipe?.grind?.grinderId ?? defaultEquipmentIds(equipment).grinderId;
   const init = initialRecipe({ bean, beans: allBeans, brews, tastings, grinders: equipment.filter((e) => e.kind === 'grinder'), grinderId, defaultDoseG: doseFromSettings(settings) });
@@ -233,6 +260,7 @@ async function render() {
   $('name').textContent = bean.name;
   $('sub').textContent = [bean.roastLevel, originText(bean)].filter(Boolean).join('　');
   $('editLink').href = `bean-edit.html?id=${encodeURIComponent(bean.id)}`;
+  renderMainAction(bean);
   $('toggleFinished').textContent = bean.status === 'finished' ? '飲み切りを取り消す' : '飲み切りにする';
   $('toggleFinished').dataset.status = bean.status;
   // 入荷待ちの豆は、届くまで飲み頃・残量・在庫の操作を出さず「届いた」の入力だけにする
@@ -303,11 +331,19 @@ function renderFrozen(inFreezer, parts) {
             {
               class: 'btn secondary small',
               type: 'button',
-              onclick: async () => {
-                await takeOutPortion(db, p.id);
+              onclick: singleFlight(async (ev) => {
+                ev.currentTarget.disabled = true; // 2度押しで「冷凍庫にない袋です」にならないように（2-8 の13番）
+                try {
+                  await takeOutPortion(db, p.id);
+                } catch (err) {
+                  console.error(err);
+                  showMessage(err.message, 'error', 'fzMsg');
+                  ev.currentTarget.disabled = false;
+                  return;
+                }
                 showMessage(`#${p.labelNo}（${formatG(p.grams)}）を取り出し、常温に戻しました`, 'ok', 'fzMsg');
                 await render();
-              },
+              }),
             },
             '取り出す',
           ),
@@ -326,8 +362,7 @@ function renderFrozen(inFreezer, parts) {
   renderFreezeTotal();
 }
 
-$('freezeForm').addEventListener('submit', async (event) => {
-  event.preventDefault();
+$('freezeForm').addEventListener('submit', guarded(async (event) => {
   const { value, errors } = normalizeFreezeInput(readFreezeForm(), { availableG: roomG });
   for (const span of event.target.querySelectorAll('.field-error')) span.textContent = errors[span.dataset.for] ?? '';
   if (!value) return;
@@ -341,7 +376,40 @@ $('freezeForm').addEventListener('submit', async (event) => {
   $('freezeDetails').open = false;
   fz.count.input.value = '';
   await render();
-});
+}, 'fzMsg'));
+
+/**
+ * 画面の下に固定するボタン（2-8 の20番）：その豆でいちばん使う操作
+ * - 入荷待ち：「届いた」（入力欄へ移って重さを入れる）
+ * - 手元にある豆：「この豆で淹れる」（★がいちばん高かった淹れ方。まだなければ最初のレシピ）
+ * - 飲み切り：出さない
+ */
+function renderMainAction(bean) {
+  const btn = $('mainAction');
+  const show = bean.status !== 'finished';
+  $('bottomBar').hidden = !show;
+  document.querySelector('main').classList.toggle('with-bottom-bar', show);
+  if (!show) return;
+  if (bean.status === 'ordered') {
+    btn.textContent = '届いた';
+    btn.removeAttribute('href');
+    btn.setAttribute('role', 'button');
+    // 重さが入っていれば「届いた」を送る。まだなら重さの欄へ移る
+    btn.onclick = () => {
+      if ($('arrivalWeight').value.trim()) {
+        $('arrivalForm').requestSubmit();
+        return;
+      }
+      $('arrivalCard').scrollIntoView({ block: 'start', behavior: 'smooth' });
+      $('arrivalWeight').focus({ preventScroll: true });
+    };
+  } else {
+    btn.textContent = 'この豆で淹れる';
+    btn.removeAttribute('role');
+    btn.onclick = null;
+    btn.href = `brew.html?best=${encodeURIComponent(bean.id)}`;
+  }
+}
 
 /** 入荷待ち：注文日と、届く重さの目安 */
 async function renderArrival(bean) {
@@ -356,8 +424,7 @@ async function renderArrival(bean) {
   if (!$('arrivalDate').value) $('arrivalDate').value = localYmd();
 }
 
-$('arrivalForm').addEventListener('submit', async (event) => {
-  event.preventDefault();
+$('arrivalForm').addEventListener('submit', guarded(async (event) => {
   const form = event.target;
   const raw = Object.fromEntries(new FormData(form));
   const { value, errors } = arrivalChanges(raw);
@@ -367,19 +434,17 @@ $('arrivalForm').addEventListener('submit', async (event) => {
   form.reset();
   showMessage(`届いた豆を登録しました（${formatG(value.actualWeightG)}、焙煎日 ${formatYmdJa(value.roastDate)}）`);
   await render();
-});
+}));
 
-$('cupForm').addEventListener('submit', async (event) => {
-  event.preventDefault();
+$('cupForm').addEventListener('submit', guarded(async () => {
   const g = readGrams($('cupDose'), 100);
   if (g == null) return showMessage('粉の量は0より大きい数字（g）で入れてください', 'error');
   await recordCupUsage(db, beanId, g);
   showMessage(`${formatG(g)} 減らしました`);
   await render();
-});
+}));
 
-$('measureForm').addEventListener('submit', async (event) => {
-  event.preventDefault();
+$('measureForm').addEventListener('submit', guarded(async () => {
   const input = $('measured');
   const g = parseNumber(input.value);
   if (g == null || Number.isNaN(g) || g < 0 || g > 5000) return showMessage('今の重さを0以上の数字（g）で入れてください', 'error');
@@ -387,10 +452,9 @@ $('measureForm').addEventListener('submit', async (event) => {
   input.value = '';
   showMessage(tx ? `残量を ${formatG(g)} に合わせました（${tx.deltaG > 0 ? '+' : ''}${formatG(tx.deltaG)}）` : '残量と同じでした。変更はありません');
   await render();
-});
+}));
 
-$('outForm').addEventListener('submit', async (event) => {
-  event.preventDefault();
+$('outForm').addEventListener('submit', guarded(async (event) => {
   const g = readGrams($('outG'));
   if (g == null) return showMessage('減らす量を0より大きい数字（g）で入れてください', 'error');
   const kind = new FormData(event.target).get('outKind') === 'discard' ? 'discard' : 'gift';
@@ -398,7 +462,7 @@ $('outForm').addEventListener('submit', async (event) => {
   $('outG').value = '';
   showMessage(`${TX_KINDS[kind]}で ${formatG(g)} 減らしました`);
   await render();
-});
+}));
 
 $('toggleFinished').addEventListener('click', async (event) => {
   const next = event.target.dataset.status === 'finished' ? 'open' : 'finished';

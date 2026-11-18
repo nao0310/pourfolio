@@ -37,6 +37,24 @@ export function showMessage(text, kind = 'ok', id = 'msg') {
   box.className = kind;
 }
 
+/**
+ * 画面の読み込みに失敗したときの知らせ（2-8 の15番）。中身の箱が隠れたままでも見えるよう、main の先頭に出す。
+ * 真っ白な画面のまま止まらないように
+ */
+export function showPageLoadError() {
+  const main = document.querySelector('main');
+  if (!main || main.querySelector('.load-error')) return;
+  main.prepend(
+    el(
+      'div',
+      { class: 'card load-error', role: 'alert' },
+      el('p', {}, el('strong', {}, '画面を読み込めませんでした')),
+      el('p', { class: 'muted' }, '開き直してください。何度も出るときは、トップに戻ってからもう一度開いてください。'),
+      el('div', { class: 'row' }, el('a', { class: 'btn secondary', href: './' }, 'トップへ'), el('button', { class: 'btn secondary', type: 'button', onclick: () => location.reload() }, '開き直す')),
+    ),
+  );
+}
+
 /** 飲み頃の札（色＋文字。色だけに頼らない） */
 export function freshnessPill(f) {
   if (!f) return el('span', { class: 'pill stage-none' }, '焙煎日なし');

@@ -2,7 +2,7 @@
 // 選んだフォルダの情報（ハンドル）は書き出しに入れられないので、本体とは別の小さな保存場所（pourfolio-local）に置く（D-140）。
 // 使えないブラウザ（iPhone・Android・Firefox など）では何もしない。
 import { exportAll, updateSettings } from './db.js';
-import { AUTOSAVE_FILE_NAME, AUTOSAVE_WAIT_MS, autosaveStatus } from './core/autosave.js';
+import { AUTOSAVE_FILE_NAME, AUTOSAVE_WAIT_MS, autosaveStatus, hasRecordsToSave } from './core/autosave.js';
 
 const LOCAL_DB = 'pourfolio-local';
 const STORE = 'kv';
@@ -54,6 +54,11 @@ export async function getAutosaveState() {
 async function writeNow(db, handle) {
   const now = new Date();
   const backup = await exportAll(db, now);
+  if (!hasRecordsToSave(backup.tables)) {
+    // 記録が空のときは上書きしない（全部消したあとに、唯一のバックアップを空にしないように。2-8 の18番）
+    await setLocal('lastError', '記録が空なので上書きしていません');
+    return;
+  }
   const file = await handle.getFileHandle(AUTOSAVE_FILE_NAME, { create: true });
   const w = await file.createWritable();
   await w.write(JSON.stringify(backup, null, 1));

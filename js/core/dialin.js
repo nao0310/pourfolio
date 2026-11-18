@@ -9,6 +9,7 @@
 import { pickTasting, jarWord } from './tastings.js';
 import { planFromBrew, ratioOf, scalePoursToWater, fillPourSecs } from './recipes.js';
 import { parseNumber } from './beans.js';
+import { cupsOf, perCupPlan } from './plan-adjust.js';
 
 /** 縦（濃さ）の呼び方 */
 export const STRENGTH_LABELS = Object.freeze({ weak: '薄い', ok: 'ちょうど', strong: '濃い' });
@@ -117,7 +118,8 @@ export function diagnose(tasting) {
  * @param {object|null} recipe
  */
 export function basePlanForNext(brew, recipe = null) {
-  const plan = planFromBrew(brew, recipe);
+  // 杯数を変えて淹れた杯は1杯分に戻す（2-8 の7番）。アイスの杯はお湯の量のまま（氷は呼ぶ側で足す）
+  const plan = perCupPlan(planFromBrew(brew, recipe), cupsOf(brew));
   const actualGrind = String(brew.actual?.grind?.setting ?? '').trim();
   if (actualGrind) plan.grind = { ...plan.grind, setting: actualGrind };
   return plan;
@@ -385,11 +387,33 @@ export function pickSuggestionForBrew(suggestions, brewId) {
   return list.length ? list.reduce((a, b) => (String(a.updatedAt) >= String(b.updatedAt) ? a : b)) : null;
 }
 
-/** その豆で、まだ次の抽出に使われていない、計画を変える提案のうち最新のもの。なければ null */
-export function pickPendingSuggestion(suggestions, beanId) {
+/**
+ * その豆で、まだ次の抽出に使われていない、計画を変える提案のうち最新のもの。なければ null
+ * brews を渡すと、その豆でもっと新しい杯がある杯の提案は使わない（2-8 の8番：古い杯をあとから評価したとき、
+ * 今の挽き目と合わない古い提案が出ないように）
+ * @param {object[]} suggestions
+ * @param {string|null} beanId
+ * @param {object[]|null} [brews] 全部の抽出
+ */
+export function pickPendingSuggestion(suggestions, beanId, brews = null) {
   if (!beanId) return null;
+  let latestAt = null;
+  const atOf = new Map();
+  if (brews) {
+    for (const b of brews) {
+      if (!alive(b)) continue;
+      atOf.set(b.id, String(b.at));
+      if (b.beanId === beanId && (latestAt == null || String(b.at) > latestAt)) latestAt = String(b.at);
+    }
+  }
   const list = (suggestions ?? []).filter(
-    (s) => alive(s) && s.beanId === beanId && s.nextBrewId == null && CHANGING_KINDS.includes(s.action?.kind) && s.action?.to != null,
+    (s) =>
+      alive(s) &&
+      s.beanId === beanId &&
+      s.nextBrewId == null &&
+      CHANGING_KINDS.includes(s.action?.kind) &&
+      s.action?.to != null &&
+      (latestAt == null || !atOf.has(s.brewId) || atOf.get(s.brewId) >= latestAt),
   );
   return list.length ? list.reduce((a, b) => (String(a.createdAt) >= String(b.createdAt) ? a : b)) : null;
 }
@@ -411,4 +435,23 @@ export function linkSuggestions(suggestions, brew) {
         (s.id === brew.suggestionId || (brew.beanId != null && s.beanId === brew.beanId)),
     )
     .map((s) => ({ id: s.id, adopted: s.id === brew.suggestionId, nextBrewId: brew.id }));
+}
+
+/** 代わりの案で上げる湯温（℃）。CELLS の 'ok/under' の alt と同じ */
+export const ALT_TEMP_STEP = 2;
+
+/**
+ * 代わりの案を入れて淹れるボタン（2-8 の22番）。挽き目が数字で記録されていなくて提案（挽き目を細かく）を
+ * 計画に入れられないとき、代わりの「湯温を2℃上げる」を数字で入れて淹れられるようにする
+ * @param {object} suggestion 提案の記録
+ * @param {object} brew 提案を出した抽出
+ * @returns {{label:string, href:string}|null}
+ */
+export function altBrewLink(suggestion, brew) {
+  const cellKey = `${suggestion?.cell?.strength}/${suggestion?.cell?.extraction}`;
+  if (cellKey !== 'ok/under' || suggestion?.action?.to != null || !brew?.id) return null;
+  const t = Number(brew.actual?.tempC ?? brew.planned?.tempC);
+  if (!Number.isFinite(t) || t + ALT_TEMP_STEP > 100) return null;
+  const to = Math.round(t) + ALT_TEMP_STEP;
+  return { label: `湯温を${ALT_TEMP_STEP}℃上げて淹れる（${Math.round(t)}℃ → ${to}℃）`, href: `brew.html?brew=${encodeURIComponent(brew.id)}&temp=${to}&via=alt` };
 }

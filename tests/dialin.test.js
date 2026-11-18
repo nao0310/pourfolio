@@ -276,6 +276,24 @@ test('まだ使っていない提案：同じ豆で、計画を変えるもの�
   assert.equal(pickPendingSuggestion(list, null), null);
 });
 
+test('まだ使っていない提案：同じ豆にもっと新しい杯があれば、古い杯の提案は出さない（2-8 の8番）', () => {
+  const base = { deletedAt: null, nextBrewId: null, beanId: 'bean1' };
+  const brews = [
+    { id: 'A', beanId: 'bean1', at: '2026-11-17T07:00:00Z', deletedAt: null },
+    { id: 'B', beanId: 'bean1', at: '2026-11-18T07:00:00Z', deletedAt: null },
+  ];
+  // B を先に評価し、あとから A を評価した（A の提案のほうが新しく作られた）
+  const fromB = { ...base, id: 'sB', brewId: 'B', createdAt: '2026-11-18T08:00:00Z', action: { kind: 'finer', to: '17' } };
+  const fromA = { ...base, id: 'sA', brewId: 'A', createdAt: '2026-11-18T09:00:00Z', action: { kind: 'coarser', to: '21' } };
+  assert.equal(pickPendingSuggestion([fromB, fromA], 'bean1', brews).id, 'sB');
+  assert.equal(pickPendingSuggestion([fromA], 'bean1', brews), null);
+  // brews を渡さないときは今までどおり（いちばん新しく作った提案）
+  assert.equal(pickPendingSuggestion([fromB, fromA], 'bean1').id, 'sA');
+  // 新しい杯が削除済みなら、その前の杯の提案を使う
+  const deletedB = brews.map((b) => (b.id === 'B' ? { ...b, deletedAt: '2026-11-18T10:00:00Z' } : b));
+  assert.equal(pickPendingSuggestion([fromA], 'bean1', deletedB).id, 'sA');
+});
+
 test('その抽出の提案を選ぶ（削除済みは除く）', () => {
   const list = [
     { id: 'a', brewId: 'b1', deletedAt: null, updatedAt: '2026-11-18T00:00:00Z' },
@@ -306,4 +324,14 @@ test('抽出を保存したら、使った提案は採用、同じ豆の残り�
   ]);
   // 豆を選ばずに提案なしで淹れたら何もつながない
   assert.deepEqual(linkSuggestions(list, { id: 'b2', beanId: null, suggestionId: null }), []);
+});
+
+test('代わりの案で淹れる：挽き目が数字でなく「細かく」を入れられないとき、湯温を2℃上げて淹れられる（2-8 の22番）', async () => {
+  const { altBrewLink } = await import('../js/core/dialin.js');
+  const s = { cell: { strength: 'ok', extraction: 'under' }, action: { kind: 'finer', to: null } };
+  const brew = { id: 'b1', actual: { tempC: 92 } };
+  assert.deepEqual(altBrewLink(s, brew), { label: '湯温を2℃上げて淹れる（92℃ → 94℃）', href: 'brew.html?brew=b1&temp=94&via=alt' });
+  assert.equal(altBrewLink({ ...s, action: { kind: 'finer', to: '23' } }, brew), null); // 目盛りが数字なら提案どおりで淹れられる
+  assert.equal(altBrewLink({ ...s, cell: { strength: 'ok', extraction: 'over' } }, brew), null);
+  assert.equal(altBrewLink(s, { id: 'b1', actual: {} }), null);
 });

@@ -1,6 +1,59 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "pourfolio", "runtimeExecutable": "npm", "runtimeArgs": ["run", "serve"], "port": 8080 }
+    {
+      "name": "pourfolio",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "serve"
+      ],
+      "port": 8080
+    },
+    {
+      "name": "debug-empty",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "scripts/debug/serve.js",
+        "8082"
+      ],
+      "port": 8082
+    },
+    {
+      "name": "debug-minimal",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "scripts/debug/serve.js",
+        "8083"
+      ],
+      "port": 8083
+    },
+    {
+      "name": "debug-demo",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "scripts/debug/serve.js",
+        "8084"
+      ],
+      "port": 8084
+    },
+    {
+      "name": "debug-nasty",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "scripts/debug/serve.js",
+        "8085"
+      ],
+      "port": 8085
+    },
+    {
+      "name": "debug-bulk",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "scripts/debug/serve.js",
+        "8086"
+      ],
+      "port": 8086
+    }
   ]
 }

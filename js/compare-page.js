@@ -36,8 +36,9 @@ import {
 import { orderRecipesForList, recipeSummary } from './core/recipes.js';
 import { tastingSummary } from './core/tastings.js';
 import { renderStars, renderTags } from './tasting-parts.js';
-import { $, el, queryParam, showMessage } from './ui.js';
+import { $, el, queryParam, showMessage, showPageLoadError } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
+import { singleFlight, serialQueue } from './core/once.js';
 
 const db = openDb();
 const enc = encodeURIComponent;
@@ -142,7 +143,8 @@ async function showList() {
   }
 }
 
-async function onStart(e) {
+// 「始める」の連打で同じ飲み比べが2件できないように（2-8 の12番）
+const onStart = singleFlight(async (e) => {
   e.preventDefault();
   const beanIds = [...document.querySelectorAll('#beanChecks input:checked')].map((i) => i.value);
   const { value, errors } = normalizeCompareInput({ beanIds, recipeId: $('recipe').value, blind: $('blind').checked }, beans);
@@ -151,9 +153,16 @@ async function onStart(e) {
     showMessage(beanIds.length > MAX_ENTRIES ? `比べられるのは${MAX_ENTRIES}袋までです` : '赤い文字のところを直してください', 'error');
     return;
   }
-  const rec = await addExperiment(db, buildExperiment({ value, beans }));
-  location.href = `compare.html?id=${enc(rec.id)}`;
-}
+  $('start').disabled = true;
+  try {
+    const rec = await addExperiment(db, buildExperiment({ value, beans }));
+    location.href = `compare.html?id=${enc(rec.id)}`;
+  } catch (err) {
+    console.error(err);
+    $('start').disabled = false;
+    showMessage('始められませんでした。もう一度押してください', 'error');
+  }
+});
 
 // ---- 飲み比べ1回 ----
 
@@ -180,12 +189,32 @@ function renderEntries() {
   );
 }
 
-let memoTimer = null;
+/** メモの保存待ち（カップごと）。打ち終わって0.5秒で保存する。結果を出す前には待たずに保存する（2-8 の11番） */
+const memoWaits = new Map();
+/** 評価の保存は1つずつ順番に（古い中身から作った保存が、新しい保存を上書きしないように） */
+const ratingQueue = serialQueue();
 
 /** カップ1つの評価を保存する（入力のたびに） */
-async function saveRating(key, rating) {
-  exp = await updateExperiment(db, exp.id, { ratings: setRating(exp, key, rating) });
-  showErrors({}, $('revealCard'));
+function saveRating(key, rating) {
+  return ratingQueue
+    .run(async () => {
+      exp = await updateExperiment(db, exp.id, { ratings: setRating(exp, key, rating) });
+      showErrors({}, $('revealCard'));
+    })
+    .catch((err) => {
+      console.error(err);
+      showMessage('★やメモを保存できませんでした。もう一度入れてください', 'error', 'rMsg');
+    });
+}
+
+/** 保存待ちのメモを今すぐ保存し、全部の保存が終わるのを待つ */
+async function flushRatings() {
+  for (const [key, w] of memoWaits) {
+    clearTimeout(w.timer);
+    memoWaits.delete(key);
+    w.run();
+  }
+  await ratingQueue.idle();
 }
 
 /** 2. 飲み比べる：ブラインドなら番号、そうでなければ袋ごとに★・一言・メモ */
@@ -209,8 +238,8 @@ function renderCups() {
         placeholder: 'メモ',
         oninput: (ev) => {
           state.memo = ev.target.value;
-          clearTimeout(memoTimer);
-          memoTimer = setTimeout(save, 500);
+          clearTimeout(memoWaits.get(key)?.timer);
+          memoWaits.set(key, { run: save, timer: setTimeout(() => (memoWaits.delete(key), save()), 500) });
         },
       });
       memo.value = state.memo;
@@ -251,6 +280,7 @@ function renderReveal() {
 }
 
 async function onReveal() {
+  await flushRatings(); // 打ったばかりのメモも結果に入れる
   const blind = exp.blind !== false;
   let ratings;
   if (blind) {
@@ -351,7 +381,10 @@ async function init() {
   else await showList();
 }
 
-$('startForm').addEventListener('submit', onStart);
+$('startForm').addEventListener('submit', (e) => {
+  e.preventDefault(); // 処理中の2回目でも、ブラウザの送信は止める
+  onStart(e);
+});
 $('reveal').addEventListener('click', onReveal);
 $('remove').addEventListener('click', async () => {
   if (!confirm('この飲み比べをやめますか？淹れた抽出と評価は残ります')) return;
@@ -362,5 +395,5 @@ $('remove').addEventListener('click', async () => {
 registerServiceWorker();
 init().catch((err) => {
   console.error(err);
-  showMessage('読み込みに失敗しました', 'error');
+  showPageLoadError(); // エラーの文の欄は隠れた箱の中にあるため、見える所に出す（2-8 の15番）
 });

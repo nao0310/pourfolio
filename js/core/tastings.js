@@ -79,8 +79,8 @@ export function normalizeStage(stage) {
 
 /** 冷めた味の評価を促すのは、落ち切ってから何分後か（spec 4.2） */
 export const COOL_AFTER_MIN = 15;
-/** 冷めた味の評価を促すのをやめるのは、落ち切ってから何時間後か */
-export const COOL_WITHIN_HOURS = 3;
+/** 冷めた味の評価を促すのをやめるのは、落ち切ってから何時間後か（2-8 で3時間から1時間に。出続けて邪魔なため） */
+export const COOL_WITHIN_HOURS = 1;
 
 /** すべて未回答のJAR */
 export function emptyJar() {
@@ -246,7 +246,7 @@ export function coolReadyMs(brew) {
 }
 
 /**
- * 冷めた味の評価を促す抽出（B5）：落ち切ってから15分〜3時間で、主な評価が済み、冷めてからの評価がまだのもの。
+ * 冷めた味の評価を促す抽出（B5）：落ち切ってから15分〜1時間で、主な評価が済み、冷めてからの評価がまだのもの。
  * いちばん新しい1杯。なければ null
  */
 export function pickCoolPrompt(brews, tastings, now = new Date()) {

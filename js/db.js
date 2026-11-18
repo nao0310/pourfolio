@@ -94,12 +94,24 @@ export async function restoreBackup(db, backup) {
       const table = db.table(name);
       const incoming = backup.tables[name] ?? [];
       const existing = await table.bulkGet(incoming.map((r) => r.id));
-      const { toPut, added, updated, skipped } = mergeRecords(existing, incoming);
+      let { toPut, added, updated, skipped } = mergeRecords(existing, incoming);
+      // 設定のうち端末だけのもの（最後に見た版など）は、今の端末の値を残す（2-8 の6番）
+      if (name === 'settings') toPut = toPut.map((r) => keepDeviceSettings(r, existing.find((e) => e?.id === r.id)));
       if (toPut.length) await table.bulkPut(toPut);
       result[name] = { added, updated, skipped };
     }
   });
   return result;
+}
+
+function keepDeviceSettings(incoming, current) {
+  if (!current) return incoming;
+  const out = { ...incoming };
+  for (const k of DEVICE_SETTINGS_KEYS) {
+    if (k in current) out[k] = current[k];
+    else delete out[k];
+  }
+  return out;
 }
 
 /** 全部の表を空にする */
@@ -118,13 +130,35 @@ export async function putAll(db, tables) {
   });
 }
 
-/** 設定（1件）を読む。なければ作って返す */
+/**
+ * 自動で作った設定の日時（いちばん古い日時）。新しい端末で開いただけの設定が、
+ * 書き出しファイルの設定より「新しい」と判断されて復元で捨てられないように（2-8 の6番）
+ */
+export const BLANK_SETTINGS_AT = new Date(0);
+
+/** 設定のうち、その端末だけのもの（復元しても今の端末の値を残す。変えても updatedAt を進めない） */
+export const DEVICE_SETTINGS_KEYS = Object.freeze(['lastSeenVersion']);
+
+/** 設定（1件）を読む。なければ作って返す（作った日時は BLANK_SETTINGS_AT） */
 export async function getSettings(db, now = new Date()) {
   const cur = await db.table('settings').get(SETTINGS_ID);
   if (cur) return cur;
-  const rec = createRecord({ id: SETTINGS_ID, lastBackupAt: null }, now);
+  const rec = createRecord({ id: SETTINGS_ID, lastBackupAt: null }, BLANK_SETTINGS_AT);
   await db.table('settings').put(rec);
   return rec;
+}
+
+/**
+ * その端末だけの設定（DEVICE_SETTINGS_KEYS）を変える。updatedAt は進めない
+ * （「最後に見た版」を覚えただけで、書き出しファイルの設定に負けなくならないように）
+ */
+export async function setDeviceSettings(db, changes) {
+  const bad = Object.keys(changes).filter((k) => !DEVICE_SETTINGS_KEYS.includes(k));
+  if (bad.length) throw new Error(`端末だけの設定ではありません：${bad.join('、')}`);
+  const cur = await getSettings(db);
+  const next = { ...cur, ...changes };
+  await db.table('settings').put(next);
+  return next;
 }
 
 /** 設定を一部だけ変える */
@@ -329,6 +363,8 @@ export async function deleteInventoryTx(db, txId, now = new Date()) {
       if (portions.some((p) => !isInFreezer(p))) throw new Error('取り出した袋があるため、この冷凍は取り消せません');
       if (portions.length) await db.table('frozenPortions').bulkPut(portions.map((p) => markDeleted(p, now)));
     }
+    // 抽出で使った袋の取り出しは取り消せない。袋だけ冷凍庫に戻り、粉の分が二重に数えられるため（2-8 の9番）
+    if (cur.kind === 'thaw' && cur.brewId) throw new Error('抽出で使った袋の取り出しは取り消せません（抽出の記録とつながっています）');
     if (cur.kind === 'thaw' && cur.portionId) {
       const p = await db.table('frozenPortions').get(cur.portionId);
       if (p && alive(p)) await db.table('frozenPortions').put(updateRecord(p, { takenOutAt: null, takenOutBrewId: null }, now));

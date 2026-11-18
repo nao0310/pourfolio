@@ -23,7 +23,7 @@ import { drawBrewImage, canvasToFile } from './brew-image.js';
 import { autosaveAfterChange } from './autosave-file.js';
 import { PHOTO_SLOTS } from './core/photos.js';
 import { shrinkImageFile } from './photo.js';
-import { CONFIDENCE_LABELS, CHANGING_KINDS } from './core/dialin.js';
+import { CONFIDENCE_LABELS, CHANGING_KINDS, altBrewLink } from './core/dialin.js';
 import { renderStars, renderTags, renderJar, renderDetail, renderFlavors, renderDefects } from './tasting-parts.js';
 import {
   detailAnsweredCount,
@@ -42,7 +42,7 @@ import { formatSec } from './core/recipes.js';
 import { remainingG, cupsLeft, doseFromSettings } from './core/inventory.js';
 import { formatG } from './core/format.js';
 import { portionsOf, stockParts, stockPartsText } from './core/frozen.js';
-import { $, el, queryParam, showMessage } from './ui.js';
+import { $, el, queryParam, showMessage, showPageLoadError } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
 
 const db = openDb();
@@ -165,7 +165,8 @@ async function onSave(e) {
 function brewButtonLabel(action) {
   if (action.kind === 'keep') return '同じ計画で淹れる';
   if (action.kind === 'repeat') return '同じ条件でもう1杯淹れる';
-  if (CHANGING_KINDS.includes(action.kind) && action.to == null) return '前回と同じ計画で淹れる';
+  // 挽き目の目盛りが数字でないときは、計画の数字は変わらない（挽き目は手で合わせる）。それでも提案を入れた計画なのでそう呼ぶ（2-8 の22番）
+  if (CHANGING_KINDS.includes(action.kind) && action.to == null) return '提案を入れて淹れる（目盛りは手で）';
   return 'この提案で淹れる';
 }
 
@@ -180,6 +181,12 @@ function renderSuggestion(s) {
   $('sNext').hidden = !$('sNext').textContent;
   $('sBrew').textContent = brewButtonLabel(s.action);
   $('sBrew').href = `brew.html?suggestion=${encodeURIComponent(s.id)}`;
+  const alt = altBrewLink(s, brew);
+  $('sAlt').hidden = !alt;
+  if (alt) {
+    $('sAlt').textContent = alt.label;
+    $('sAlt').href = alt.href;
+  }
   const r = s.reasons ?? {};
   const items = [
     ['あなたの入力', (r.input ?? []).join('・')],
@@ -432,5 +439,5 @@ $('edit').addEventListener('click', showForm);
 registerServiceWorker();
 init().catch((err) => {
   console.error(err);
-  showMessage('読み込みに失敗しました', 'error');
+  showPageLoadError(); // エラーの文の欄は隠れた箱の中にあるため、見える所に出す（2-8 の15番）
 });

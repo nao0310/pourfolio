@@ -22,3 +22,13 @@ export function autosaveStatus({ supported, folderName = null, permission = null
   if (lastError) return { show: true, on: true, needsPermission: false, text: `「${folderName}」に保存できませんでした（${lastError}）。${last}` };
   return { show: true, on: true, needsPermission: false, text: `「${folderName}」の ${AUTOSAVE_FILE_NAME} に、保存のたびに上書きします。${last}` };
 }
+
+/**
+ * 書き出しの中身に、上書きしてよい記録があるか（2-8 の18番）。
+ * 全部消したあとなど、記録が1件もない（設定だけ）の中身でフォルダのファイルを上書きしない。
+ * そのファイルが唯一のバックアップのことがあるため
+ * @param {Record<string, object[]>} tables 書き出しの tables
+ */
+export function hasRecordsToSave(tables) {
+  return Object.entries(tables ?? {}).some(([name, rows]) => name !== 'settings' && (rows ?? []).some((r) => r && r.deletedAt == null));
+}
