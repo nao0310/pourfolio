@@ -53,6 +53,27 @@
         <p id="arrivalMsg" role="status"></p>
       </div>
 
+      <!-- 未来の自分への申し送り（X32）：同じ銘柄の前の袋（なければ似た豆）から。この袋で3杯淹れるまで出す -->
+      <div class="card suggest-card" id="handoverCard" hidden>
+        <h2>前回の申し送り</h2>
+        <p class="muted" id="hoFrom"></p>
+        <div id="hoNotes"></div>
+        <div id="hoBestBox">
+          <h3 class="section-title">ベストの条件</h3>
+          <p class="suggest-action num" id="hoBestHead"></p>
+          <p class="num" id="hoBest"></p>
+          <p class="muted" id="hoRoast"></p>
+        </div>
+        <p id="hoPeak"></p>
+        <div id="hoMemoBox">
+          <h3 class="section-title">評価のメモ</h3>
+          <ul class="reason-list" id="hoMemos"></ul>
+        </div>
+        <div class="row" id="hoBrewRow">
+          <a class="btn" id="hoBrew">この条件で淹れる</a>
+        </div>
+      </div>
+
       <!-- 新しい豆の初期レシピ（F2）：まだ淹れていない豆だけ -->
       <div class="card suggest-card" id="initCard" hidden>
         <div class="bean-card-top"><h2>この豆の最初のレシピ</h2><span class="pill tag" id="initSource"></span></div>
@@ -139,6 +160,20 @@
               <label class="chip"><input type="radio" name="outKind" value="gift" checked><span>おすそ分け</span></label>
               <label class="chip"><input type="radio" name="outKind" value="discard"><span>廃棄</span></label>
             </div>
+            <!-- おすそ分け記録（X34）：誰に・メモ。感想はあとから「おすそ分け」の画面で書く -->
+            <div id="giftFields">
+              <label class="field">
+                <span class="label">渡した相手</span>
+                <input type="text" id="giftTo" autocomplete="off" maxlength="30" placeholder="例：母、職場の田中さん">
+                <span class="field-error" data-for="recipient"></span>
+              </label>
+              <div class="chips three" id="giftToChips" hidden></div>
+              <label class="field">
+                <span class="label">メモ</span>
+                <input type="text" id="giftMemo" autocomplete="off" maxlength="200" placeholder="例：豆のまま、挽いて渡した">
+                <span class="field-error" data-for="memo"></span>
+              </label>
+            </div>
             <div class="inline-form">
               <label class="field compact">
                 <span class="label">量</span>
@@ -146,6 +181,7 @@
               </label>
               <button class="btn secondary" type="submit">減らす</button>
             </div>
+            <p class="hint" id="giftHint"><a href="gift.html">おすそ分けの記録と感想</a></p>
           </form>
         </details>
         <p id="msg" role="status"></p>
@@ -154,6 +190,19 @@
       <div class="card" id="txCard">
         <h2>在庫の履歴</h2>
         <ul class="tx-list" id="txList"></ul>
+      </div>
+
+      <!-- 次の自分への一言（X32）：同じ豆や似た豆を次に開けたときに、申し送りに出る -->
+      <div class="card" id="noteCard">
+        <h2>次の自分への一言</h2>
+        <p class="hint">同じ豆や似た豆を次に開けたとき、「前回の申し送り」に出ます。飲み切るときに書いておくと便利です</p>
+        <form id="noteForm" novalidate>
+          <label class="field">
+            <span class="label visually-hidden">一言</span>
+            <textarea id="handoverNote" rows="2" maxlength="200" placeholder="例：焙煎10日目からが良い。挽き目は粗めが合う"></textarea>
+          </label>
+          <button class="btn secondary" type="submit">一言を保存</button>
+        </form>
       </div>
 
       <div class="card">

@@ -100,6 +100,35 @@
         <p class="hint">基準はSCAA（2009年）の水の基準です。硬度の基準はカルシウム硬度なので、ラベルの「硬度」（総硬度）と比べるのは目安です</p>
       </div>
 
+      <!-- お手入れ（D4）：グラインダーの刃の掃除、ケトルの除石灰 -->
+      <div class="card" id="mtCard" hidden>
+        <h2 id="mtTitle">お手入れ</h2>
+        <p class="hint" id="mtHow"></p>
+        <label class="check-row">
+          <input type="checkbox" name="mtEnabled">
+          <span>時期が来たらホームで知らせる</span>
+        </label>
+        <div class="field-pair">
+          <label class="field">
+            <span class="label">日数ごと</span>
+            <span class="with-unit"><input type="text" inputmode="numeric" name="mtDays" autocomplete="off"><span>日</span></span>
+            <span class="field-error" data-for="mtDays"></span>
+          </label>
+          <label class="field">
+            <span class="label">杯数ごと</span>
+            <span class="with-unit"><input type="text" inputmode="numeric" name="mtCups" autocomplete="off"><span>杯</span></span>
+            <span class="field-error" data-for="mtCups"></span>
+          </label>
+        </div>
+        <p class="hint">どちらかに届いたら知らせます。片方だけでもかまいません（杯数は、この器具を使って淹れた杯を数えます）</p>
+        <label class="field">
+          <span class="label">前回のお手入れ</span>
+          <input type="date" name="mtLast">
+          <span class="hint">空のときは、器具を登録した日から数えます</span>
+          <span class="field-error" data-for="mtLast"></span>
+        </label>
+        <p id="mtStatus"></p>
+      </div>
       <div class="card">
         <label class="field">
           <span class="label">メモ</span>

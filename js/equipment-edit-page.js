@@ -1,5 +1,6 @@
 // 器具の登録・編集（D1）
-import { openDb, addEquipment, updateEquipment, deleteEquipment, getEquipment } from './db.js';
+import { openDb, addEquipment, updateEquipment, deleteEquipment, getEquipment, listBrews } from './db.js';
+import { MAINTENANCE_DEFAULTS, hasMaintenance, normalizeMaintenanceInput, mergeMaintenance, maintenanceToFormValues, maintenanceStatus, maintenanceLine } from './core/maintenance.js';
 import {
   EQUIPMENT_KINDS,
   DRIPPER_MODELS,
@@ -20,6 +21,8 @@ import { askConfirm } from './confirm-box.js';
 const db = openDb();
 const form = $('form');
 const editId = queryParam('id');
+/** 編集している器具（お手入れの記録を残して保存するため） */
+let current = null;
 
 // ---- 選択肢を作る ----
 const radioChips = (name, dict) =>
@@ -145,6 +148,28 @@ function syncKind() {
   form.elements.name.placeholder = NAME_PLACEHOLDERS[kind] ?? '名前';
   $('bleachField').hidden = form.elements.filterMaterial.value !== 'paper';
   if (kind === 'water') renderWaterCheck();
+  syncMaintenance(kind);
+}
+
+/**
+ * お手入れ（D4）の欄：グラインダーとケトルだけ。
+ * 新しく登録するときと、まだ設定のない種類に切り替えたときは、種類ごとの初期値を入れる
+ */
+function syncMaintenance(kind) {
+  const show = hasMaintenance({ kind });
+  $('mtCard').hidden = !show;
+  if (!show) return;
+  const d = MAINTENANCE_DEFAULTS[kind];
+  $('mtTitle').textContent = `お手入れ（${d.label}）`;
+  $('mtHow').textContent = d.how;
+  if ($('mtCard').dataset.filledFor !== kind) {
+    $('mtCard').dataset.filledFor = kind;
+    const v = current && current.kind === kind ? maintenanceToFormValues(current) : maintenanceToFormValues({ kind });
+    form.elements.mtEnabled.checked = Boolean(v.mtEnabled);
+    form.elements.mtDays.value = v.mtDays;
+    form.elements.mtCups.value = v.mtCups;
+    form.elements.mtLast.value = v.mtLast;
+  }
 }
 
 function readForm() {
@@ -188,7 +213,11 @@ form.addEventListener('input', (e) => {
 
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
-  const { value, errors } = normalizeEquipmentInput(readForm());
+  const raw = readForm();
+  const { value, errors } = normalizeEquipmentInput(raw);
+  const mt = normalizeMaintenanceInput(raw, value.kind);
+  Object.assign(errors, mt.errors);
+  if (mt.value) value.maintenance = mergeMaintenance(current?.maintenance, mt.value);
   showErrors(errors);
   if (Object.keys(errors).length) {
     showMessage('入力を直してください', 'error');
@@ -230,7 +259,12 @@ async function init() {
     $('title').textContent = '器具の編集';
     $('save').textContent = '保存する';
     $('deleteRow').hidden = false;
+    current = eq;
     writeForm(equipmentToFormValues(eq));
+    if (hasMaintenance(eq)) {
+      const st = maintenanceStatus(eq, await listBrews(db));
+      $('mtStatus').textContent = st ? maintenanceLine(st) : '';
+    }
   } else {
     const kind = queryParam('kind');
     writeForm({ kind: Object.hasOwn(EQUIPMENT_KINDS, kind) ? kind : 'dripper' });

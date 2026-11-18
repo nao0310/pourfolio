@@ -49,6 +49,7 @@ import { pickGhost, ghostLine } from './core/ghost.js';
 import * as cue from './cue.js';
 import { createWakeLock } from './wake-lock.js';
 import { bestBrewForBean } from './core/today.js';
+import { handoverFor, handoverBrewHref, conditionsText, bestHead } from './core/handover.js';
 import { autosaveAfterChange } from './autosave-file.js';
 import { $, el, queryParam, showMessage, stepperField, showPageLoadError, showToast } from './ui.js';
 import { singleFlight } from './core/once.js';
@@ -220,6 +221,29 @@ function renderSuggestCard() {
     $('sUse').href = `brew.html?suggestion=${encodeURIComponent(s.id)}`;
     $('sRow').hidden = false;
   }
+}
+
+/**
+ * 前回の申し送り（X32）：選んだ豆の袋でまだ1杯も淹れていないとき、同じ銘柄の前の袋（なければ似た豆）の一言とベストの条件を出す。
+ * 飲み比べ・最適化・提案の計画のときは出さない（決めた条件から外れるため）
+ */
+function renderHandover() {
+  const id = $('bean').value;
+  const bean = beans.find((b) => b.id === id);
+  const { brews, tastings } = ghostSource;
+  const skip = compare || queryParam('via') === 'optimize' || loadedPlan?.suggestion;
+  const h = !skip && bean && !brews.some((b) => b.beanId === id && b.deletedAt == null) ? handoverFor({ bean, beans, brews, tastings }) : null;
+  $('hoCard').hidden = !h;
+  if (!h) return;
+  $('hoFrom').textContent = h.source === 'same' ? `同じ銘柄の${h.fromLabel}` : h.fromLabel;
+  $('hoNotes').replaceChildren(...h.notes.slice(0, 1).map((n) => el('p', { class: 'handover-note' }, `「${n.text}」`)));
+  const grinder = h.best ? equipmentList.find((e) => e.id === h.best.grinderId) : null;
+  $('hoBest').hidden = !h.best;
+  $('hoBest').textContent = h.best ? `ベスト ${bestHead(h.best)}：${conditionsText(h.best, grinder?.name ?? '')}` : '';
+  // すでに前回のベストを土台にしているなら、ボタンは出さない
+  const already = h.best && queryParam('brew') === h.best.brewId;
+  $('hoRow').hidden = !h.best || already;
+  if (h.best) $('hoUse').href = handoverBrewHref(h, bean);
 }
 
 /** 豆の選択肢（飲み切り以外） */
@@ -835,6 +859,7 @@ async function init() {
   try {
     const [brews, tastings] = await Promise.all([listBrews(db), listTastings(db)]);
     ghostSource = { brews, tastings };
+    renderHandover();
   } catch (err) {
     console.error(err); // ゴーストが出ないだけで、淹れるのには困らない
   }
@@ -848,6 +873,7 @@ $('start').addEventListener('click', () => beginNew(true));
 $('bean').addEventListener('change', () => {
   renderSuggestCard();
   renderBeanNote();
+  renderHandover();
 });
 $('noTimer').addEventListener('click', () => beginNew(false));
 $('iced').addEventListener('change', (e) => setAdjust({ iced: e.target.checked }));

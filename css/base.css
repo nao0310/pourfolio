@@ -249,6 +249,8 @@ details.sub-action { border-top: 1px solid var(--line); margin-top: 12px; paddin
 .num.minus { color: var(--fg); }
 .num.plus { color: var(--ok); }
 .tx-sub { font-size: 0.85rem; }
+/* おすそ分けの感想（X34） */
+.gift-feedback { margin: 6px 0 0; line-height: 1.6; overflow-wrap: anywhere; white-space: pre-line; }
 .link-btn { background: none; border: 0; padding: 8px 0 0; color: var(--accent); font: inherit; font-size: 0.9rem; text-decoration: underline; cursor: pointer; min-height: 32px; }
 #info dd { white-space: pre-wrap; word-break: break-word; }
 
@@ -441,6 +443,8 @@ body.timer-on { overflow: hidden; }
 .seg5 .seg[aria-pressed="true"] { border-color: var(--accent); border-style: solid; background: var(--accent); color: var(--accent-fg); font-weight: 700; }
 .seg5 .seg:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 .suggest-card { border: 2px solid var(--accent); }
+/* 次の自分への一言（X32） */
+.handover-note { margin: 8px 0; font-size: 1.05rem; line-height: 1.6; overflow-wrap: anywhere; }
 .suggest-action { font-size: 1.2rem; font-weight: 700; margin: 4px 0; }
 .suggest-why { font-size: 1rem; margin: 16px 0 4px; }
 .reasons { margin: 0; padding-left: 1.4em; }
@@ -458,6 +462,14 @@ body.timer-on { overflow: hidden; }
 .today-suggest { font-weight: 700; }
 .sec-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .sec-head a { color: var(--accent); display: inline-block; padding: 10px 0; }
+/* 器具のお手入れ（D4） */
+.mt-list { list-style: none; margin: 8px 0 0; padding: 0; }
+.mt-item { padding: 8px 0; border-top: 1px solid var(--line); }
+.mt-item:first-child { border-top: 0; }
+.mt-item p { margin: 4px 0; }
+.mt-due { color: var(--danger); font-weight: 600; }
+.field-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.field-pair .with-unit input { min-width: 0; }
 .plain-list { list-style: none; margin: 8px 0 0; padding: 0; }
 .plain-list li { border-top: 1px solid var(--line); }
 .plain-list li:first-child { border-top: 0; }
