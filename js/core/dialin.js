@@ -453,5 +453,5 @@ export function altBrewLink(suggestion, brew) {
   const t = Number(brew.actual?.tempC ?? brew.planned?.tempC);
   if (!Number.isFinite(t) || t + ALT_TEMP_STEP > 100) return null;
   const to = Math.round(t) + ALT_TEMP_STEP;
-  return { label: `湯温を${ALT_TEMP_STEP}℃上げて淹れる（${Math.round(t)}℃ → ${to}℃）`, href: `brew.html?brew=${encodeURIComponent(brew.id)}&temp=${to}` };
+  return { label: `湯温を${ALT_TEMP_STEP}℃上げて淹れる（${Math.round(t)}℃ → ${to}℃）`, href: `brew.html?brew=${encodeURIComponent(brew.id)}&temp=${to}&via=alt` };
 }

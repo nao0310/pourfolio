@@ -330,7 +330,7 @@ test('代わりの案で淹れる：挽き目が数字でなく「細かく」�
   const { altBrewLink } = await import('../js/core/dialin.js');
   const s = { cell: { strength: 'ok', extraction: 'under' }, action: { kind: 'finer', to: null } };
   const brew = { id: 'b1', actual: { tempC: 92 } };
-  assert.deepEqual(altBrewLink(s, brew), { label: '湯温を2℃上げて淹れる（92℃ → 94℃）', href: 'brew.html?brew=b1&temp=94' });
+  assert.deepEqual(altBrewLink(s, brew), { label: '湯温を2℃上げて淹れる（92℃ → 94℃）', href: 'brew.html?brew=b1&temp=94&via=alt' });
   assert.equal(altBrewLink({ ...s, action: { kind: 'finer', to: '23' } }, brew), null); // 目盛りが数字なら提案どおりで淹れられる
   assert.equal(altBrewLink({ ...s, cell: { strength: 'ok', extraction: 'over' } }, brew), null);
   assert.equal(altBrewLink(s, { id: 'b1', actual: {} }), null);

@@ -273,6 +273,12 @@ async function showPlan(loaded, lastBeanId) {
     $('name').textContent = `AIの提案：${recipe?.name ?? plan.name}`;
     $('sub').textContent = 'AIの答えから読み取った数字（粉量・湯量・湯温・挽き目）を、この注ぎ方に入れました';
   }
+  // 評価のあとの「代わりの案」から来たとき（2-8 の22番）
+  if (queryParam('via') === 'alt') {
+    $('name').textContent = `代わりの案：${recipe?.name ?? plan.name}`;
+    $('sub').textContent = '評価した杯の計画のまま、湯温だけを上げました';
+    document.title = `${$('name').textContent} - Pourfolio`;
+  }
   if (plan.recipeId && recipe) $('editLink').href = `recipe-edit.html?id=${encodeURIComponent(plan.recipeId)}`;
   else $('editLink').hidden = true;
   // 初期レシピ（F2）は、どこから決めたかを出す
