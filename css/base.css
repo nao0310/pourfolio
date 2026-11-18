@@ -754,3 +754,39 @@ p > a:not(.btn):only-child { display: inline-block; padding: 11px 0; }
 .swatch.zone-mine { border-radius: 3px; background: color-mix(in srgb, var(--accent) 25%, transparent); border: 2px solid var(--accent); }
 .swatch.zone-classic { border-radius: 3px; background: transparent; border: 2px dashed var(--muted); }
 .chart-svg .ratio-line-label { font-size: 10px; }
+
+/* ---- 下の5つのタブ（D-063・D-118） ---- */
+.tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 11;
+  display: flex;
+  justify-content: center;
+  background: var(--card);
+  border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.tab {
+  flex: 1 1 0;
+  max-width: 112px;
+  min-height: 58px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 0.75rem;
+  font-weight: 600;
+  -webkit-tap-highlight-color: transparent;
+}
+.tab.current { color: var(--accent); }
+.tab-icon { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.tab.current .tab-icon { stroke-width: 2.4; }
+body.has-tabbar main { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+body.has-tabbar main.with-bottom-bar { padding-bottom: calc(176px + env(safe-area-inset-bottom)); }
+body.has-tabbar .bottom-bar { bottom: calc(59px + env(safe-area-inset-bottom)); padding-bottom: 10px; }
+body.timer-on .tabbar { display: none; }
