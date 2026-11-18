@@ -7,6 +7,9 @@ import {
   restockText,
   shoppingCandidates,
   orderMemo,
+  bulkBuyPlan,
+  bulkBuyText,
+  normalizeShippingInput,
   RESTOCK_SOON_DAYS,
 } from '../js/core/restock.js';
 
@@ -177,4 +180,74 @@ test('在庫の合計に冷凍の袋を含める（取り出した・削除し�
   assert.equal(s.frozenG, 45);
   const plan = restockPlan({ beans, txs: [...txs, ...dailyBrews('a', 14, 1)], portions, today: TODAY, now: NOW });
   assert.match(restockText(plan).text, /冷凍を含む/);
+});
+
+// ---- 送料無料ラインのまとめ買い案 ----
+
+const cand = (key, priceJpy, extra = {}) => ({ key, name: key, roastLevel: 'シティ', labelWeightG: 100, labelWeightBasis: 'green', priceJpy, ...extra });
+const SHIP = { shippingJpy: 600, freeShippingJpy: 3000, freezerSlots: 10 };
+
+test('送料の設定：空欄は未設定、円・カンマ・全角は読む、マイナスや小数は止める', () => {
+  assert.deepEqual(normalizeShippingInput({ shippingJpy: '６００円', freeShippingJpy: '3,000', freezerSlots: '' }), {
+    value: { shippingJpy: 600, freeShippingJpy: 3000, freezerSlots: null },
+    errors: {},
+  });
+  const bad = normalizeShippingInput({ shippingJpy: '-1', freeShippingJpy: '10.5', freezerSlots: '1000' });
+  assert.deepEqual(Object.keys(bad.errors).sort(), ['freeShippingJpy', 'freezerSlots', 'shippingJpy']);
+});
+
+test('まとめ買い：ラインが未設定・候補を選んでいない・ラインに届いている', () => {
+  const candidates = [cand('a', 1500), cand('b', 2000)];
+  assert.equal(bulkBuyPlan({ picked: [candidates[0]], candidates, settings: {}, doseG: 15 }).status, 'noLine');
+  assert.equal(bulkBuyPlan({ picked: [], candidates, settings: SHIP, doseG: 15 }).status, 'empty');
+  const free = bulkBuyPlan({ picked: candidates, candidates, settings: SHIP, doseG: 15 });
+  assert.equal(free.status, 'free');
+  assert.equal(free.totalJpy, 3500);
+  assert.match(bulkBuyText(free), /届いています/);
+});
+
+test('まとめ買い：足りない額と、1つで届く候補（★の高い順のまま）。冷凍庫に1杯分ずつ入るか', () => {
+  // 候補は★の高い順に並んでいる前提。生豆時100g・シティ → 約82g → 15gずつで6袋
+  const candidates = [cand('picked', 1800), cand('cheap', 500), cand('top', 1300), cand('second', 1200), cand('noPrice', null)];
+  const b = bulkBuyPlan({ picked: [candidates[0]], candidates, settings: SHIP, portions: [], doseG: 15 });
+  assert.equal(b.status, 'short');
+  assert.equal(b.shortfallJpy, 1200);
+  assert.equal(b.freeSlots, 10);
+  assert.deepEqual(
+    b.suggestions.map((s) => s.keys),
+    [['top'], ['second']],
+  );
+  assert.equal(b.suggestions[0].addG, 82);
+  assert.equal(b.suggestions[0].portionsNeeded, 6);
+  assert.equal(b.suggestions[0].fits, true);
+  assert.equal(bulkBuyText(b), '合計 1,800円。送料無料まで、あと1,200円。このままだと送料600円がかかります');
+});
+
+test('まとめ買い：冷凍庫の空きに入らない案は後ろ。冷凍中の袋は空きから引く。入る数がわからなければ fits は null', () => {
+  const candidates = [cand('picked', 2000), cand('big', 1500, { labelWeightG: 500 }), cand('small', 1100)];
+  const portions = Array.from({ length: 4 }, (_, i) => ({ id: `p${i}`, takenOutAt: null, deletedAt: null }));
+  portions.push({ id: 'out', takenOutAt: 'x', deletedAt: null });
+  const b = bulkBuyPlan({ picked: [candidates[0]], candidates, settings: SHIP, portions, doseG: 15 });
+  assert.equal(b.freeSlots, 6);
+  assert.deepEqual(
+    b.suggestions.map((s) => [s.keys[0], s.fits]),
+    [
+      ['small', true],
+      ['big', false],
+    ],
+  );
+  const unknown = bulkBuyPlan({ picked: [candidates[0]], candidates, settings: { ...SHIP, freezerSlots: null }, doseG: 15 });
+  assert.equal(unknown.freeSlots, null);
+  assert.ok(unknown.suggestions.every((s) => s.fits === null));
+});
+
+test('まとめ買い：1つで届かなければ、★の高い順に足した組み合わせ。それでも届かなければ案なし', () => {
+  const candidates = [cand('picked', 500), cand('a', 900), cand('b', 1000), cand('c', 800), cand('d', 700)];
+  const b = bulkBuyPlan({ picked: [candidates[0]], candidates, settings: SHIP, doseG: 15 });
+  assert.equal(b.shortfallJpy, 2500);
+  assert.equal(b.suggestions.length, 1);
+  assert.deepEqual(b.suggestions[0].keys, ['a', 'b', 'c'], '届いたところで止める（d は足さない）');
+  assert.equal(b.suggestions[0].addJpy, 2700);
+  const none = bulkBuyPlan({ picked: [candidates[0]], candidates, settings: { ...SHIP, freeShippingJpy: 10000 }, doseG: 15 });
+  assert.deepEqual(none.suggestions, []);
 });

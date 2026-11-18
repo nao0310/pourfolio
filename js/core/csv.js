@@ -10,6 +10,7 @@ import { BEAN_STATUS, WEIGHT_BASIS, sortBeansForList } from './beans.js';
 import { formatSec } from './recipes.js';
 import { formatDateTimeJa } from './format.js';
 import { groupPortionsByBean, stockParts } from './frozen.js';
+import { brewCostJpy } from './cost.js';
 
 export const BOM = '﻿';
 const alive = (r) => r && r.deletedAt == null;
@@ -58,6 +59,8 @@ export function brewRows({ brews = [], beans = [], recipes = [], equipment = [],
     '総時間秒',
     '総時間',
     '抽出液g',
+    '原価円',
+    '冷凍の袋',
     'タイマー',
     '★',
     '一言',
@@ -98,6 +101,8 @@ export function brewRows({ brews = [], beans = [], recipes = [], equipment = [],
         a.totalSec ?? '',
         a.totalSec != null ? formatSec(a.totalSec) : '',
         a.beverageG ?? '',
+        brewCostJpy(b, bean, beans) ?? '',
+        b.frozenPortionId ? '使った' : '',
         Boolean(b.timerUsed),
         t?.stars ?? '',
         (t?.tags ?? []).join('・'),

@@ -172,3 +172,115 @@ export function orderMemo(picked, plan) {
   });
   return [head, ...lines].join('\n');
 }
+
+// ---- 送料無料ラインのまとめ買い案（spec 4.4「送料の最適化」、D-085） ----
+
+/** まとめ買い案の数 */
+export const BULK_SUGGEST_MAX = 3;
+
+/**
+ * 送料・送料無料ライン・冷凍庫に入る袋の数の入力を確かめる
+ * @param {{shippingJpy?:string, freeShippingJpy?:string, freezerSlots?:string}} raw 空欄は「未設定」
+ * @returns {{value:{shippingJpy:number|null, freeShippingJpy:number|null, freezerSlots:number|null}, errors:Record<string,string>}}
+ */
+export function normalizeShippingInput(raw = {}) {
+  const errors = {};
+  const read = (key, max, msg) => {
+    const s = String(raw[key] ?? '').normalize('NFKC').replace(/[,，円袋]/g, '').trim();
+    if (s === '') return null;
+    const n = Number(s);
+    if (!Number.isInteger(n) || n < 0 || n > max) {
+      errors[key] = msg;
+      return null;
+    }
+    return n;
+  };
+  return {
+    value: {
+      shippingJpy: read('shippingJpy', 100000, '送料は0以上の整数（円）で入れてください'),
+      freeShippingJpy: read('freeShippingJpy', 1000000, '送料無料ラインは0以上の整数（円）で入れてください'),
+      freezerSlots: read('freezerSlots', 500, '冷凍庫に入る袋の数は0〜500で入れてください'),
+    },
+    errors,
+  };
+}
+
+/** 候補1つの届く重さの見積もり（焙煎後のg） */
+function candidateGrams(c, beans) {
+  if (!(c.labelWeightG > 0)) return null;
+  return initialStockG({ id: c.key, labelWeightG: c.labelWeightG, labelWeightBasis: c.labelWeightBasis, roastLevel: c.roastLevel }, beans)?.g ?? null;
+}
+
+/**
+ * 送料無料ラインに届くまとめ買い案
+ * - 印を付けた候補の合計が送料無料ラインに届かないとき、足りない額を埋める候補を出す
+ *   （1つで届く候補を★の高い順に。1つで届かなければ★の高い順に足していく組み合わせ）
+ * - 足した分の豆が冷凍庫の空き（冷凍庫に入る袋の数 − 冷凍中の袋）に1杯分ずつ入るかも確かめる
+ * @param {{picked:object[], candidates:object[], settings?:object, portions?:object[], beans?:object[], doseG:number}} p
+ * @returns {{status:'noLine'|'empty'|'free'|'short', totalJpy:number, unpriced:number, lineJpy:number|null, shippingJpy:number|null,
+ *   shortfallJpy?:number, freeSlots:number|null,
+ *   suggestions?:{keys:string[], names:string[], addJpy:number, addG:number|null, portionsNeeded:number|null, fits:boolean|null}[]}}
+ */
+export function bulkBuyPlan({ picked = [], candidates = [], settings = {}, portions = [], beans = [], doseG }) {
+  const lineJpy = Number.isInteger(settings?.freeShippingJpy) && settings.freeShippingJpy > 0 ? settings.freeShippingJpy : null;
+  const shippingJpy = Number.isInteger(settings?.shippingJpy) ? settings.shippingJpy : null;
+  const slots = Number.isInteger(settings?.freezerSlots) ? settings.freezerSlots : null;
+  const inFreezer = portions.filter((p) => p && p.deletedAt == null && p.takenOutAt == null).length;
+  const freeSlots = slots == null ? null : Math.max(0, slots - inFreezer);
+  const totalJpy = picked.reduce((s, c) => s + (c.priceJpy ?? 0), 0);
+  const unpriced = picked.filter((c) => c.priceJpy == null).length;
+  const base = { totalJpy, unpriced, lineJpy, shippingJpy, freeSlots };
+  if (lineJpy == null) return { status: 'noLine', ...base };
+  if (!picked.length) return { status: 'empty', ...base };
+  if (totalJpy >= lineJpy) return { status: 'free', ...base };
+  const shortfallJpy = lineJpy - totalJpy;
+  const pickedKeys = new Set(picked.map((c) => c.key));
+  const pool = candidates.filter((c) => !pickedKeys.has(c.key) && c.priceJpy > 0);
+  const dose = doseG > 0 ? doseG : 15;
+  const describe = (list) => {
+    const grams = list.map((c) => candidateGrams(c, beans));
+    const addG = grams.every((g) => g != null) ? Math.round(grams.reduce((s, g) => s + g, 0) * 10) / 10 : null;
+    const portionsNeeded = addG == null ? null : Math.ceil(addG / dose - 1e-9);
+    return {
+      keys: list.map((c) => c.key),
+      names: list.map((c) => [c.name, c.roastLevel].filter(Boolean).join(' ')),
+      addJpy: list.reduce((s, c) => s + c.priceJpy, 0),
+      addG,
+      portionsNeeded,
+      fits: freeSlots == null || portionsNeeded == null ? null : portionsNeeded <= freeSlots,
+    };
+  };
+  // 1つで届く候補（候補の並び＝★の高い順のまま）
+  const singles = pool.filter((c) => c.priceJpy >= shortfallJpy).map((c) => describe([c]));
+  let suggestions = singles;
+  if (!singles.length) {
+    // 1つで届かなければ、★の高い順に足していく
+    const combo = [];
+    let sum = 0;
+    for (const c of pool) {
+      combo.push(c);
+      sum += c.priceJpy;
+      if (sum >= shortfallJpy) break;
+    }
+    suggestions = sum >= shortfallJpy ? [describe(combo)] : [];
+  }
+  // 冷凍庫に入る案を先に（入るかわからない案はその次）
+  const rank = (s) => (s.fits === true ? 0 : s.fits == null ? 1 : 2);
+  suggestions = suggestions
+    .map((s, i) => ({ s, i }))
+    .sort((a, b) => rank(a.s) - rank(b.s) || a.i - b.i)
+    .map(({ s }) => s)
+    .slice(0, BULK_SUGGEST_MAX);
+  return { status: 'short', ...base, shortfallJpy, suggestions };
+}
+
+/** まとめ買い案の見出しの文 */
+export function bulkBuyText(b) {
+  const yenText = (n) => `${Math.round(n).toLocaleString('ja-JP')}円`;
+  if (b.status === 'noLine') return '下の「送料の設定」に送料無料ラインを入れると、まとめ買い案を出します';
+  if (b.status === 'empty') return `候補に印を付けると、送料無料ライン（${yenText(b.lineJpy)}）まであといくらかを出します`;
+  const unpriced = b.unpriced ? `（価格のわからない${b.unpriced}袋を除く）` : '';
+  if (b.status === 'free') return `合計 ${yenText(b.totalJpy)}${unpriced}。送料無料ライン（${yenText(b.lineJpy)}）に届いています`;
+  const ship = b.shippingJpy ? `。このままだと送料${yenText(b.shippingJpy)}がかかります` : '';
+  return `合計 ${yenText(b.totalJpy)}${unpriced}。送料無料まで、あと${yenText(b.shortfallJpy)}${ship}`;
+}

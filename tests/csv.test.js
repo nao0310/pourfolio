@@ -38,6 +38,8 @@ test('抽出の一覧：1杯1行で、豆・計画・実績・評価・提案が
   assert.equal(col('レシピ'), '4:6メソッド（サンプル）');
   assert.equal(col('計画 挽き目'), '24'); // 古い形（文字列）の計画も読める
   assert.equal(col('粉量g'), 20.1);
+  assert.equal(col('原価円'), Math.round(20.1 * (1200 / 166.5) * 10) / 10, '粉量×（価格÷実重量）');
+  assert.equal(col('冷凍の袋'), '');
   assert.equal(col('総時間'), '3:35');
   assert.equal(col('グラインダー'), 'サンプル 手挽きミル');
   assert.equal(col('★'), 4);
@@ -63,6 +65,7 @@ test('抽出の一覧：評価・提案・豆のない抽出は空欄、削除�
   assert.equal(r2[head.indexOf('使った提案')], '湯を増やす');
   assert.equal(r2[head.indexOf('豆')], '');
   assert.equal(r2[head.indexOf('★')], '');
+  assert.equal(r2[head.indexOf('原価円')], '');
   assert.equal(r2[head.indexOf('タイマー')], false);
 });
 
