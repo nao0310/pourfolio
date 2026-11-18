@@ -93,14 +93,15 @@ export function makeDemoData(now = new Date()) {
     first,
   );
 
-  // 抽出の日程：90日前から今日まで、1日0〜2杯。袋は順に10杯ずつ使う
+  // 抽出の日程：昨日からさかのぼって1日0〜2杯、全部で80杯。袋は古い順に10杯ずつ使う
   const slots = [];
-  for (let d = 90; d >= 0 && slots.length < BAGS.length * 10; d--) {
+  for (let d = 1; slots.length < BAGS.length * 10; d++) {
     const x = rnd();
     const cups = x < 0.12 ? 0 : x < 0.88 ? 1 : 2;
-    if (cups >= 1) slots.push(at(d, 7, Math.floor(rnd() * 50)));
     if (cups >= 2) slots.push(at(d, 14, Math.floor(rnd() * 50)));
+    if (cups >= 1 && slots.length < BAGS.length * 10) slots.push(at(d, 7, Math.floor(rnd() * 50)));
   }
+  slots.sort((a, b) => a - b);
 
   const beans = [];
   const brews = [];

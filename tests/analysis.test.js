@@ -230,7 +230,8 @@ test('デモデータ：同じ日なら同じ中身。全画面の計算が中�
   assert.ok(roastCurves(rows).some((c) => c.ready.ready));
   assert.ok(preferenceBy(rows, 'origin').length >= 5);
   assert.equal(likingPeaks(a.tastings).ready.ready, true);
-  // 今日から91日以内
+  // 昨日まで（未来の杯はない）、100日以内
   const oldest = Math.min(...a.brews.map((x) => Date.parse(x.at)));
-  assert.ok(NOW.getTime() - oldest <= 91 * 86400000);
+  assert.ok(NOW.getTime() - oldest <= 100 * 86400000);
+  assert.ok(a.brews.every((x) => Date.parse(x.at) < NOW.getTime()));
 });
