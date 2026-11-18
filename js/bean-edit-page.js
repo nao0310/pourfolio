@@ -1,15 +1,18 @@
 // 豆の登録・編集（C1）
-import { openDb, addBean, updateBean, getBeanWithTx, listBeans } from './db.js';
+import { openDb, addBean, updateBean, getBeanWithTx, listBeans, getWish, updateWish } from './db.js';
 import { normalizeBeanInput, beanToFormValues, PROCESS_OPTIONS, VARIETY_OPTIONS, DEFAULT_SHOP } from './core/beans.js';
 import { ROAST_LEVELS, initialStockG } from './core/roast.js';
 import { formatG } from './core/format.js';
 import { $, el, queryParam, showMessage } from './ui.js';
 import { parseProductText, productMemo } from './core/tonya.js';
+import { wishToBeanForm } from './core/wishlist.js';
 import { registerServiceWorker } from './pwa.js';
 
 const db = openDb();
 const form = $('form');
 const editId = queryParam('id');
+/** 気になる豆（F6）から「買った」で開いたとき、その気になる豆 */
+let fromWish = null;
 let allBeans = [];
 
 // ---- 選択肢を作る ----
@@ -133,6 +136,27 @@ $('pasteRead').addEventListener('click', () => {
   form.elements.name.scrollIntoView({ block: 'center', behavior: 'smooth' });
 });
 
+/** 気になる豆の中身を入れる（焙煎度はおすすめ、状態は入荷待ち） */
+function fillFromWish(w, roast) {
+  const f = wishToBeanForm(w, { roastLevel: ROAST_LEVELS.includes(roast) ? roast : '' });
+  writeForm({
+    ...f,
+    ...(f.variety ? withOther('variety', f.variety, VARIETY_OPTIONS) : {}),
+    ...(f.process ? withOther('process', f.process, PROCESS_OPTIONS) : {}),
+  });
+  priceTable = w.priceTable ?? [];
+  autoPrice = priceTable.length > 0;
+  $('back').textContent = '気になる豆';
+  $('back').href = 'wishlist.html';
+  $('pasteBox').hidden = true;
+  $('wishMsg').hidden = false;
+  showMessage(
+    `気になる豆「${w.name}」の内容を入れました（状態は入荷待ち${f.roastLevel ? `、焙煎度は${f.roastLevel}` : ''}）。焙煎度・重さ・価格は注文した内容に直してから登録してください`,
+    'ok',
+    'wishMsg',
+  );
+}
+
 form.addEventListener('input', (event) => {
   if (event.target.name === 'variety' || event.target.name === 'process') syncOtherInputs();
   if (event.target.name === 'priceJpy') autoPrice = false;
@@ -156,6 +180,8 @@ form.addEventListener('submit', async (event) => {
   $('save').disabled = true;
   try {
     const saved = editId ? await updateBean(db, editId, value) : await addBean(db, value);
+    // 気になる豆から登録したら、その気になる豆を「購入済み」にする（失敗しても豆の登録は済んでいる）
+    if (!editId && fromWish) await updateWish(db, fromWish.id, { boughtBeanId: saved.id }).catch((err) => console.error(err));
     location.replace(`bean.html?id=${encodeURIComponent(saved.id)}`);
   } catch (err) {
     console.error(err);
@@ -182,6 +208,9 @@ async function init() {
     writeForm(beanToFormValues(found.bean));
   } else {
     writeForm({ shop: DEFAULT_SHOP });
+    const wishId = queryParam('wish');
+    fromWish = wishId ? await getWish(db, wishId) : null;
+    if (fromWish) fillFromWish(fromWish, queryParam('roast') ?? '');
   }
   updatePreview();
 }

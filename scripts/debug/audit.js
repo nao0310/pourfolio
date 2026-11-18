@@ -18,7 +18,7 @@ export const VIEWPORTS = [
 const PAGES = [
   'index.html', 'today.html', 'beans.html', 'bean-edit.html', 'recipes.html', 'recipe-edit.html', 'brew.html',
   'equipment.html', 'equipment-edit.html', 'analysis.html', 'analysis.html?demo=1', 'brew-chart.html', 'calendar.html',
-  'factors.html', 'profile.html', 'dialin-history.html', 'cost.html', 'shopping.html', 'shops.html', 'order-import.html',
+  'factors.html', 'profile.html', 'dialin-history.html', 'cost.html', 'shopping.html', 'wishlist.html', 'shops.html', 'order-import.html',
   'compare.html', 'optimize.html', 'ai.html', 'report.html', 'share.html', 'scan.html', 'recipe-card.html', 'more.html', 'data.html',
   'storage-test.html', 'tasting.html',
 ];
@@ -44,6 +44,9 @@ async function pagesWithIds({ every = false } = {}) {
   if (exp) out.push(`compare.html?id=${exp.id}`);
   const opt = newest(alive('experiments').filter((e) => e.kind === 'optimize'));
   if (opt) out.push(`optimize.html?id=${opt.id}`);
+  const wish = newest(alive('wishlist'));
+  if (wish) out.push(`bean-edit.html?wish=${wish.id}&roast=シティ`);
+  out.push('bean-edit.html?wish=no-such-id');
   if (bean) out.push(`optimize.html?bean=${bean.id}`, `compare.html?bean=${bean.id}`, `compare.html?new=triangle`);
   // 削除した豆のページ（意地悪のデータ）
   const deadBean = (all.beans ?? []).find((b) => b.deletedAt != null);

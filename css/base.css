@@ -680,6 +680,15 @@ p > a:not(.btn):only-child { display: inline-block; padding: 11px 0; }
 .pref-list .row { margin-top: 6px; }
 .heat.next { outline: 3px solid var(--accent); outline-offset: -3px; }
 .pref-note { color: var(--accent); font-size: 0.9rem; font-weight: 700; }
+/* 次に買う豆（F6） */
+.wish-row { border-top: 1px solid var(--line); padding: 10px 0; }
+.wish-row:first-child { border-top: none; }
+.wish-row .row { margin-top: 6px; align-items: center; }
+.next-reason { font-size: 0.9rem; }
+.shop-name .pill { margin-left: 6px; font-size: 0.8rem; vertical-align: middle; }
+.pill.explore { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+.pill.steady { background: transparent; color: var(--ok); border: 1px solid var(--ok); }
+.with-unit.two input { min-width: 0; }
 
 /* TDS（A8）：評価の画面であとから入れる */
 .tds-row input { max-width: 8em; font-size: 1.25rem; }

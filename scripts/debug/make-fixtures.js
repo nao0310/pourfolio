@@ -25,6 +25,8 @@ import {
   attachBrewToExperiment,
   updateExperiment,
   updateSettings,
+  addWish,
+  deleteWish,
   putAll,
   exportAll,
   getBeanWithTx,
@@ -42,6 +44,7 @@ import { remainingG } from '../../js/core/inventory.js';
 import { makeDemoData } from '../../js/core/demo-data.js';
 import { makeBackup } from '../../js/core/backup.js';
 import { localYmd } from '../../js/core/format.js';
+import { normalizeWishInput } from '../../js/core/wishlist.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const OUT = path.join(ROOT, 'tests/fixtures/debug');
@@ -194,6 +197,13 @@ async function nasty() {
     exp = await attachBrewToExperiment(db, exp.id, { brewId: br.id, beanId: b.id }, ago(0, 7, 21));
   }
   await updateExperiment(db, exp.id, setRating(exp, 1, { stars: 4, word: '明るい' }), ago(0, 7, 40));
+
+  // 気になる豆（F6）：長い名前と記号、銘柄だけ、消したもの、買ったもの
+  await addWish(db, ok(normalizeWishInput({ name: `${LONG}<script>`, country: 'エチオピア', process: 'ナチュラル', roastLevel: 'ライト', priceJpy: '12345', labelWeightG: '100', memo: 'メモ'.repeat(60), productUrl: 'https://example.com/' + 'a'.repeat(120) }), '気になる豆'), ago(2));
+  await addWish(db, ok(normalizeWishInput({ name: '銘柄だけ' }), '気になる豆'), ago(2));
+  const deadWish = await addWish(db, ok(normalizeWishInput({ name: '消した気になる豆', country: 'ボリビア' }), '気になる豆'), ago(2));
+  await deleteWish(db, deadWish.id, ago(1));
+  await addWish(db, ok(normalizeWishInput({ name: '入荷待ちのルワンダ', country: 'ルワンダ' }), '気になる豆'), ago(3));
 
   // 設定：カフェインの区切りと、いつもの粉量
   await updateSettings(db, { caffeineCutoff: '15:00', defaultDoseG: 15 }, ago(30));

@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="color-scheme" content="light dark">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>気になる豆 - Pourfolio</title>
+  <meta name="theme-color" content="#5a371f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Pourfolio">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/base.css">
+</head>
+<body>
+  <main>
+    <p class="crumb"><a href="beans.html">豆と在庫</a> ＞ <a href="shopping.html">買い物リスト</a></p>
+    <h1>気になる豆</h1>
+    <p class="muted">次に買うかもしれない豆を入れておくと、買い物リストの「次に買う候補」に、好みの予想と一緒に並びます。</p>
+
+    <!-- 商品ページの文章から入れる（X28 と同じ読み取り） -->
+    <details class="card paste-card" id="pasteBox" open>
+      <summary>珈琲問屋の商品ページから入れる</summary>
+      <p class="muted">商品ページを開き、ページの文章を全部選んでコピーし、下に貼ってください。</p>
+      <textarea id="pasteText" rows="5" aria-label="商品ページの文章"></textarea>
+      <label class="field">
+        <span class="label">商品ページのURL（あれば）</span>
+        <input type="url" id="pasteUrl" autocomplete="off" placeholder="https://">
+      </label>
+      <div class="row">
+        <button class="btn secondary" type="button" id="pasteRead">読み取る</button>
+      </div>
+      <p id="pasteMsg" role="status"></p>
+    </details>
+
+    <form class="card" id="form" novalidate>
+      <h2 id="formTitle">気になる豆を足す</h2>
+      <label class="field">
+        <span class="label">銘柄（必須）</span>
+        <input type="text" name="name" autocomplete="off">
+        <span class="field-error" data-for="name"></span>
+      </label>
+      <label class="field">
+        <span class="label">生産国</span>
+        <input type="text" name="country" autocomplete="off" placeholder="エチオピア">
+      </label>
+      <label class="field">
+        <span class="label">精製</span>
+        <input type="text" name="process" autocomplete="off" list="processList" placeholder="ウォッシュト">
+        <datalist id="processList"></datalist>
+      </label>
+      <label class="field">
+        <span class="label">店の標準の焙煎度</span>
+        <select name="roastLevel" id="roastLevel"></select>
+        <span class="field-error" data-for="roastLevel"></span>
+      </label>
+      <label class="field">
+        <span class="label">価格（生豆時の重さとその値段）</span>
+        <span class="with-unit two"><input type="text" inputmode="numeric" name="labelWeightG" autocomplete="off" aria-label="生豆時の重さ"><span>gで</span><input type="text" inputmode="numeric" name="priceJpy" autocomplete="off" aria-label="値段"><span>円</span></span>
+        <span class="field-error" data-for="labelWeightG"></span>
+        <span class="field-error" data-for="priceJpy"></span>
+      </label>
+      <label class="field">
+        <span class="label">商品ページのURL</span>
+        <input type="url" name="productUrl" autocomplete="off" placeholder="https://">
+        <span class="field-error" data-for="productUrl"></span>
+      </label>
+      <label class="field">
+        <span class="label">メモ</span>
+        <textarea name="memo" rows="2"></textarea>
+      </label>
+      <div class="row">
+        <button class="btn" type="submit" id="save">足す</button>
+        <button class="btn secondary" type="button" id="cancelEdit" hidden>やめる</button>
+      </div>
+      <p id="msg" role="status"></p>
+    </form>
+
+    <section class="card">
+      <h2>まだ買っていない豆</h2>
+      <div id="openList"><p class="muted">読み込み中…</p></div>
+    </section>
+
+    <details class="card" id="boughtBox">
+      <summary id="boughtTitle">購入済み</summary>
+      <div id="boughtList"></div>
+    </details>
+
+    <div class="row">
+      <a class="btn secondary" href="shopping.html">買い物リストへ</a>
+    </div>
+  </main>
+  <!-- tabbar：npm run sw が書き込む（手で直さない） -->
+  <nav class="tabbar" aria-label="メニュー">
+    <a class="tab" href="./"><svg viewBox="0 0 24 24" class="tab-icon" aria-hidden="true"><path d="M4 11 12 4l8 7v9h-5v-6H9v6H4z"></path></svg><span class="tab-label">ホーム</span></a>
+    <a class="tab" href="recipes.html"><svg viewBox="0 0 24 24" class="tab-icon" aria-hidden="true"><path d="M5 6h14l-2 7a5 5 0 0 1-10 0zM9 20h6M12 18v2"></path></svg><span class="tab-label">淹れる</span></a>
+    <a class="tab current" href="beans.html" aria-current="page"><svg viewBox="0 0 24 24" class="tab-icon" aria-hidden="true"><path d="M12 3c4 0 6 4 6 9s-2 9-6 9-6-4-6-9 2-9 6-9zM12 4c-2 4 2 8 0 16"></path></svg><span class="tab-label">豆と在庫</span></a>
+    <a class="tab" href="analysis.html"><svg viewBox="0 0 24 24" class="tab-icon" aria-hidden="true"><path d="M4 20V4M4 20h16M8 16v-4M12 16V8M16 16v-6"></path></svg><span class="tab-label">分析</span></a>
+    <a class="tab" href="more.html"><svg viewBox="0 0 24 24" class="tab-icon" aria-hidden="true"><path d="M5 12h.01M12 12h.01M19 12h.01"></path></svg><span class="tab-label">その他</span></a>
+  </nav>
+  <!-- /tabbar -->
+  <script type="module" src="js/wishlist-page.js"></script>
+  <script type="module" src="js/tabbar.js"></script>
+</body>
+</html>

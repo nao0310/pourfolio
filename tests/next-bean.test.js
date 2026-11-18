@@ -57,12 +57,12 @@ test('焙煎度の選び方：焙煎度比較 → 産地×焙煎度（3杯以上
   const prefs = [{ key: 'c:ケニア', label: 'ケニア', experiments: 2, best: 'フルシティ' }];
   assert.deepEqual(recommendRoast({ country: 'ケニア', fallback: 'ミディアム', fallbackWhy: '店の標準' }, { prefs, heat }), {
     level: 'フルシティ',
-    why: 'ケニアの焙煎度比較で好き（2回）',
+    why: 'ケニアの焙煎度比較で好き・2回',
     source: 'compare',
   });
   const cell = recommendRoast({ country: 'ケニア', fallback: 'ミディアム', fallbackWhy: '店の標準' }, { prefs: [], heat });
   assert.equal(cell.level, 'ハイ', '2杯しかないシティは使わない');
-  assert.equal(cell.why, 'ケニア×ハイの好みが★4.1（3杯）');
+  assert.equal(cell.why, 'ケニア×ハイの好みが★4.1・3杯');
   assert.equal(recommendRoast({ country: 'ペルー', fallback: 'ミディアム', fallbackWhy: '店の標準' }, { prefs, heat }).why, '店の標準');
   assert.equal(recommendRoast({ country: '', fallback: '' }, { prefs, heat }).source, 'none');
 });

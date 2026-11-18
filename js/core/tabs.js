@@ -18,6 +18,7 @@ const PAGE_TAB = Object.freeze({
   'beans.html': 'beans',
   'bean.html': 'beans',
   'shopping.html': 'beans',
+  'wishlist.html': 'beans',
   'shops.html': 'beans',
   'order-import.html': 'beans',
   'analysis.html': 'analysis',

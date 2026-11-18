@@ -81,13 +81,13 @@ export function recommendRoast({ country, fallback = '', fallbackWhy = '' }, { p
   const c = clean(country);
   if (c) {
     const pref = preferenceForBean(prefs, { origin: { country: c } });
-    if (pref?.best) return { level: pref.best, why: `${pref.label}の焙煎度比較で好き（${pref.experiments}回）`, source: 'compare' };
+    if (pref?.best) return { level: pref.best, why: `${pref.label}の焙煎度比較で好き・${pref.experiments}回`, source: 'compare' };
     const row = heat.cells?.[c];
     if (row) {
       const best = Object.entries(row)
         .filter(([, v]) => v && v.n >= ROAST_CELL_MIN)
         .sort((a, b) => b[1].score - a[1].score || b[1].n - a[1].n)[0];
-      if (best) return { level: best[0], why: `${c}×${best[0]}の好みが★${r1(best[1].score)}（${best[1].n}杯）`, source: 'cell' };
+      if (best) return { level: best[0], why: `${c}×${best[0]}の好みが★${r1(best[1].score)}・${best[1].n}杯`, source: 'cell' };
     }
   }
   if (fallback) return { level: fallback, why: fallbackWhy, source: 'fallback' };

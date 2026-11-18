@@ -26,16 +26,17 @@
       <dl class="plan-numbers" id="planNumbers"></dl>
     </section>
 
-    <!-- 候補：これまでに買った豆（評価の高い順） -->
+    <!-- 次に買う豆（F6）：気になる豆＋これまでに買った豆を、自分向け度＋開拓ボーナスの順に -->
     <section class="card">
       <h2>次に買う候補</h2>
-      <p class="muted">これまでに買った豆を、評価の高い順に並べています。注文する豆に印を付けると、下に注文メモができます。</p>
+      <p class="muted">気になる豆と、これまでに買った豆を並べています。順番は「好みに合いそうか」に、あまり飲んでいない産地や精製の「開拓」の点を足して決めます。注文する豆に印を付けると、下に注文メモができます。</p>
       <div id="candidates"></div>
+      <p><a class="link-more" href="wishlist.html">気になる豆を足す・見る</a></p>
     </section>
 
     <section class="card">
       <h2>注文メモ</h2>
-      <p class="muted">店のサイトで注文するときに見るメモです。メモアプリなどに貼っておけます。</p>
+      <p class="muted">店のサイトで注文するときに見るメモです。量は、飲むペースの4週間分を選んだ豆で分けた目安です。メモアプリなどに貼っておけます。</p>
       <textarea id="memo" rows="5" readonly></textarea>
       <div class="row">
         <button class="btn" type="button" id="copyMemo">メモをコピー</button>
