@@ -102,7 +102,15 @@ function baseFor(beanId) {
 
 function renderLink() {
   const beanId = $('answerBean').value;
+  if (parsed && !beanId) {
+    // 手元に豆がないと淹れる画面を開けないので、押せないボタンにせず案内を出す（2-8の44番）
+    $('answerBase').textContent = '手元に豆がありません。先に「豆と在庫」で豆を登録してください';
+    $('brewLink').textContent = '豆を登録する';
+    $('brewLink').href = 'bean-edit.html';
+    return;
+  }
   if (!parsed || !beanId) return;
+  $('brewLink').textContent = 'この計画で淹れる';
   const base = baseFor(beanId);
   $('answerBase').textContent = base.text;
   // AIの湯量はお湯の量なので、土台の杯がアイスでもホットで開く（iced=0。抽出の画面でアイスにもできる）
