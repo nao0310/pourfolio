@@ -118,6 +118,8 @@ $('exportCsv').addEventListener('click', async () => {
         equipment: all.equipment,
         tastings: all.tastings,
         suggestions: all.suggestions,
+        photos: all.photos,
+        experiments: all.experiments,
       }),
     );
     const beans = toCsv(beanRowsCsv({ beans: all.beans, txs: all.inventoryTx, portions: all.frozenPortions, doseG: doseFromSettings(settings), today: localYmd(now) }));

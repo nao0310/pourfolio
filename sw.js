@@ -8,8 +8,8 @@
 
 // <manifest> npm run sw が書き込む（手で直さない）
 const MANIFEST = {
-  "label": "2.3.1",
-  "version": "6e25bdbaaae8",
+  "label": "2.4",
+  "version": "ba21ccd2679c",
   "files": {
     "bean-edit.html": "b4ab5c1cb88b2a27",
     "bean.html": "52b1b3a8772eef17",
@@ -36,7 +36,7 @@ const MANIFEST = {
     "js/core/brews.js": "96cb92b979415477",
     "js/core/compare.js": "2e3ea884c75c2aaa",
     "js/core/cost.js": "814376caa01c3338",
-    "js/core/csv.js": "118eb24c1f75be97",
+    "js/core/csv.js": "e6de93439b037927",
     "js/core/dialin.js": "fbdeef29b0af89c8",
     "js/core/equipment.js": "1666ceecf4236724",
     "js/core/flavors.js": "89fe07c6a438754f",
@@ -53,15 +53,15 @@ const MANIFEST = {
     "js/core/records.js": "6ba3cc4987ed52ec",
     "js/core/restock.js": "27a93133facd5d34",
     "js/core/roast.js": "e713f66bb296aa2d",
-    "js/core/sample-data.js": "bcb0a1097337453f",
+    "js/core/sample-data.js": "319cceeb6cfea345",
     "js/core/shops.js": "5cea814d683272ae",
     "js/core/tastings.js": "5d49b1a72a18a144",
     "js/core/timer.js": "158a32d82adfeb48",
     "js/core/tonya.js": "faac59308d2b0ca5",
-    "js/core/version.js": "43608b50b708ce6d",
+    "js/core/version.js": "c66f7050f582413a",
     "js/cost-page.js": "c20bca9c70ccf702",
     "js/cue.js": "4ec66c174d81b2d6",
-    "js/data-page.js": "4f7d7b8859bcb1d6",
+    "js/data-page.js": "6e8a98dd25622e9f",
     "js/db.js": "6e5f2628a3937990",
     "js/equipment-edit-page.js": "189ab98a4f008939",
     "js/equipment-page.js": "b1bf191837d8dac2",

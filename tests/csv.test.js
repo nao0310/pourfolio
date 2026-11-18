@@ -49,6 +49,32 @@ test('抽出の一覧：1杯1行で、豆・計画・実績・評価・提案が
   assert.equal(col('この杯への提案'), '挽き目を1目盛り細かく：挽き目 24 → 23');
   assert.equal(col('使った提案'), '');
   assert.equal(col('抽出ID'), data.brews[0].id);
+  assert.equal(col('写真'), 1);
+  assert.equal(col('飲み比べ'), ''); // 飲み比べで淹れた杯ではない
+});
+
+test('抽出の一覧（2-4）：抽出前チェック・香味・雑味・強さと好み・温度帯ごとの★', () => {
+  const brews = [{ id: 'b1', at: '2026-11-18T01:00:00Z', deletedAt: null, actual: {}, precheck: { temp: true, rinse: true, preheat: false, tare: false } }];
+  const t = (stage, extra) => ({ id: `t-${stage}`, brewId: 'b1', by: 'me', stage, deletedAt: null, updatedAt: '1', tags: [], ...extra });
+  const tastings = [
+    t('warm', { stars: 4, flavors: ['fruity/citrus', 'floral/jasmine'], defects: ['えぐい'], intensity: { acidity: 12 }, liking: { acidity: 3 }, blind: true }),
+    t('cool', { stars: 5, memo: '甘さが出た' }),
+  ];
+  const [head, row] = brewRows({ brews, tastings });
+  const col = (name) => row[head.indexOf(name)];
+  assert.equal(row.length, head.length);
+  assert.equal(col('抽出前チェック'), '湯温・リンス');
+  assert.equal(col('★'), 4);
+  assert.equal(col('香味'), 'ジャスミン・柑橘');
+  assert.equal(col('雑味'), 'えぐい');
+  assert.equal(col('強さ 酸味'), 12);
+  assert.equal(col('好み 酸味'), 3);
+  assert.equal(col('強さ 甘さ'), '');
+  assert.equal(col('ブラインド'), true);
+  assert.equal(col('熱いうち★'), '');
+  assert.equal(col('冷めてから★'), 5);
+  assert.equal(col('冷めてからのメモ'), '甘さが出た');
+  assert.equal(col('写真'), '');
 });
 
 test('抽出の一覧：評価・提案・豆のない抽出は空欄、削除済みは出さず古い順', () => {

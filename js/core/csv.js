@@ -2,7 +2,10 @@
 // Excelで開いても文字化けしないよう、先頭にBOMを付けたUTF-8にし、行の区切りはCRLFにする。
 // 2つのファイルを作る：抽出の一覧（1杯1行、豆・計画・実績・評価・提案を含む）と豆の一覧。
 
-import { pickTasting, JAR_ATTRS, jarWord } from './tastings.js';
+import { pickTasting, JAR_ATTRS, jarWord, DETAIL_ATTRS } from './tastings.js';
+import { flavorsText } from './flavors.js';
+import { precheckText } from './brews.js';
+import { photoCount } from './photos.js';
 import { pickSuggestionForBrew } from './dialin.js';
 import { remainingG, cupsLeft, groupTxByBean } from './inventory.js';
 import { freshness } from './freshness.js';
@@ -31,15 +34,17 @@ const ADOPTED = { true: '使った', false: '使わなかった' };
 
 /**
  * 抽出の一覧（古い順、削除済みは除く）
- * @param {{brews:object[], beans?:object[], recipes?:object[], equipment?:object[], tastings?:object[], suggestions?:object[]}} t
+ * 評価の列は主な評価（温かいうち）。熱いうち・冷めてからは★とメモだけを別の列に出す（B5）
+ * @param {{brews:object[], beans?:object[], recipes?:object[], equipment?:object[], tastings?:object[], suggestions?:object[], photos?:object[], experiments?:object[]}} t
  * @returns {string[][]} 見出しの行を含む
  */
-export function brewRows({ brews = [], beans = [], recipes = [], equipment = [], tastings = [], suggestions = [] }) {
+export function brewRows({ brews = [], beans = [], recipes = [], equipment = [], tastings = [], suggestions = [], photos = [], experiments = [] }) {
   const byId = (list) => new Map((list ?? []).map((r) => [r.id, r]));
   const beanOf = byId(beans);
   const recipeOf = byId(recipes);
   const eqOf = byId(equipment);
   const sugById = byId((suggestions ?? []).filter(alive));
+  const expOf = byId((experiments ?? []).filter(alive));
   const head = [
     '日時',
     '豆',
@@ -62,10 +67,21 @@ export function brewRows({ brews = [], beans = [], recipes = [], equipment = [],
     '原価円',
     '冷凍の袋',
     'タイマー',
+    '抽出前チェック',
     '★',
     '一言',
     ...JAR_ATTRS.map((a) => a.label),
+    '香味',
+    '雑味',
+    ...DETAIL_ATTRS.flatMap((a) => [`強さ ${a.label}`, `好み ${a.label}`]),
     '評価メモ',
+    'ブラインド',
+    '熱いうち★',
+    '熱いうちのメモ',
+    '冷めてから★',
+    '冷めてからのメモ',
+    '飲み比べ',
+    '写真',
     'この杯への提案',
     '使った提案',
     '抽出メモ',
@@ -79,6 +95,8 @@ export function brewRows({ brews = [], beans = [], recipes = [], equipment = [],
       const a = b.actual ?? {};
       const bean = beanOf.get(b.beanId);
       const t = pickTasting(tastings, b.id);
+      const hot = pickTasting(tastings, b.id, 'hot');
+      const cool = pickTasting(tastings, b.id, 'cool');
       const sug = pickSuggestionForBrew(suggestions, b.id);
       const used = b.suggestionId ? sugById.get(b.suggestionId) : null;
       const pGrind = typeof p.grind === 'string' ? p.grind : p.grind?.setting;
@@ -104,10 +122,21 @@ export function brewRows({ brews = [], beans = [], recipes = [], equipment = [],
         brewCostJpy(b, bean, beans) ?? '',
         b.frozenPortionId ? '使った' : '',
         Boolean(b.timerUsed),
+        precheckText(b.precheck),
         t?.stars ?? '',
         (t?.tags ?? []).join('・'),
         ...JAR_ATTRS.map((x) => (t?.jar?.[x.key] != null ? jarWord(x.key, t.jar[x.key]) : '')),
+        flavorsText(t?.flavors),
+        (t?.defects ?? []).join('・'),
+        ...DETAIL_ATTRS.flatMap((x) => [t?.intensity?.[x.key] ?? '', t?.liking?.[x.key] ?? '']),
         t?.memo ?? '',
+        t ? Boolean(t.blind) : '',
+        hot?.stars ?? '',
+        hot?.memo ?? '',
+        cool?.stars ?? '',
+        cool?.memo ?? '',
+        expOf.get(b.experimentId)?.title ?? '',
+        photoCount(photos, b.id) || '',
         sug ? [sug.action?.text, sug.adopted != null ? `（${ADOPTED[sug.adopted]}）` : ''].join('') : '',
         used?.action?.text ?? '',
         b.memo ?? '',

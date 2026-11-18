@@ -172,14 +172,14 @@ export function makeSampleData(now = new Date()) {
     daysAgo(1),
   );
 
-  // 焙煎度比較（X27）：始めたばかりの飲み比べ（1袋だけ淹れた）
+  // 焙煎度比較（X27）：始めたばかりの飲み比べ（まだ淹れていない）
   const experiment = createRecord(
     {
       kind: 'roast',
       title: `${bean.name} 焙煎度比較`,
       blind: true,
       recipeId: recipe.id,
-      entries: [{ beanId: bean.id, brewId: brew.id }],
+      entries: [{ beanId: bean.id, brewId: null }],
       ratings: [],
       revealedAt: null,
     },
