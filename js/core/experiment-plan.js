@@ -222,7 +222,7 @@ export const pairKey = (exp) => (exp?.oddKey === 'a' ? 'b' : 'a');
 
 /**
  * 答え合わせ：選んだ番号（違うと思ったカップ）と、底を見て分かった「1つだけのカップ」の番号
- * @param {{picked:number|string, odd:number|string, liked?:'odd'|'pair'|'same'|null}} input
+ * @param {{picked:number|string, odd:number|string, liked?:'a'|'b'|'same'|null}} input liked はどちらが好きだったか（カップの鍵か、同じくらい）
  * @returns {{answer:object|null, errors:Record<string,string>}}
  */
 export function judgeTriangle(input) {
@@ -236,7 +236,7 @@ export function judgeTriangle(input) {
   if (picked == null) errors.picked = '違うと思ったカップを選んでください';
   if (odd == null) errors.odd = '底を見て、1つだけのカップを選んでください';
   if (Object.keys(errors).length) return { answer: null, errors };
-  const liked = ['odd', 'pair', 'same'].includes(input?.liked) ? input.liked : null;
+  const liked = ['a', 'b', 'same'].includes(input?.liked) ? input.liked : null;
   return { answer: { picked, odd, correct: picked === odd, liked }, errors };
 }
 

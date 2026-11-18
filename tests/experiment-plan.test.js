@@ -104,7 +104,7 @@ test('トライアングル：豆2つ。1つにする方はアプリが決める
   assert.equal(pairKey(exp), 'a');
   assert.equal(exp.title, 'トライアングル：シティ　エチオピア と ハイ　ケニア');
   assert.equal(buildTriangleExperiment(r, () => 0.1).oddKey, 'a');
-  assert.deepEqual(judgeTriangle({ picked: 2, odd: 2, liked: 'odd' }).answer, { picked: 2, odd: 2, correct: true, liked: 'odd' });
+  assert.deepEqual(judgeTriangle({ picked: 2, odd: 2, liked: 'b' }).answer, { picked: 2, odd: 2, correct: true, liked: 'b' });
   assert.equal(judgeTriangle({ picked: 1, odd: 3 }).answer.correct, false);
   assert.ok(judgeTriangle({ picked: 4, odd: 1 }).errors.picked);
   assert.ok(judgeTriangle({ picked: 1 }).errors.odd);

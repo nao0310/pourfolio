@@ -21,13 +21,13 @@ import {
   listRecipes,
   setBeanStatus,
 } from './db.js';
-import { adjustPlan, adjustNotes, parseAdjustParams, adjustQuery, hotPlanOf, carryIce, isIced, cupsOf, perCupPlan, perCupIceG, MOODS, CUP_OPTIONS, cupsLabel } from './core/plan-adjust.js';
+import { adjustPlan, adjustNotes, parseAdjustParams, adjustQuery, hotPlanOf, carryIce, isIced, cupsOf, perCupPlan, perCupIceG, MOODS, CUP_OPTIONS, cupsLabel, normalizeOverrides } from './core/plan-adjust.js';
 import { initialRecipe, initialPlan, baseRecipe } from './core/initial-recipe.js';
 import { defaultEquipmentIds } from './core/equipment.js';
 import { doseFromSettings } from './core/inventory.js';
 import { frozenChoice, portionsOf, portionText } from './core/frozen.js';
 import { remainingG, stockCheckForBrew } from './core/inventory.js';
-import { experimentStatus } from './core/compare.js';
+import { experimentStatus, entryKey, kindOf, KIND_LABELS } from './core/compare.js';
 import { basePlanForNext, applyAction, pickPendingSuggestion } from './core/dialin.js';
 import { planFromRecipe, planFromBrew, formatSec, POUR_STYLES, ratioOf } from './core/recipes.js';
 import { sortBeansForList } from './core/beans.js';
@@ -70,8 +70,9 @@ let equipmentList = [];
 const waters = () => equipmentList.filter((e) => e.kind === 'water');
 /** 抽出前チェック（A5）で押した項目 */
 let precheck = {};
-/** 焙煎度比較（X27）で淹れるときの飲み比べ（?compare=ID） */
+/** 飲み比べ（X27・F7・B6）で淹れるときの飲み比べ（?compare=ID）と、淹れるカップ（?cup=鍵） */
 let compare = null;
+let compareEntry = null;
 
 // ---- 計画（スタート前） ----
 
@@ -204,7 +205,8 @@ function planItem(label, value, changed = false) {
 function renderSuggestCard() {
   const fromSuggestion = loadedPlan?.suggestion;
   // 飲み比べ（X27）で淹れるときは、前回の提案を出さない。入れると飲み比べから外れ、ブラインドが崩れるため（2-8 の10番）
-  const s = fromSuggestion ?? (compare ? null : pickPendingSuggestion(suggestions, $('bean').value || null, suggestBrews));
+  // 最適化（F7）の条件で淹れるときも出さない（最適化の条件から外れるため）
+  const s = fromSuggestion ?? (compare || queryParam('via') === 'optimize' ? null : pickPendingSuggestion(suggestions, $('bean').value || null, suggestBrews));
   $('suggestCard').hidden = !s;
   if (!s) return;
   $('sText').textContent = s.action?.text ?? '';
@@ -399,6 +401,7 @@ async function beginNew(withTimer) {
     // 焙煎度比較（X27）で淹れるとき：保存したら飲み比べにつなぎ、飲み比べの画面に戻る
     compareId: compare?.id ?? null,
     compareBeanId: compare ? queryParam('bean') : null,
+    compareKey: compareEntry ? entryKey(compareEntry) : null,
   };
   // 前回のベストのペース（ゴースト、D-041）。下書きに入れておき、開き直しても同じ杯と比べる
   // 量やアイスを変えた計画は、ペースが違うので比べない
@@ -729,12 +732,12 @@ const onSave = singleFlight(async (e) => {
     if (stock.empty && bean && bean.status !== 'finished' && (await askConfirm('この豆の残りがなくなりました。飲み切りにしますか？', { ok: '飲み切りにする', cancel: 'まだ残っている' }))) {
       await setBeanStatus(db, bean.id, 'finished');
     }
-    const { compareId, compareBeanId } = draft;
+    const { compareId, compareBeanId, compareKey } = draft;
     clearDraft();
     draft = null;
     if (compareId) {
       // 焙煎度比較（X27）：評価はあとで飲み比べの画面でまとめて入れる（ブラインドを崩さないため）
-      const attached = await attachBrewToExperiment(db, compareId, { brewId: brew.id, beanId: brew.beanId, targetBeanId: compareBeanId });
+      const attached = await attachBrewToExperiment(db, compareId, { brewId: brew.id, beanId: brew.beanId, targetBeanId: compareBeanId, targetKey: compareKey ?? null });
       await autosaveAfterChange(db);
       if (!attached) {
         // 淹れている途中で飲み比べがやめられていた：この杯は普通に評価する（2-8 の12番）
@@ -791,14 +794,22 @@ async function init() {
   // 結果を出した飲み比べ（古い画面から開いた）は、ふつうの1杯として淹れる（2-8の50番）
   if (compare && experimentStatus(compare) === 'done') compare = null;
   if (compare) {
-    $('crumb').textContent = '飲み比べ';
+    $('crumb').textContent = '実験';
     $('crumb').href = `compare.html?id=${encodeURIComponent(compare.id)}`;
     $('compareNote').hidden = false;
+    $('compareTitle').textContent = `${KIND_LABELS[kindOf(compare)]}で淹れています`;
+    compareEntry = compare.entries.find((e) => entryKey(e) === queryParam('cup')) ?? null;
+    if (compareEntry?.label && kindOf(compare) !== 'roast') {
+      $('compareCup').hidden = false;
+      $('compareCup').textContent = `このカップ：${compareEntry.label}`;
+    }
   }
   loadedPlan = await loadPlan();
   if (loadedPlan) {
     const p = parseAdjustParams(queryParam);
     adj = { mood: p.mood, cups: p.cups, iced: p.iced ?? Boolean(loadedPlan.icedDefault), overrides: p.overrides };
+    // 飲み比べのカップの条件（変えた挽き目など）は、URL より記録を正にする（URL を直されても比べる条件がずれないように）
+    if (compareEntry) adj = { mood: null, cups: 1, iced: false, overrides: { ...p.overrides, ...normalizeOverrides(compareEntry.overrides ?? {}) } };
     applyAdjust();
   }
   if (!loadedPlan) {

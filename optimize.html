@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="color-scheme" content="light dark">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>最適化 - Pourfolio</title>
+  <meta name="theme-color" content="#5a371f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Pourfolio">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/base.css">
+</head>
+<body>
+  <main>
+    <p class="crumb"><a href="compare.html">実験</a></p>
+
+    <!-- 始める（F7 最適化モード） -->
+    <div id="startView" hidden>
+      <h1>最適化を始める</h1>
+      <p class="muted">豆を1つ選び、挽き目と比率を動かす範囲を決めます。淹れて★を付けるたびに、記録から「次に試すと最も学べる条件」を選び直します（ベイズ最適化。計算はこの端末の中だけで行います）。</p>
+      <form class="card" id="optForm" novalidate>
+        <label class="field">
+          <span class="label">豆</span>
+          <select id="oBean"></select>
+          <span class="field-error" data-for="beanId"></span>
+        </label>
+        <label class="field">
+          <span class="label">レシピ</span>
+          <select id="oRecipe"></select>
+          <span class="hint">粉量と注ぎ方はこのレシピのまま、挽き目と湯量（比率）だけを変えます</span>
+          <span class="field-error" data-for="recipeId"></span>
+        </label>
+        <fieldset class="field">
+          <legend class="label">挽き目の範囲</legend>
+          <div class="range-row">
+            <input type="text" inputmode="decimal" id="gLo" aria-label="挽き目（細かい側）">
+            <span>〜</span>
+            <input type="text" inputmode="decimal" id="gHi" aria-label="挽き目（粗い側）">
+          </div>
+          <span class="hint" id="gHint"></span>
+          <span class="field-error" data-for="grind"></span>
+        </fieldset>
+        <fieldset class="field">
+          <legend class="label">比率の範囲（1:x の x）</legend>
+          <div class="range-row">
+            <input type="text" inputmode="decimal" id="rLo" aria-label="比率（濃い側）">
+            <span>〜</span>
+            <input type="text" inputmode="decimal" id="rHi" aria-label="比率（薄い側）">
+          </div>
+          <span class="field-error" data-for="ratio"></span>
+        </fieldset>
+        <label class="check-row">
+          <input type="checkbox" id="useTemp">
+          <span>湯温も動かす（杯数が多く要ります）</span>
+        </label>
+        <fieldset class="field" id="tBox" hidden>
+          <legend class="label">湯温の範囲（℃）</legend>
+          <div class="range-row">
+            <input type="text" inputmode="decimal" id="tLo" aria-label="湯温（低い側）">
+            <span>〜</span>
+            <input type="text" inputmode="decimal" id="tHi" aria-label="湯温（高い側）">
+          </div>
+          <span class="field-error" data-for="tempC"></span>
+        </fieldset>
+        <p id="msg" role="status"></p>
+        <div class="row">
+          <button class="btn" type="submit" id="start">最適化を始める</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- 最適化1つ -->
+    <div id="optView" hidden>
+      <h1 id="title"></h1>
+      <p class="muted" id="sub"></p>
+
+      <section class="card suggest-card" id="nextCard">
+        <h2>次の1杯</h2>
+        <p class="suggest-action" id="nextText"></p>
+        <p class="muted small" id="nextReason"></p>
+        <div class="row">
+          <a class="btn" id="nextBrew">この条件で淹れる</a>
+        </div>
+        <p class="muted small">淹れたら、いつものように★を付けてください。★を付けた杯から、次の条件を選び直します</p>
+      </section>
+
+      <section class="card" id="bestCard" hidden>
+        <h2>今のいちばん</h2>
+        <p id="bestText"></p>
+        <div class="row">
+          <a class="btn secondary" id="bestBrew">この条件で淹れる</a>
+        </div>
+      </section>
+
+      <section class="card" id="mapCard" hidden>
+        <h2>予想の地図</h2>
+        <p class="muted small" id="mapNote"></p>
+        <div class="table-wrap" id="map"></div>
+      </section>
+
+      <section class="card">
+        <h2>試した杯</h2>
+        <ul class="link-list" id="points"></ul>
+      </section>
+
+      <div class="row">
+        <button class="btn secondary" type="button" id="done">この最適化を終える</button>
+        <button class="link-btn" type="button" id="remove">この最適化をやめる</button>
+      </div>
+    </div>
+
+    <div id="notFound" hidden>
+      <h1>最適化が見つかりません</h1>
+      <p class="muted">やめたのかもしれません。<a href="compare.html">実験の一覧</a>から選び直してください。</p>
+    </div>
+  </main>
+  <!-- tabbar：npm run sw が書き込む（手で直さない） -->
+  <nav class="tabbar" aria-label="メニュー">
+    <a class="tab" href="./"><svg viewBox="0 0 24 24" class="tab-icon" aria-hidden="true"><path d="M4 11 12 4l8 7v9h-5v-6H9v6H4z"></path></svg><span class="tab-label">ホーム</span></a>
+    <a class="tab" href="recipes.html"><svg viewBox="0 0 24 24" class="tab-icon" aria-hidden="true"><path d="M5 6h14l-2 7a5 5 0 0 1-10 0zM9 20h6M12 18v2"></path></svg><span class="tab-label">淹れる</span></a>
+    <a class="tab" href="beans.html"><svg viewBox="0 0 24 24" class="tab-icon" aria-hidden="true"><path d="M12 3c4 0 6 4 6 9s-2 9-6 9-6-4-6-9 2-9 6-9zM12 4c-2 4 2 8 0 16"></path></svg><span class="tab-label">豆と在庫</span></a>
+    <a class="tab" href="analysis.html"><svg viewBox="0 0 24 24" class="tab-icon" aria-hidden="true"><path d="M4 20V4M4 20h16M8 16v-4M12 16V8M16 16v-6"></path></svg><span class="tab-label">分析</span></a>
+    <a class="tab current" href="more.html" aria-current="page"><svg viewBox="0 0 24 24" class="tab-icon" aria-hidden="true"><path d="M5 12h.01M12 12h.01M19 12h.01"></path></svg><span class="tab-label">その他</span></a>
+  </nav>
+  <!-- /tabbar -->
+  <script type="module" src="js/optimize-page.js"></script>
+  <script type="module" src="js/tabbar.js"></script>
+</body>
+</html>

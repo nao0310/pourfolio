@@ -59,6 +59,9 @@ test('学びに使う杯：その豆・同じグラインダー・★あり・�
     { ...row('g', 24, 15, 4), brew: { ...row('g', 24, 15, 4).brew, actual: { grind: { grinderId: 'g2', setting: '24' }, tempC: 92 } } },
   ];
   assert.deepEqual(optimizePoints(exp, rows).map((p) => p.brewId), ['a', 'd']);
+  // 動かさない湯温は持たない（「今のいちばん」に出さない）
+  assert.deepEqual(optimizePoints(exp, rows)[0].x, { grind: 24, ratio: 15 });
+  assert.deepEqual(optimizePoints({ ...exp, ranges: { ...exp.ranges, tempC: [88, 96] } }, rows)[0].x, { grind: 24, ratio: 15, tempC: 92 });
 });
 
 test('コレスキー分解と正規分布', () => {

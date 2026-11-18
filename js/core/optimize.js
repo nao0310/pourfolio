@@ -133,8 +133,9 @@ export function optimizePoints(exp, rows) {
     const a = r.brew.actual ?? {};
     const gid = a.grind?.grinderId ?? r.brew.equipment?.grinderId ?? null;
     if (exp.grinderId != null && gid != null && gid !== exp.grinderId) continue;
-    const x = { grind: num(a.grind?.setting), ratio: r.metrics?.ratio ?? ratioOf(a.doseG, a.waterG), tempC: num(a.tempC) };
-    if (dims.some((k) => x[k] == null)) continue;
+    const raw = { grind: num(a.grind?.setting), ratio: r.metrics?.ratio ?? ratioOf(a.doseG, a.waterG), tempC: num(a.tempC) };
+    if (dims.some((k) => raw[k] == null)) continue;
+    const x = Object.fromEntries(dims.map((k) => [k, raw[k]])); // 動かさない条件（湯温）は持たない
     const inside = dims.every((k) => {
       const [lo, hi] = exp.ranges[k];
       const s = stepOf(exp, k);
