@@ -53,6 +53,10 @@ export function openDb(name = DB_NAME, options) {
     photos: 'id, brewId, updatedAt',
     experiments: 'id, updatedAt',
   });
+  // 版6：気になる豆（F6、spec 9章の Wishlist）の表を足す。既存の表と記録はそのまま（移行で書き換える記録はない）
+  db.version(6).stores({
+    wishlist: 'id, updatedAt',
+  });
   return db;
 }
 
@@ -652,6 +656,41 @@ export async function getUnratedBrew(db, now = new Date()) {
 export async function getCoolPromptBrew(db, now = new Date()) {
   const [brews, tastings] = await Promise.all([db.table('brews').toArray(), db.table('tastings').toArray()]);
   return pickCoolPrompt(brews, tastings, now);
+}
+
+// ---- 気になる豆（F6） ----
+
+/** 気になる豆の一覧（削除の印が付いたものは除く） */
+export async function listWishlist(db) {
+  return (await db.table('wishlist').toArray()).filter(alive);
+}
+
+/** 気になる豆1件。ない・削除済みなら null */
+export async function getWish(db, id) {
+  const w = await db.table('wishlist').get(id);
+  return w && alive(w) ? w : null;
+}
+
+/** 気になる豆を足す（fields は core/wishlist.js の normalizeWishInput の value） */
+export async function addWish(db, fields, now = new Date()) {
+  const rec = createRecord({ ...fields, boughtBeanId: null }, now);
+  await db.table('wishlist').put(rec);
+  return rec;
+}
+
+/** 気になる豆を直す */
+export async function updateWish(db, id, changes, now = new Date()) {
+  const cur = await getWish(db, id);
+  if (!cur) throw new Error('気になる豆が見つかりません');
+  const next = updateRecord(cur, changes, now);
+  await db.table('wishlist').put(next);
+  return next;
+}
+
+/** 気になる豆を消す（削除の印） */
+export async function deleteWish(db, id, now = new Date()) {
+  const cur = await getWish(db, id);
+  if (cur) await db.table('wishlist').put(markDeleted(cur, now));
 }
 
 // ---- 飲み比べ・実験（X27・F7・B6） ----
