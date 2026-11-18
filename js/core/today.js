@@ -83,6 +83,11 @@ export function bestBrewOf(list = []) {
   return hot.reduce((a, b) => (b.stars > a.stars || (b.stars === a.stars && String(b.brew.at) > String(a.brew.at)) ? b : a)).brew;
 }
 
+/** その豆で★がいちばん高かった杯（キャニスターの QR、X14）。★のある杯がなければ null */
+export function bestBrewForBean(brews = [], tastings = [], beanId) {
+  return bestBrewOf(starsByBean(brews, tastings).get(beanId) ?? []);
+}
+
 /**
  * 産地・精製・焙煎度の好み（嗜好スコア）から、まだ飲んでいない豆の★を予測する
  * @returns {{stars:number, keys:string[]}|null}

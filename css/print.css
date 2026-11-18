@@ -1,0 +1,88 @@
+/* 印刷する画面（レシピカード X2・キャニスターのラベル X14・月次レポート X4）
+   紙は白地に黒で固定（ダーク表示でも印刷やPDFは同じ見た目にする）。 */
+
+/* ---- カード（名刺・A6） ---- */
+.print-area { display: flex; justify-content: center; margin: 8px 0 24px; }
+.pc-card {
+  box-sizing: border-box;
+  width: min(var(--card-w, 91mm), 100%);
+  min-height: var(--card-h, 55mm);
+  padding: 4mm 5mm;
+  background: #fff;
+  color: #000;
+  border: 1px solid #bbb;
+  border-radius: 2mm;
+  font-size: 8.5pt;
+  line-height: 1.35;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2mm;
+  overflow: hidden;
+}
+.pc-card p, .pc-card ol { margin: 0; }
+.pc-head { display: flex; gap: 3mm; align-items: flex-start; justify-content: space-between; }
+.pc-titles { min-width: 0; flex: 1; }
+.pc-title { font-size: 11pt; font-weight: 700; overflow-wrap: anywhere; }
+.pc-sub { color: #333; overflow-wrap: anywhere; }
+.pc-qr { flex: 0 0 auto; width: 19mm; }
+.pc-qr svg { display: block; width: 100%; height: auto; }
+.pc-summary { font-weight: 700; }
+.pc-line { color: #222; }
+.pc-pours { padding-left: 0; list-style: none; columns: 2; column-gap: 3mm; font-size: 7.5pt; }
+.pc-memo { white-space: pre-line; color: #333; font-size: 7.5pt; border-top: 1px solid #ddd; padding-top: 1mm; }
+.pc-foot { margin-top: auto !important; color: #666; font-size: 6.5pt; }
+
+/* A6 は大きめの文字と QR、注湯は1列 */
+.size-a6 .pc-card { font-size: 10pt; padding: 7mm; gap: 2mm; }
+.size-a6 .pc-title { font-size: 14pt; }
+.size-a6 .pc-qr { width: 30mm; }
+.size-a6 .pc-pours { columns: 1; font-size: 10pt; }
+.size-a6 .pc-memo { font-size: 9pt; }
+.size-a6 .pc-foot { font-size: 8pt; }
+
+/* キャニスターのラベル（名刺の大きさでも QR を大きく） */
+.pc-label .pc-qr { width: 30mm; }
+.pc-label .pc-title { font-size: 13pt; }
+.size-a6 .pc-label .pc-qr { width: 50mm; }
+.size-a6 .pc-label .pc-head { flex-direction: column; align-items: center; text-align: center; }
+
+/* ---- 月次レポート（A4） ---- */
+.report-sheet {
+  background: #fff;
+  color: #000;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 24px;
+  font-size: 0.95rem;
+}
+.report-sheet .muted { color: #555; }
+.report-sheet h2 { margin: 0 0 2px; font-size: 1.3rem; }
+.report-sheet h3 { margin: 16px 0 6px; font-size: 1.05rem; border-bottom: 1px solid #ddd; padding-bottom: 2px; }
+.rp-head { margin-bottom: 10px; }
+.rp-head p { margin: 0; }
+.rp-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.rp-stat { border: 1px solid #ddd; border-radius: 6px; padding: 6px 8px; display: flex; flex-direction: column; min-width: 0; }
+.rp-stat-label { font-size: 0.8rem; color: #555; }
+.rp-stat-value { font-size: 1.25rem; font-weight: 700; }
+.rp-stat-note { font-size: 0.75rem; color: #555; overflow-wrap: anywhere; }
+.rp-best { margin: 0; padding-left: 1.4em; }
+.rp-best li { margin: 2px 0; overflow-wrap: anywhere; }
+.rp-bars { display: flex; flex-direction: column; gap: 4px; }
+.rp-bar-row { display: grid; grid-template-columns: 6.5em 1fr 3em; gap: 6px; align-items: center; }
+.rp-bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rp-bar { height: 10px; background: #eee; border-radius: 5px; overflow: hidden; }
+.rp-bar-fill { display: block; height: 100%; background: #8b5a34; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+.rp-list { margin: 0; padding-left: 1.2em; }
+@media (min-width: 560px) { .rp-stats { grid-template-columns: repeat(4, 1fr); } }
+
+/* ---- 印刷するとき ---- */
+@media print {
+  html, body { background: #fff !important; color: #000 !important; }
+  body.print-page main { padding: 0 !important; margin: 0 !important; max-width: none !important; }
+  .no-print, .tabbar, .demo-bar, #msg { display: none !important; }
+  .print-area { margin: 0; display: block; }
+  .pc-card { width: var(--card-w, 91mm); height: var(--card-h, 55mm); min-height: 0; border: 0; border-radius: 0; }
+  .report-sheet { border: 0; padding: 0; margin: 0; font-size: 10.5pt; }
+  .rp-stats { grid-template-columns: repeat(4, 1fr); }
+}

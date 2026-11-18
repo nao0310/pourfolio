@@ -14,6 +14,7 @@ const PAGE_TAB = Object.freeze({
   'index.html': 'home',
   'today.html': 'home',
   'recipes.html': 'brew',
+  'share.html': 'brew',
   'beans.html': 'beans',
   'bean.html': 'beans',
   'shopping.html': 'beans',
@@ -26,15 +27,17 @@ const PAGE_TAB = Object.freeze({
   'profile.html': 'analysis',
   'calendar.html': 'analysis',
   'cost.html': 'analysis',
+  'report.html': 'analysis',
   'more.html': 'more',
   'equipment.html': 'more',
   'compare.html': 'more',
   'data.html': 'more',
   'ai.html': 'more',
+  'scan.html': 'more',
 });
 
 /** タブを出さない画面（入力の途中・開発用） */
-export const NO_TAB_PAGES = Object.freeze(['brew.html', 'tasting.html', 'bean-edit.html', 'equipment-edit.html', 'recipe-edit.html', 'storage-test.html']);
+export const NO_TAB_PAGES = Object.freeze(['brew.html', 'tasting.html', 'bean-edit.html', 'equipment-edit.html', 'recipe-edit.html', 'storage-test.html', 'recipe-card.html']);
 
 /**
  * URLのパスから、その画面のタブ（タブを出さない画面は null）

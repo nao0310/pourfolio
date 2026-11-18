@@ -38,6 +38,41 @@
       </div>
     </div>
 
+    <!-- 自動ファイル保存（X1）：PC の Chrome・Edge だけ -->
+    <div class="card" id="autosaveCard" hidden>
+      <h2>自動ファイル保存（PC）</h2>
+      <p class="muted">決めたフォルダの <span class="num">pourfolio-backup.json</span> に、抽出や評価を保存するたびに上書きします。Googleドライブなどの同期フォルダを選ぶと、無料のクラウドバックアップになります。</p>
+      <p id="autosaveText" role="status"></p>
+      <div class="row">
+        <button class="btn" id="autosaveChoose" type="button">フォルダを選ぶ</button>
+        <button class="btn" id="autosaveResume" type="button" hidden>再開する</button>
+        <button class="btn secondary" id="autosaveStop" type="button" hidden>やめる</button>
+      </div>
+    </div>
+
+    <!-- 端末間の引っ越し（X13）：書き出し → 送る → 復元（統合） -->
+    <div class="card">
+      <h2>端末間の引っ越し</h2>
+      <p class="muted">iPhoneとPCで記録をそろえるときは、書き出したファイルを送って、相手の端末で復元します。同じ記録は新しいほうが残るので、二重にはなりません。</p>
+      <details class="sub-action">
+        <summary>iPhone → PC</summary>
+        <ol class="steps">
+          <li>iPhoneでこの画面の「書き出す」を押す</li>
+          <li>共有の画面で「AirDrop」（Macのとき）か「メール」「ファイルに保存（iCloud Drive・Googleドライブ）」を選ぶ</li>
+          <li>PCでこの画面を開き、「ファイルを選んで復元」でそのファイルを選ぶ</li>
+        </ol>
+      </details>
+      <details class="sub-action">
+        <summary>PC → iPhone</summary>
+        <ol class="steps">
+          <li>PCでこの画面の「書き出す」を押す（ダウンロードのフォルダに入ります）</li>
+          <li>そのファイルを、メールに付けるか、iCloud Drive・Googleドライブに入れる</li>
+          <li>iPhoneのホーム画面のPourfolioでこの画面を開き、「ファイルを選んで復元」→「ブラウズ」でそのファイルを選ぶ</li>
+        </ol>
+      </details>
+      <p class="hint">iPhoneは、Safariではなくホーム画面のPourfolioで復元してください（保存場所が別々です）。</p>
+    </div>
+
     <div class="card">
       <h2>表計算用（CSV）</h2>
       <p class="muted">抽出の一覧（1杯1行。豆・計画・実績・評価・提案）と、豆の一覧の2つのファイルを作ります。Excelやスプレッドシートで開けます。復元には使えません。</p>

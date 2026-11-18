@@ -8,7 +8,7 @@ import { pickTasting } from './core/tastings.js';
 import { sortBeansForList } from './core/beans.js';
 import { doseFromSettings } from './core/inventory.js';
 import { localYmd, formatG } from './core/format.js';
-import { $, el, queryParam, showMessage } from './ui.js';
+import { $, el, queryParam, showMessage, copyBySelection } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
 
 const db = openDb();
@@ -68,22 +68,6 @@ function renderText() {
 }
 
 /** 画面に見えない入力欄に文章を入れて選び、コピーの命令を出す（クリップボードの機能が使えないブラウザ用） */
-function copyBySelection(text) {
-  const box = el('textarea', { readonly: true, style: 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;' });
-  box.value = text;
-  document.body.append(box);
-  box.focus();
-  box.setSelectionRange(0, text.length); // iPhone の Safari は select() だけでは選ばれない
-  let ok = false;
-  try {
-    ok = document.execCommand('copy');
-  } catch {
-    ok = false;
-  }
-  box.remove();
-  return ok;
-}
-
 async function copy() {
   const text = currentText();
   $('text').value = text;

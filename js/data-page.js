@@ -11,6 +11,7 @@ import { formatDateTimeJa } from './core/format.js';
 import { registerServiceWorker, requestPersistentStorage, getOfflineStatus } from './pwa.js';
 import { APP_VERSION, CHANGELOG, versionLabel } from './core/version.js';
 import { photoUsage, formatBytes, withoutPhotos } from './core/photos.js';
+import { autosaveSupported, getAutosaveState, chooseFolder, resumeAutosave, stopAutosave } from './autosave-file.js';
 
 const LABELS = {
   beans: '豆',
@@ -229,6 +230,39 @@ async function renderOffline() {
   $('appVersion').textContent = st?.updateWaiting
     ? `新しい版${st.waitingLabel ? `（${versionLabel(st.waitingLabel)}）` : ''}が準備できています（画面の上の「更新する」で切り替わります）`
     : '';
+}
+
+// ---- 自動ファイル保存（X1）：PC の Chrome・Edge だけ ----
+
+async function renderAutosave() {
+  const st = await getAutosaveState();
+  $('autosaveCard').hidden = !st.show;
+  if (!st.show) return;
+  $('autosaveText').textContent = st.text;
+  $('autosaveChoose').textContent = st.on ? 'フォルダを選び直す' : 'フォルダを選ぶ';
+  $('autosaveChoose').className = st.on ? 'btn secondary' : 'btn';
+  $('autosaveResume').hidden = !(st.on && st.needsPermission);
+  $('autosaveStop').hidden = !st.on;
+}
+
+async function autosaveAction(fn, okText) {
+  try {
+    const ok = await fn();
+    if (ok !== false) showMessage(okText);
+  } catch (err) {
+    if (err?.name === 'AbortError') return; // フォルダを選ばずに閉じた
+    console.error(err);
+    showMessage('フォルダに保存できませんでした。別のフォルダを選んでください', 'error');
+  }
+  await renderAutosave();
+  await render();
+}
+
+if (autosaveSupported()) {
+  $('autosaveChoose').addEventListener('click', () => autosaveAction(() => chooseFolder(db), 'フォルダに保存しました。これから保存のたびに上書きします'));
+  $('autosaveResume').addEventListener('click', () => autosaveAction(() => resumeAutosave(db), '自動保存を再開しました'));
+  $('autosaveStop').addEventListener('click', () => autosaveAction(() => stopAutosave(), '自動保存をやめました（フォルダのファイルは残っています）'));
+  renderAutosave().catch((err) => console.error(err));
 }
 
 $('appVersionLabel').textContent = versionLabel(APP_VERSION);

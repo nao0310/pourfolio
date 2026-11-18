@@ -46,6 +46,8 @@ import { loadDraft, saveDraft, clearDraft } from './brew-draft.js';
 import { pickGhost, ghostLine } from './core/ghost.js';
 import * as cue from './cue.js';
 import { createWakeLock } from './wake-lock.js';
+import { bestBrewForBean } from './core/today.js';
+import { autosaveAfterChange } from './autosave-file.js';
 import { $, el, queryParam, showMessage, stepperField } from './ui.js';
 import { registerServiceWorker, blockUpdatePrompt, recheckUpdatePrompt } from './pwa.js';
 
@@ -72,8 +74,26 @@ function fromBrewPlan(plan, src) {
   return isIced(src) ? { plan: hotPlanOf(plan, src.context.iceG), icedDefault: true } : { plan, icedDefault: false };
 }
 
+/** 杯の淹れ方を土台にする（挽き目は実際に挽いた目盛り） */
+async function loadFromBrew(src) {
+  const recipe = src.recipeId ? await getRecipe(db, src.recipeId) : null;
+  const { plan, icedDefault } = fromBrewPlan({ ...basePlanForNext(src, recipe), source: 'bestBrew' }, src);
+  return { base: plan, recipe, icedDefault };
+}
+
+/** 新しい豆の初期レシピ（F2）を土台にする */
+async function loadInitial(beanId) {
+  const bean = beans.find((b) => b.id === beanId);
+  if (!bean) return null;
+  const [brews, tastings, recipes, settings] = await Promise.all([listBrews(db), listTastings(db), listRecipes(db), getSettings(db)]);
+  const recipe = baseRecipe(recipes, brews);
+  const grinderId = recipe?.grind?.grinderId ?? defaultEquipmentIds(equipmentList).grinderId;
+  const init = initialRecipe({ bean, beans, brews, tastings, grinders: equipmentList.filter((e) => e.kind === 'grinder'), grinderId, defaultDoseG: doseFromSettings(settings) });
+  return { base: initialPlan(init, recipe, bean), recipe, init };
+}
+
 /**
- * URL（?recipe=ID、?from=last、?suggestion=ID、?brew=ID、?initial=豆ID）から土台の計画を作る。見つからなければ null。
+ * URL（?recipe=ID、?from=last、?suggestion=ID、?best=豆ID、?brew=ID、?initial=豆ID）から土台の計画を作る。見つからなければ null。
  * 気分・杯数・アイス・数値の上書き（?mood= ?cups= ?iced= ?dose= など）は、あとで土台に当てはめる（applyAdjust）
  */
 async function loadPlan() {
@@ -93,25 +113,24 @@ async function loadPlan() {
     const recipe = await getRecipe(db, recipeId);
     return recipe ? { base: planFromRecipe(recipe), recipe } : null;
   }
+  const bestBeanId = queryParam('best');
+  if (bestBeanId) {
+    // キャニスターの QR（X14）：その豆で★がいちばん高かった杯の淹れ方。まだなければ初期レシピ
+    const [brews, tastings] = await Promise.all([listBrews(db), listTastings(db)]);
+    const best = bestBrewForBean(brews, tastings, bestBeanId);
+    if (best) return loadFromBrew(best);
+    return loadInitial(bestBeanId);
+  }
   const brewId = queryParam('brew');
   if (brewId) {
     // 今日の一杯（F3）：その豆で★がいちばん高かった杯の淹れ方（挽き目は実際に挽いた目盛り）
     const src = await getBrew(db, brewId);
-    if (!src) return null;
-    const recipe = src.recipeId ? await getRecipe(db, src.recipeId) : null;
-    const { plan, icedDefault } = fromBrewPlan({ ...basePlanForNext(src, recipe), source: 'bestBrew' }, src);
-    return { base: plan, recipe, icedDefault };
+    return src ? loadFromBrew(src) : null;
   }
   const initialBeanId = queryParam('initial');
   if (initialBeanId) {
     // 新しい豆の初期レシピ（F2）
-    const bean = beans.find((b) => b.id === initialBeanId);
-    if (!bean) return null;
-    const [brews, tastings, recipes, settings] = await Promise.all([listBrews(db), listTastings(db), listRecipes(db), getSettings(db)]);
-    const recipe = baseRecipe(recipes, brews);
-    const grinderId = recipe?.grind?.grinderId ?? defaultEquipmentIds(equipmentList).grinderId;
-    const init = initialRecipe({ bean, beans, brews, tastings, grinders: equipmentList.filter((e) => e.kind === 'grinder'), grinderId, defaultDoseG: doseFromSettings(settings) });
-    return { base: initialPlan(init, recipe, bean), recipe, init };
+    return loadInitial(initialBeanId);
   }
   if (queryParam('from') === 'last') {
     const last = await getLastBrew(db);
@@ -254,7 +273,7 @@ async function showPlan(loaded, lastBeanId) {
   if (loaded.init) $('initReasons').replaceChildren(...loaded.init.reasons.map((t) => el('li', {}, t)));
 
   // 豆：初期値は ?bean= の豆（焙煎度比較）、前回の豆、一覧の先頭の順
-  const preferred = queryParam('bean') ?? plan.beanId ?? lastBeanId ?? null;
+  const preferred = queryParam('bean') ?? queryParam('best') ?? plan.beanId ?? lastBeanId ?? null;
   const usable = fillBeanSelect($('bean'), preferred);
   if (!$('bean').value && usable[0]) $('bean').value = usable[0].id;
   renderBeanNote(preferred);
@@ -678,9 +697,12 @@ async function onSave(e) {
     if (compareId) {
       // 焙煎度比較（X27）：評価はあとで飲み比べの画面でまとめて入れる（ブラインドを崩さないため）
       await attachBrewToExperiment(db, compareId, { brewId: brew.id, beanId: brew.beanId, targetBeanId: compareBeanId });
+      await autosaveAfterChange(db);
       location.replace(`compare.html?id=${encodeURIComponent(compareId)}&brewed=1`);
       return;
     }
+    // PC で自動保存のフォルダを決めていれば、ファイルにも残す（X1）
+    await autosaveAfterChange(db);
     // そのまま味の評価へ（spec 8章：実績の確認 → テイスティング）。戻るで実績の確認に戻らないよう replace
     location.replace(`tasting.html?brew=${encodeURIComponent(brew.id)}&saved=1`);
   } catch (err) {
@@ -729,7 +751,7 @@ async function init() {
     applyAdjust();
   }
   if (!loadedPlan) {
-    if (queryParam('initial') || queryParam('brew')) {
+    if (queryParam('initial') || queryParam('brew') || queryParam('best')) {
       $('notFound').querySelector('h1').textContent = '豆か記録が見つかりません';
       $('notFound').querySelector('p').textContent = '豆か抽出の記録が削除されています。トップに戻って選び直してください。';
     } else if (queryParam('suggestion')) {

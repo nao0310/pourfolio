@@ -823,3 +823,41 @@ p.label { font-weight: 600; margin: 12px 0 6px; }
 .cutoff-row { align-items: center; margin-top: 0; }
 .cutoff-row input { flex: 1; min-width: 0; }
 .ai-text { width: 100%; font-family: inherit; font-size: 0.85rem; line-height: 1.4; }
+
+/* ---- 2-7 書き出しと共有 ---- */
+/* レシピ帳のカード：3つ目のボタン（共有・印刷）は下の段いっぱい */
+.card-actions .btn:nth-child(3) { grid-column: 1 / -1; }
+
+/* QR（白地に黒で固定。ダーク表示でもカメラで読めるように） */
+.qr-box { display: flex; justify-content: center; margin: 12px 0; }
+.qr-box svg { width: min(260px, 80vw); height: auto; background: #fff; border-radius: 8px; }
+.qr-small svg { width: min(200px, 60vw); }
+.break-all { overflow-wrap: anywhere; word-break: break-all; }
+textarea#link { width: 100%; box-sizing: border-box; font-size: 0.85rem; }
+.pour-list { margin: 8px 0; padding-left: 1.2em; }
+.pour-list li { margin: 2px 0; }
+
+/* QRを読む */
+.scan-view { position: relative; width: 100%; aspect-ratio: 1 / 1; background: #000; border-radius: 12px; overflow: hidden; margin-bottom: 10px; }
+.scan-view video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.scan-frame { position: absolute; inset: 15%; border: 3px solid rgba(255, 255, 255, 0.85); border-radius: 12px; box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.25); }
+
+/* いつもの1杯（X15） */
+.usual-card { padding: 12px; }
+.usual-btn { display: flex; flex-direction: column; align-items: center; gap: 2px; padding-top: 12px; padding-bottom: 12px; }
+.usual-label { font-size: 1.15rem; font-weight: 700; }
+.usual-what { font-size: 0.95rem; opacity: 0.9; overflow-wrap: anywhere; text-align: center; }
+.usual-card .hint { margin: 8px 0 0; text-align: center; }
+
+/* カフェイン・タイムキーパー（X17） */
+.caf-meter { height: 12px; border-radius: 6px; background: var(--line); overflow: hidden; margin: 6px 0; }
+.caf-fill { display: block; height: 100%; width: 0; background: var(--ok); transition: width 0.3s; }
+.caf-fill.over { background: var(--stage-past); }
+.caffeine-card p { margin: 4px 0; }
+
+/* 抽出レポートの画像（X3） */
+.brew-image { display: block; width: 100%; height: auto; margin: 12px 0; border: 1px solid var(--line); border-radius: 8px; }
+
+/* 引っ越しの手順 */
+.steps { margin: 8px 0; padding-left: 1.4em; }
+.steps li { margin: 4px 0; }

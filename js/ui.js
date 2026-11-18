@@ -94,3 +94,35 @@ export function stepperField(opts) {
     },
   };
 }
+
+/** 画面に見えない入力欄に文章を入れて選び、コピーの命令を出す（クリップボードの機能が使えないブラウザ用） */
+export function copyBySelection(text) {
+  const box = el('textarea', { readonly: true, style: 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;' });
+  box.value = text;
+  document.body.append(box);
+  box.focus();
+  box.setSelectionRange(0, text.length); // iPhone の Safari は select() だけでは選ばれない
+  let ok = false;
+  try {
+    ok = document.execCommand('copy');
+  } catch {
+    ok = false;
+  }
+  box.remove();
+  return ok;
+}
+
+/** 文章をコピーする（クリップボード → 見えない入力欄の2段）。できたら true */
+export async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return copyBySelection(text);
+  }
+}
+
+/** 自分で作った SVG の文字を要素にする（innerHTML を使わない） */
+export function svgElement(svgText) {
+  return document.importNode(new DOMParser().parseFromString(svgText, 'image/svg+xml').documentElement, true);
+}
