@@ -4,11 +4,13 @@ import { analysisRows } from './core/analysis.js';
 import { dailyStats, monthGrid, shiftMonth, lastDays, caffeineSummary } from './core/calendar.js';
 import { localYmd, formatYmdJa } from './core/format.js';
 import { plot, chartBox } from './chart.js';
+import { todayCaffeine } from './core/caffeine.js';
 import { $, el } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
 
 const WEEK = ['日', '月', '火', '水', '木', '金', '土'];
 let stats = new Map();
+let rows = [];
 let shown = null;
 
 function renderMonth() {
@@ -77,8 +79,9 @@ function renderCaffeine() {
     el(
       'dl',
       { class: 'plan-numbers' },
-      el('dt', {}, '今日'),
-      el('dd', { class: 'num' }, `約${s.todayMg}mg`),
+      // 「今日」はホーム・分析と同じ朝5時区切り（マスと棒は日付で区切る、D-149。総仕上げの71番）
+      el('dt', {}, '今日（朝5時から）'),
+      el('dd', { class: 'num' }, `約${todayCaffeine(rows, new Date()).mg}mg`),
       el('dt', {}, '飲んだ日の平均'),
       el('dd', { class: 'num' }, s.avgMg != null ? `約${s.avgMg}mg（${s.avgCups}杯）` : '—'),
       el('dt', {}, 'いちばん多い日'),
@@ -90,7 +93,8 @@ function renderCaffeine() {
 
 async function render() {
   const data = await loadAnalysisData();
-  stats = dailyStats(analysisRows(data));
+  rows = analysisRows(data);
+  stats = dailyStats(rows);
   const [y, m] = localYmd().split('-').map(Number);
   shown = { year: y, month: m };
   $('content').replaceChildren(el('section', { class: 'card', id: 'month' }), el('section', { class: 'card', id: 'caffeine' }));

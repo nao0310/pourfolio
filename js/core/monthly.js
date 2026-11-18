@@ -101,6 +101,23 @@ export function prefChangeText({ now, before, avg, prevAvg }) {
   return lines;
 }
 
+/**
+ * 月を指定せずに開いたときの月。月の1〜3日で、今月はまだ淹れていなければ先月（月の初めに0杯の今月が開かないように、総仕上げの72番）
+ * @param {string} todayYmd
+ * @param {string[]} months reportMonths の結果
+ * @param {object[]} brews
+ */
+export function defaultReportMonth(todayYmd, months = [], brews = []) {
+  const cur = monthOfYmd(todayYmd);
+  const day = Number(todayYmd.slice(8, 10));
+  const hasCur = brews.some((b) => b && b.deletedAt == null && monthOfYmd(localYmd(b.at)) === cur);
+  if (day <= 3 && !hasCur) {
+    const prev = months.find((m) => m < cur);
+    if (prev) return prev;
+  }
+  return months[0] ?? cur;
+}
+
 /** 記録のある月（新しい順）。今月は記録がなくても入れる */
 export function reportMonths(brews = [], today = localYmd()) {
   const set = new Set([monthOfYmd(today)]);

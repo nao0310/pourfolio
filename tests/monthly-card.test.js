@@ -125,3 +125,11 @@ test('キャニスターのラベル', () => {
   const t = canisterLabelText({ name: 'ケニア', roastLevel: 'シティ', origin: { country: 'ケニア' }, roastDate: '2026-11-10' });
   assert.deepEqual(t, { title: 'ケニア', sub: 'シティ・ケニア', roast: '焙煎 11/10', howTo: 'アプリの「QRを読む」で抽出へ' });
 });
+
+test('月を指定せずに開いたら、月の1〜3日で今月まだ淹れていなければ先月（総仕上げの72番）', async () => {
+  const { defaultReportMonth } = await import('../js/core/monthly.js');
+  const months = ['2026-12', '2026-11'];
+  assert.equal(defaultReportMonth('2026-12-01', months, [{ at: '2026-11-30T10:00:00', deletedAt: null }]), '2026-11');
+  assert.equal(defaultReportMonth('2026-12-01', months, [{ at: '2026-12-01T07:00:00', deletedAt: null }]), '2026-12');
+  assert.equal(defaultReportMonth('2026-12-04', months, []), '2026-12');
+});

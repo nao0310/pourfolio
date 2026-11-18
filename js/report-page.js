@@ -1,6 +1,6 @@
 // 月次レポート（X4）：杯数・ベスト3・飲んだ産地・支出・好みの変化を A4 の1枚に（印刷・PDF 保存）
 // ?month=YYYY-MM。分析と同じく ?demo=1 ならデモデータで見る（端末のデータには書かない）。
-import { monthlyReport, reportMonths, monthLabel, isMonth } from './core/monthly.js';
+import { monthlyReport, reportMonths, monthLabel, isMonth, defaultReportMonth } from './core/monthly.js';
 import { yen } from './core/cost.js';
 import { formatYmdJa, localYmd } from './core/format.js';
 import { loadAnalysisData, isDemo, analysisHref, setupAnalysisPage } from './analysis-data.js';
@@ -50,7 +50,7 @@ async function init() {
   data = await loadAnalysisData();
   const months = reportMonths(data.brews, localYmd());
   const want = queryParam('month');
-  const month = isMonth(want) ? want : months[0];
+  const month = isMonth(want) ? want : defaultReportMonth(localYmd(), months, data.brews);
   if (!months.includes(month)) months.unshift(month);
   $('month').replaceChildren(...months.map((m) => el('option', { value: m }, monthLabel(m))));
   $('month').value = month;

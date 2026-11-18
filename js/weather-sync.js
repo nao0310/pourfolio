@@ -42,8 +42,9 @@ export async function fetchWeather(place, { force = false, now = new Date() } = 
   const cache = loadWeatherCache();
   const online = typeof navigator === 'undefined' || navigator.onLine !== false;
   if (!place) return { cache: null, error: null };
+  // オフラインのときは「通信できません」を出す（needsFetch はオフラインだと false を返すので、先に見る。総仕上げの75番）
+  if (!online) return { cache, error: '通信できません。通信が戻ると天気を入れます' };
   if (!force && !needsFetch({ cache, place, now, online })) return { cache, error: null };
-  if (!online) return { cache, error: '通信できません' };
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
   try {
@@ -52,12 +53,20 @@ export async function fetchWeather(place, { force = false, now = new Date() } = 
     // 古い天気が返らないかは、問い合わせの間隔（needsFetch）と受け取った時刻で見る
     const res = await fetch(weatherUrl(place), { signal: ctrl.signal });
     if (!res.ok) return { cache, error: `天気を受け取れませんでした（${res.status}）` };
-    const next = parseWeather(await res.json(), place, now);
-    if (!next) return { cache, error: '天気の中身を読めませんでした' };
+    let json;
+    try {
+      json = await res.json();
+    } catch {
+      // 通信の途中のログインの画面などで、天気でない中身が返ったとき（英語の中身は出さない、総仕上げの75番）
+      return { cache, error: '天気の中身を読めませんでした。少したってから開き直してください' };
+    }
+    const next = parseWeather(json, place, now);
+    if (!next) return { cache, error: '天気の中身を読めませんでした。少したってから開き直してください' };
     saveCache(next);
     return { cache: next, error: null };
   } catch (err) {
     console.warn('天気を取れませんでした', err);
+    // 通信の失敗は、ブラウザの言葉（Load failed など）をかっこに入れて出す（原因を確かめられるように、D-166）
     const why = err?.name === 'AbortError' ? '時間切れ' : String(err?.message ?? err).slice(0, 60);
     return { cache, error: `天気を受け取れませんでした（通信を確かめてください：${why}）` };
   } finally {

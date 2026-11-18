@@ -1,7 +1,7 @@
 // 年間まとめ「Coffee Wrapped」（X5）：1年を全画面のカードで振り返る（計算は js/core/wrapped.js）
 // ?year=YYYY。分析と同じく ?demo=1 ならデモデータで見る（端末のデータには書かない）。
 // カードは横に並べ、スワイプ（scroll-snap）・右側／左側を押す・「次へ」「前へ」・矢印キーで動く。
-import { wrappedSlides, wrappedYears, isYear, wrappedImageContent } from './core/wrapped.js';
+import { wrappedSlides, wrappedYears, isYear, wrappedImageContent, defaultWrappedYear } from './core/wrapped.js';
 import { landPath, MAP_W, MAP_H, BELT_LAT, project } from './core/origin-map.js';
 import { yen } from './core/cost.js';
 import { formatYmdJa, localYmd } from './core/format.js';
@@ -209,7 +209,7 @@ async function init() {
   data = await loadAnalysisData();
   const years = wrappedYears(data.brews, localYmd());
   const want = queryParam('year');
-  const year = isYear(want) ? want : years[0];
+  const year = isYear(want) ? want : defaultWrappedYear(localYmd(), years);
   if (!years.includes(year)) years.unshift(year);
   $('year').replaceChildren(...years.map((y) => el('option', { value: y }, `${y}年`)));
   $('year').value = year;

@@ -495,7 +495,7 @@ body.timer-on { overflow: hidden; }
 .home-menu { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 16px 0; }
 .home-menu .btn { text-align: center; }
 /* 指で押しやすく（押せる高さを44px以上に。1-7の全体確認） */
-.crumb a { display: inline-block; padding: 10px 12px 10px 0; }
+.crumb a { display: inline-block; padding: 10px 12px 10px 0; min-width: 44px; min-height: 44px; box-sizing: border-box; } /* 短い戻るリンクも44px（総仕上げの93番） */
 p > a:not(.btn):only-child { display: inline-block; padding: 11px 0; }
 .link-btn { min-height: 44px; padding: 10px 0; }
 .btn.small { min-height: 44px; }
@@ -1013,6 +1013,11 @@ h2 .term-help, h1 .term-help { margin-top: -10px; margin-bottom: -10px; }
   overflow-wrap: anywhere;
 }
 .wr-slide > * { margin: 0; }
+/* 背の低い横向きでは、カードを低くして「前へ」「次へ」を画面に入れる（総仕上げの73番） */
+@media (orientation: landscape) and (max-height: 500px) {
+  .wr-slide { height: max(200px, calc(100svh - 170px)); padding: 14px 18px; }
+  .wr-nav { position: sticky; bottom: calc(59px + env(safe-area-inset-bottom)); z-index: 2; background: var(--bg); margin-top: 0; padding: 6px 0; }
+}
 .wr-s-cover { justify-content: center; background: var(--accent); color: var(--accent-fg); border-color: transparent; }
 .wr-s-cover .wr-sub, .wr-s-cover .wr-kicker { color: var(--accent-fg); opacity: 0.85; }
 .wr-kicker { font-weight: 700; letter-spacing: 0.04em; }

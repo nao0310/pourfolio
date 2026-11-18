@@ -144,6 +144,10 @@ export function weatherUrl(place, pastDays = PAST_DAYS) {
   return `${WEATHER_API}?${q}`;
 }
 
+/** 記録してよい気温の範囲（℃） */
+export const TEMP_RANGE = Object.freeze([-60, 60]);
+const inRange = (v, lo, hi) => (v != null && v >= lo && v <= hi ? v : null);
+
 /**
  * 返ってきた中身を、端末に置いておく形にする。読めないときは null
  * @returns {null|{fetchedAt:string, lat:number, lon:number, offsetSec:number, t0:number, temp:(number|null)[], hum:(number|null)[], code:(number|null)[], days:{ymd:string, maxC:number|null}[]}}
@@ -154,20 +158,21 @@ export function parseWeather(json, place, fetchedAt = new Date()) {
   if (!times || !times.length || !times.every((t) => num(t) != null)) return null;
   // 1時間ごとに並んでいること（あとで杯の時刻から位置を計算するため）
   for (let i = 1; i < times.length; i++) if (times[i] - times[i - 1] !== HOUR_SEC) return null;
-  const col = (a) => times.map((_, i) => (Array.isArray(a) ? num(a[i]) : null));
+  // ありえない値は記録しない（気温9999℃などの壊れた返事で「暑い日」と出さないように、総仕上げの75番）
+  const col = (a, lo, hi) => times.map((_, i) => inRange(Array.isArray(a) ? num(a[i]) : null, lo, hi));
   const offsetSec = num(json.utc_offset_seconds) ?? 0;
   const dt = Array.isArray(json.daily?.time) ? json.daily.time : [];
   const dmax = Array.isArray(json.daily?.temperature_2m_max) ? json.daily.temperature_2m_max : [];
-  const days = dt.filter((t) => num(t) != null).map((t, i) => ({ ymd: ymdAt(t, offsetSec), maxC: num(dmax[i]) }));
+  const days = dt.filter((t) => num(t) != null).map((t, i) => ({ ymd: ymdAt(t, offsetSec), maxC: inRange(num(dmax[i]), ...TEMP_RANGE) }));
   return {
     fetchedAt: new Date(fetchedAt).toISOString(),
     lat: r2(place.lat),
     lon: r2(place.lon),
     offsetSec,
     t0: times[0],
-    temp: col(h.temperature_2m),
-    hum: col(h.relative_humidity_2m),
-    code: col(h.weather_code),
+    temp: col(h.temperature_2m, ...TEMP_RANGE),
+    hum: col(h.relative_humidity_2m, 0, 100),
+    code: col(h.weather_code, 0, 99),
     days,
   };
 }
