@@ -17,3 +17,10 @@
 | D-011 | 2026-11-18 | コミットのメールはGitHubのnoreplyアドレスにする | 公開リポジトリに個人のメールを残さないため | 有効 |
 | D-012 | 2026-11-18 | 保存テストは本番と別のDB名（pourfolio-storage-test）で素のIndexedDBを使う。Dexieは1-1で入れる | 1-1のスキーマとぶつけないため | 有効 |
 | D-013 | 2026-11-18 | GitHub Pagesは `.nojekyll` を置いてファイルをそのまま公開する | Jekyllの加工でファイルが変わったり消えたりしないようにするため | 有効 |
+| D-014 | 2026-11-18 | Dexie 4.4.7 の `dist/dexie.mjs` を `vendor/dexie/` に同梱する（版と入手元は `vendor/README.md`） | ES modulesでそのまま読め、ビルドが要らないため | 有効 |
+| D-015 | 2026-11-18 | 本番のDB名は `pourfolio`。表は beans・inventoryTx・equipment・recipes・brews・tastings・settings の7つ | 1-1の範囲（残りの表は使うステップで足す） | 有効 |
+| D-016 | 2026-11-18 | 設定（Settings）だけはUUIDではなく固定ID `app` の1件にする | 端末間で統合したときに設定が1件にまとまるようにするため | 有効 |
+| D-017 | 2026-11-18 | 復元は「全部置き換え」ではなく統合（同じIDは updatedAt が新しいほうを残す）。書き出しファイルには形式の版番号（formatVersion）を入れ、古い版は移行処理で直して読む | spec 10.2の③。復元で今ある記録を失わないため | 有効 |
+| D-018 | 2026-11-18 | テスト専用に fake-indexeddb（6.2.7、devDependencies）を使う。アプリ本体には含めない | 書き出し→全削除→復元をNodeの自動テストで本物に近い形で確かめるため | 有効 |
+| D-019 | 2026-11-18 | CSV書き出し（G1の一部）は 1-7 に回す | 記録する画面ができる前は中身がなく、確かめようがないため | 有効 |
+| D-020 | 2026-11-18 | 作業フォルダをOneDriveの外（`C:Users<ユーザー>devpourfolio`）に移す | OneDriveの同期が .git や node_modules とぶつかるのを避けるため | 有効 |
