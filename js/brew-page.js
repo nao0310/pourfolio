@@ -48,7 +48,7 @@ import * as cue from './cue.js';
 import { createWakeLock } from './wake-lock.js';
 import { bestBrewForBean } from './core/today.js';
 import { autosaveAfterChange } from './autosave-file.js';
-import { $, el, queryParam, showMessage, stepperField } from './ui.js';
+import { $, el, queryParam, showMessage, stepperField, showPageLoadError } from './ui.js';
 import { singleFlight } from './core/once.js';
 import { registerServiceWorker, blockUpdatePrompt, recheckUpdatePrompt } from './pwa.js';
 
@@ -843,5 +843,5 @@ blockUpdatePrompt(() => draft != null || loadDraft() != null);
 registerServiceWorker();
 init().catch((err) => {
   console.error(err);
-  showMessage('読み込みに失敗しました', 'error');
+  showPageLoadError(); // エラーの文の欄は隠れた箱の中にあるため、見える所に出す（2-8 の15番）
 });

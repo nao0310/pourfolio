@@ -36,7 +36,7 @@ import {
 import { orderRecipesForList, recipeSummary } from './core/recipes.js';
 import { tastingSummary } from './core/tastings.js';
 import { renderStars, renderTags } from './tasting-parts.js';
-import { $, el, queryParam, showMessage } from './ui.js';
+import { $, el, queryParam, showMessage, showPageLoadError } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
 import { singleFlight, serialQueue } from './core/once.js';
 
@@ -395,5 +395,5 @@ $('remove').addEventListener('click', async () => {
 registerServiceWorker();
 init().catch((err) => {
   console.error(err);
-  showMessage('読み込みに失敗しました', 'error');
+  showPageLoadError(); // エラーの文の欄は隠れた箱の中にあるため、見える所に出す（2-8 の15番）
 });

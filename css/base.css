@@ -883,3 +883,6 @@ textarea#link { width: 100%; box-sizing: border-box; font-size: 0.85rem; }
 @media (prefers-reduced-motion: reduce) {
   @view-transition { navigation: none; }
 }
+
+/* 画面の読み込みに失敗したとき（2-8 の15番） */
+.load-error { border: 2px solid var(--stage-useSoon); }

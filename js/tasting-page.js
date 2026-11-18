@@ -42,7 +42,7 @@ import { formatSec } from './core/recipes.js';
 import { remainingG, cupsLeft, doseFromSettings } from './core/inventory.js';
 import { formatG } from './core/format.js';
 import { portionsOf, stockParts, stockPartsText } from './core/frozen.js';
-import { $, el, queryParam, showMessage } from './ui.js';
+import { $, el, queryParam, showMessage, showPageLoadError } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
 
 const db = openDb();
@@ -432,5 +432,5 @@ $('edit').addEventListener('click', showForm);
 registerServiceWorker();
 init().catch((err) => {
   console.error(err);
-  showMessage('読み込みに失敗しました', 'error');
+  showPageLoadError(); // エラーの文の欄は隠れた箱の中にあるため、見える所に出す（2-8 の15番）
 });
