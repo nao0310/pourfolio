@@ -1,13 +1,34 @@
-// 抽出の画面（入口）：レシピか前回の抽出から計画を写して表示する（A1）
-// タイマー（A2）・画面スリープ防止（A3）・実績の記録（A4）はステップ1-4で作る。
-import { openDb, getRecipe, getLastBrew, listBeans, listEquipment } from './db.js';
+// 抽出の画面：計画（A1）→ ガイド付きタイマー（A2・A3）→ 実績の確認（A4）→ 保存
+// 途中の状態は下書き（js/brew-draft.js）に残し、画面を開き直しても続きから進める。
+import { openDb, getRecipe, getLastBrew, listBeans, listEquipment, getSettings, updateSettings, saveBrew, getBeanWithTx } from './db.js';
 import { planFromRecipe, planFromBrew, formatSec, POUR_STYLES } from './core/recipes.js';
 import { sortBeansForList } from './core/beans.js';
+import { remainingG, cupsLeft, doseFromSettings } from './core/inventory.js';
 import { formatG } from './core/format.js';
-import { $, el, queryParam, showMessage } from './ui.js';
+import { timerView, cuesBetween, addLap, autoAdvance, pourName } from './core/timer.js';
+import {
+  newDraft,
+  elapsedSec,
+  finishDraft,
+  initialActualInput,
+  normalizeActualInput,
+  brewDiff,
+  diffLines,
+  buildBrew,
+} from './core/brews.js';
+import { loadDraft, saveDraft, clearDraft } from './brew-draft.js';
+import * as cue from './cue.js';
+import { createWakeLock } from './wake-lock.js';
+import { $, el, queryParam, showMessage, stepperField } from './ui.js';
 import { registerServiceWorker } from './pwa.js';
 
 const db = openDb();
+let draft = null;
+let beans = [];
+let speechOn = true;
+let loadedPlan = null;
+
+// ---- 計画（スタート前） ----
 
 /** URL（?recipe=ID または ?from=last）から計画を作る。見つからなければ null */
 async function loadPlan() {
@@ -29,14 +50,20 @@ function planItem(label, value) {
   return el('div', { class: 'plan-item' }, el('span', { class: 'muted' }, label), el('span', { class: 'num plan-value' }, value || '—'));
 }
 
-async function init() {
-  const loaded = await loadPlan();
-  if (!loaded) {
-    $('notFound').hidden = false;
-    return;
-  }
+/** 豆の選択肢（飲み切り以外） */
+function fillBeanSelect(select, selectedId) {
+  const usable = sortBeansForList(beans).filter((b) => b.status !== 'finished' || b.id === selectedId);
+  select.replaceChildren(
+    el('option', { value: '' }, usable.length ? '（選ばない）' : '（豆が未登録）'),
+    ...usable.map((b) => el('option', { value: b.id }, [b.name, b.roastLevel].filter(Boolean).join('　'))),
+  );
+  select.value = usable.some((b) => b.id === selectedId) ? selectedId : '';
+  return usable;
+}
+
+async function showPlan(loaded, lastBeanId) {
   const { plan, recipe } = loaded;
-  const [beans, equipment, last] = await Promise.all([listBeans(db), listEquipment(db), getLastBrew(db)]);
+  const equipment = await listEquipment(db);
   const eqName = (id) => equipment.find((e) => e.id === id)?.name ?? '';
 
   $('content').hidden = false;
@@ -46,16 +73,11 @@ async function init() {
   if (plan.recipeId && recipe) $('editLink').href = `recipe-edit.html?id=${encodeURIComponent(plan.recipeId)}`;
   else $('editLink').hidden = true;
 
-  // 豆：飲み切り以外。初期値は前回の豆（なければ一覧の先頭）
-  const usable = sortBeansForList(beans).filter((b) => b.status !== 'finished');
-  const preferred = plan.beanId ?? last?.beanId ?? null;
-  const select = $('bean');
-  select.replaceChildren(
-    el('option', { value: '' }, usable.length ? '（選ばない）' : '（豆が未登録）'),
-    ...usable.map((b) => el('option', { value: b.id }, [b.name, b.roastLevel].filter(Boolean).join('　'))),
-  );
-  select.value = usable.some((b) => b.id === preferred) ? preferred : usable[0]?.id ?? '';
-  $('beanNote').textContent = preferred && select.value === preferred ? '前回の豆を選んでいます' : '';
+  // 豆：初期値は前回の豆（なければ一覧の先頭）
+  const preferred = plan.beanId ?? lastBeanId ?? null;
+  const usable = fillBeanSelect($('bean'), preferred);
+  if (!$('bean').value && usable[0]) $('bean').value = usable[0].id;
+  $('beanNote').textContent = preferred && $('bean').value === preferred ? '前回の豆を選んでいます' : '';
 
   $('plan').replaceChildren(
     planItem('粉量', formatG(plan.doseG)),
@@ -81,7 +103,7 @@ async function init() {
       return el(
         'tr',
         {},
-        el('td', {}, i === 0 ? '蒸らし' : `${i + 1}`),
+        el('td', {}, pourName(i).replace('投目', '')),
         el('td', { class: 'num' }, formatSec(p.atSec)),
         el('td', { class: 'num' }, formatG(p.toG)),
         el('td', {}, el('span', { class: 'num' }, `+${formatG(amount)}`), p.style ? el('span', { class: 'muted' }, ` ${POUR_STYLES[p.style] ?? ''}`) : ''),
@@ -96,8 +118,350 @@ async function init() {
     .join('　');
 }
 
-$('start').addEventListener('click', () => {
-  showMessage('ガイド付きタイマーは次のステップ（1-4）で作ります。今は計画の確認までです', 'ok');
+/** 新しく始める。途中の抽出があれば、捨ててよいか確かめる */
+function beginNew(withTimer) {
+  if (!loadedPlan) return;
+  if (loadDraft() && !confirm('途中の抽出を捨てて、新しく始めますか？')) return;
+  draft = { ...newDraft(loadedPlan.plan, $('bean').value || null, withTimer ? Date.now() : null), returnSearch: location.search };
+  saveDraft(draft);
+  $('content').hidden = true;
+  if (withTimer) {
+    cue.unlock(); // 押した瞬間に音と読み上げを使える状態にする（iPhone）
+    startTimer();
+  } else showResult();
+}
+
+// ---- ガイド付きタイマー（A2）と画面スリープ防止（A3） ----
+
+let tickId = null;
+let prevSec = null;
+const wake = createWakeLock(renderWake);
+let wakeState = null;
+
+function renderWake(state) {
+  wakeState = state;
+  const text = {
+    on: '',
+    off: '',
+    unsupported: 'この端末では画面を消さない設定が使えません。iPhoneの「設定」→「画面表示と明るさ」→「自動ロック」を長くしてください',
+    failed: '画面を消さない設定を使えませんでした。画面のどこかを押すともう一度試します',
+  }[state];
+  $('tWake').textContent = text ?? '';
+}
+
+function renderSpeechToggle() {
+  const btn = $('speechToggle');
+  btn.hidden = !cue.canSpeak;
+  btn.textContent = `読み上げ ${speechOn ? 'オン' : 'オフ'}`;
+  btn.setAttribute('aria-pressed', String(speechOn));
+}
+
+function startTimer() {
+  $('timerView').hidden = false;
+  document.body.classList.add('timer-on');
+  renderSpeechToggle();
+  wake.start();
+  prevSec = null;
+  tick();
+  clearInterval(tickId);
+  tickId = setInterval(tick, 100);
+}
+
+function stopTimer() {
+  clearInterval(tickId);
+  tickId = null;
+  wake.stop();
+  cue.stopSpeaking();
+  $('timerView').hidden = true;
+  document.body.classList.remove('timer-on');
+}
+
+function tick() {
+  const plan = draft.plan;
+  const sec = elapsedSec(draft, Date.now());
+  // 合図：前回の更新から今までに来た合図を鳴らす（スタート直後は0秒の合図から）
+  const from = prevSec ?? (sec < 1 ? -0.001 : sec);
+  for (const c of cuesBetween(plan, from, sec)) cue.playCue(c, { speech: speechOn });
+  prevSec = sec;
+
+  const laps = autoAdvance(plan.pours, draft.laps, sec);
+  if (laps.length !== draft.laps.length) {
+    draft = { ...draft, laps };
+    saveDraft(draft);
+  }
+  renderTimer(timerView(plan, draft.laps, sec), sec);
+}
+
+function renderTimer(v, sec) {
+  $('tElapsed').textContent = formatSec(Math.floor(sec));
+  const count = $('tCount');
+  count.classList.remove('soon');
+  const tap = $('tap');
+  tap.classList.toggle('drawdown', v.phase === 'drawdown');
+  const plan = draft.plan;
+
+  if (v.phase === 'drawdown') {
+    $('tLabel').textContent = '落ち切り待ち';
+    $('tTarget').textContent = `累計 ${formatG(plan.waterG)}`;
+    $('tAdd').textContent = '';
+    count.textContent =
+      v.secsToTarget == null ? '' : v.secsToTarget >= 0 ? `目標まで あと${v.secsToTarget}秒` : `目標を${-v.secsToTarget}秒 超過`;
+    $('tNext').textContent = plan.targetTotalSec ? `目標 ${formatSec(plan.targetTotalSec)}` : '';
+    $('tapLabel').textContent = '落ち切った';
+    $('tapSub').textContent = '押すとタイマーを止めて記録に進みます';
+    return;
+  }
+
+  const style = v.style ? `（${POUR_STYLES[v.style] ?? ''}）` : '';
+  $('tTarget').textContent = `累計 ${formatG(v.toG)}`;
+  $('tAdd').textContent = `+${formatG(v.addG)}${style}`;
+  const next = plan.pours[v.index + 1];
+  $('tNext').textContent = next ? `その次：${pourName(v.index + 1)} ${formatG(next.toG)}（${formatSec(next.atSec)}）` : '最後の注湯です';
+
+  if (v.phase === 'wait') {
+    $('tLabel').textContent = `次：${v.name}`;
+    count.textContent = `あと${v.secsLeft}秒`;
+    if (v.secsLeft <= 3) count.classList.add('soon');
+    $('tapLabel').textContent = '注湯完了';
+    $('tapSub').textContent = '早めに注ぎ終えたときに押します';
+  } else {
+    $('tLabel').textContent = `${v.name}を注ぐ`;
+    count.textContent = v.secsToNext != null ? `次の注湯まで ${v.secsToNext}秒` : '';
+    if (v.secsToNext != null && v.secsToNext <= 3) count.classList.add('soon');
+    $('tapLabel').textContent = v.isLast ? '注ぎ終えた' : '注湯完了';
+    $('tapSub').textContent = '画面の下半分のどこを押してもよい';
+  }
+}
+
+function onTap() {
+  cue.unlock();
+  if (wakeState !== 'on' && wakeState !== 'unsupported') wake.start();
+  const now = Date.now();
+  const sec = elapsedSec(draft, now);
+  const v = timerView(draft.plan, draft.laps, sec);
+  if (v.phase === 'drawdown') {
+    draft = finishDraft(draft, now);
+    saveDraft(draft);
+    stopTimer();
+    cue.speak(speechOn ? 'おつかれさまでした' : '');
+    showResult();
+    return;
+  }
+  draft = { ...draft, laps: addLap(draft.plan.pours, draft.laps, sec) };
+  saveDraft(draft);
+  tick();
+}
+
+function cancelBrew() {
+  if (!confirm('この抽出をやめますか？記録は残りません')) return;
+  stopTimer();
+  const back = draft?.returnSearch ?? '';
+  clearDraft();
+  draft = null;
+  if (back) location.replace(`brew.html${back}`);
+  else location.replace('recipes.html');
+}
+
+// ---- 実績の確認（A4） ----
+
+const fields = {};
+
+function readForm() {
+  return {
+    beanId: $('rBean').value,
+    doseG: fields.dose.input.value,
+    waterG: fields.water.input.value,
+    tempC: fields.temp.input.value,
+    grindSetting: $('rGrind').value,
+    totalSec: $('rTotal').value,
+    beverageG: fields.bev.input.value,
+    memo: $('rMemo').value,
+  };
+}
+
+function onFormInput() {
+  draft = { ...draft, input: readForm() };
+  saveDraft(draft);
+  renderDiff();
+}
+
+function renderDiff() {
+  const { value } = normalizeActualInput(readForm());
+  const actual = { ...value, grind: { setting: value.grindSetting } };
+  const lines = diffLines(brewDiff(draft.plan, actual), draft.plan, actual);
+  $('diff').replaceChildren(...(lines.length ? lines.map((t) => el('li', { class: 'num' }, t)) : [el('li', { class: 'muted' }, '計画どおりです')]));
+}
+
+function buildResultForm() {
+  if (fields.dose) return;
+  const make = (box, opts) => {
+    const f = stepperField({ ...opts, onValue: onFormInput });
+    $(box).replaceChildren(f.node);
+    return f;
+  };
+  fields.dose = make('rDoseBox', { id: 'rDose', label: '粉量', unit: 'g', step: 0.1, decimals: 1, min: 0, errorFor: 'doseG' });
+  fields.water = make('rWaterBox', { id: 'rWater', label: '湯量', unit: 'g', step: 1, decimals: 1, min: 0, errorFor: 'waterG' });
+  fields.temp = make('rTempBox', { id: 'rTemp', label: '湯温', unit: '℃', step: 1, decimals: 1, min: 50, max: 100, errorFor: 'tempC' });
+  fields.bev = make('rBevBox', {
+    id: 'rBev',
+    label: '抽出液の重さ',
+    unit: 'g',
+    step: 1,
+    decimals: 0,
+    min: 0,
+    hint: '量ったときだけ入れます',
+    errorFor: 'beverageG',
+  });
+  for (const id of ['rBean', 'rGrind', 'rTotal', 'rMemo']) $(id).addEventListener('input', onFormInput);
+}
+
+function showResult() {
+  buildResultForm();
+  const input = draft.input ?? initialActualInput(draft);
+  fillBeanSelect($('rBean'), input.beanId);
+  fields.dose.set(input.doseG);
+  fields.water.set(input.waterG);
+  fields.temp.set(input.tempC);
+  fields.bev.set(input.beverageG);
+  $('rGrind').value = input.grindSetting ?? '';
+  $('rTotal').value = input.totalSec ?? '';
+  $('rMemo').value = input.memo ?? '';
+
+  const plan = draft.plan;
+  $('resultSub').textContent = [plan.name, draft.startedAtMs == null ? 'タイマーなし' : ''].filter(Boolean).join('・');
+  $('poursCard').hidden = draft.startedAtMs == null;
+  $('rPourBody').replaceChildren(
+    ...plan.pours.map((p, i) =>
+      el(
+        'tr',
+        {},
+        el('td', {}, pourName(i).replace('投目', '')),
+        el('td', { class: 'num' }, formatSec(p.atSec)),
+        el('td', { class: 'num' }, draft.laps[i] != null ? formatSec(Math.round(draft.laps[i])) : '—'),
+        el('td', { class: 'num' }, formatG(p.toG)),
+      ),
+    ),
+  );
+  $('content').hidden = true;
+  $('resultView').hidden = false;
+  document.title = '実績の確認 - Pourfolio';
+  renderDiff();
+  window.scrollTo(0, 0);
+}
+
+function showErrors(errors) {
+  for (const node of document.querySelectorAll('#resultView .field-error')) node.textContent = errors[node.dataset.for] ?? '';
+}
+
+async function onSave(e) {
+  e.preventDefault();
+  const { value, errors } = normalizeActualInput(readForm());
+  showErrors(errors);
+  if (Object.keys(errors).length) {
+    showMessage('赤い文字のところを直してください', 'error', 'rMsg');
+    document.querySelector('#resultView .field-error:not(:empty)')?.scrollIntoView({ block: 'center' });
+    return;
+  }
+  const bean = beans.find((b) => b.id === value.beanId) ?? null;
+  const at = new Date(draft.startedAtMs ?? Date.now()).toISOString();
+  try {
+    const { brew } = await saveBrew(db, buildBrew({ draft, value, at, bean }));
+    clearDraft();
+    draft = null;
+    await showDone(brew, bean);
+  } catch (err) {
+    console.error(err);
+    showMessage('保存できませんでした。もう一度押してください', 'error', 'rMsg');
+  }
+}
+
+async function showDone(brew, bean) {
+  $('resultView').hidden = true;
+  $('doneView').hidden = false;
+  document.title = '保存しました - Pourfolio';
+  const a = brew.actual;
+  $('doneSummary').textContent = [
+    bean?.name ?? '豆なし',
+    `${formatG(a.doseG)}・${formatG(a.waterG)}`,
+    formatSec(a.totalSec),
+  ].join('　');
+  if (bean) {
+    const loaded = await getBeanWithTx(db, bean.id);
+    const dose = doseFromSettings(await getSettings(db));
+    const rest = remainingG(loaded?.txs ?? []);
+    $('doneStock').textContent = `${bean.name}の残り ${formatG(rest)}（あと${cupsLeft(rest, dose)}杯）`;
+    $('doneBean').href = `bean.html?id=${encodeURIComponent(bean.id)}`;
+    $('doneBean').hidden = false;
+  }
+  window.scrollTo(0, 0);
+}
+
+function discard() {
+  if (!confirm('記録せずにやめますか？入れた内容は消えます')) return;
+  const back = draft?.returnSearch ?? '';
+  clearDraft();
+  draft = null;
+  location.replace(back ? `brew.html${back}` : 'recipes.html');
+}
+
+// ---- はじまり ----
+
+async function init() {
+  const settings = await getSettings(db);
+  speechOn = settings.speechOn !== false;
+  beans = await listBeans(db);
+  const saved = loadDraft();
+  const sameAsSaved = saved && (location.search === '' || location.search === saved.returnSearch);
+
+  if (saved && sameAsSaved) {
+    // 途中の抽出の続き
+    draft = saved;
+    if (draft.stage === 'timer') startTimer();
+    else showResult();
+    return;
+  }
+
+  loadedPlan = await loadPlan();
+  if (!loadedPlan) {
+    $('notFound').hidden = false;
+    return;
+  }
+  const last = await getLastBrew(db);
+  await showPlan(loadedPlan, last?.beanId);
+  if (saved) {
+    $('resumeCard').hidden = false;
+    $('resumeText').textContent = `${saved.plan.name || '前回と同じ'}（${saved.stage === 'timer' ? 'タイマーの途中' : '実績の確認の途中'}）`;
+  }
+}
+
+$('start').addEventListener('click', () => beginNew(true));
+$('noTimer').addEventListener('click', () => beginNew(false));
+$('resume').addEventListener('click', () => {
+  const saved = loadDraft();
+  location.href = saved?.returnSearch ? `brew.html${saved.returnSearch}` : 'brew.html';
+});
+$('tap').addEventListener('click', onTap);
+$('cancel').addEventListener('click', cancelBrew);
+$('speechToggle').addEventListener('click', async () => {
+  speechOn = !speechOn;
+  renderSpeechToggle();
+  if (!speechOn) cue.stopSpeaking();
+  await updateSettings(db, { speechOn });
+});
+$('resultView').addEventListener('submit', onSave);
+$('discard').addEventListener('click', discard);
+$('crumb').addEventListener('click', (e) => {
+  if (draft && !confirm('記録せずに戻りますか？途中の内容は消えます')) {
+    e.preventDefault();
+    return;
+  }
+  if (draft) clearDraft();
+});
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') cue.resume();
+});
+window.addEventListener('beforeunload', (e) => {
+  if (draft?.stage === 'timer') e.preventDefault();
 });
 
 registerServiceWorker();

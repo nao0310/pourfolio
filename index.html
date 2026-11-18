@@ -21,6 +21,13 @@
     <h1>Pourfolio 準備中</h1>
     <p>ハンドドリップ1杯ごとの記録・分析・提案アプリです。いまは公開テスト中です。</p>
 
+    <div class="card resume-card" id="resumeCard" hidden>
+      <p><strong>途中の抽出があります</strong></p>
+      <div class="row">
+        <a class="btn" href="brew.html" id="resumeLink">続きに戻る</a>
+      </div>
+    </div>
+
     <div class="card">
       <p>レシピを選んで淹れます。4:6メソッドの雛形でレシピを作れます。</p>
       <div class="row">
@@ -54,7 +61,13 @@
   </main>
   <script type="module">
     import { isStandalone, registerServiceWorker } from './js/pwa.js';
+    import { loadDraft } from './js/brew-draft.js';
     registerServiceWorker();
+    const draft = loadDraft();
+    if (draft) {
+      document.getElementById('resumeCard').hidden = false;
+      document.getElementById('resumeLink').href = `brew.html${draft.returnSearch ?? ''}`;
+    }
     document.getElementById('mode').textContent = isStandalone()
       ? 'ホーム画面のアプリとして開いています'
       : 'ブラウザで開いています（iPhoneでは「共有」→「ホーム画面に追加」で使ってください）';
