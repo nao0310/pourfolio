@@ -2,7 +2,9 @@
 // 計算や判定は js/core/ に置き、ここは出し入れだけにする。
 
 import Dexie from '../vendor/dexie/dexie.mjs';
-import { TABLES, SETTINGS_ID, createRecord, updateRecord } from './core/records.js';
+import { TABLES, SETTINGS_ID, createRecord, updateRecord, markDeleted } from './core/records.js';
+import { initialStockG } from './core/roast.js';
+import { remainingG, adjustDelta } from './core/inventory.js';
 import { makeBackup, mergeRecords } from './core/backup.js';
 
 /** 本番のデータベース名（保存テストの pourfolio-storage-test とは別） */
@@ -105,4 +107,142 @@ export async function updateSettings(db, changes, now = new Date()) {
   const next = updateRecord(cur, changes, now);
   await db.table('settings').put(next);
   return next;
+}
+
+// ---- 豆と在庫（C1・C2） ----
+
+const alive = (r) => r.deletedAt == null;
+const nowIso = (now) => new Date(now).toISOString();
+
+/** 削除の印が付いていない豆の一覧 */
+export async function listBeans(db) {
+  return (await db.table('beans').toArray()).filter(alive);
+}
+
+/** 削除の印が付いていない在庫履歴の全部 */
+export async function listAliveTx(db) {
+  return (await db.table('inventoryTx').toArray()).filter(alive);
+}
+
+/** 豆1つと、その在庫履歴（削除の印が付いたものは除く）。豆がない・削除済みなら null */
+export async function getBeanWithTx(db, beanId) {
+  const bean = await db.table('beans').get(beanId);
+  if (!bean || !alive(bean)) return null;
+  const txs = (await db.table('inventoryTx').where('beanId').equals(beanId).toArray()).filter(alive);
+  return { bean, txs };
+}
+
+/**
+ * 入庫の履歴を、豆の重量の入力に合わせる（なければ作る、量がなければ削除の印を付ける）。
+ * 豆の登録と、編集で重量を直したときに使う。
+ */
+async function syncInboundTx(db, bean, now) {
+  const allBeans = await db.table('beans').toArray();
+  const stock = initialStockG(bean, allBeans);
+  const txs = (await db.table('inventoryTx').where('beanId').equals(bean.id).toArray()).filter(alive);
+  const inbound = txs.find((t) => t.kind === 'in');
+  if (!stock) {
+    if (inbound) await db.table('inventoryTx').put(markDeleted(inbound, now));
+    return null;
+  }
+  const memo = stock.estimated ? `生豆時の表記から見積もり（目減り${stock.lossPct}%）` : '';
+  if (inbound) {
+    if (inbound.deltaG !== stock.g || inbound.memo !== memo) {
+      await db.table('inventoryTx').put(updateRecord(inbound, { deltaG: stock.g, memo }, now));
+    }
+  } else {
+    const at = bean.arrivalDate ? new Date(`${bean.arrivalDate}T12:00:00`).toISOString() : nowIso(now);
+    await db.table('inventoryTx').put(createRecord({ beanId: bean.id, at, deltaG: stock.g, kind: 'in', brewId: null, memo }, now));
+  }
+  return stock;
+}
+
+/**
+ * 豆を登録し、入庫の履歴を1件作る。
+ * @param {object} fields normalizeBeanInput の value
+ * @returns {Promise<object>} 保存した豆
+ */
+export async function addBean(db, fields, now = new Date()) {
+  const bean = createRecord(fields, now);
+  await db.transaction('rw', db.table('beans'), db.table('inventoryTx'), async () => {
+    await db.table('beans').put(bean);
+    await syncInboundTx(db, bean, now);
+  });
+  return bean;
+}
+
+/** 豆を直す。重量が変わったら入庫の履歴も直す */
+export async function updateBean(db, beanId, changes, now = new Date()) {
+  let next;
+  await db.transaction('rw', db.table('beans'), db.table('inventoryTx'), async () => {
+    const cur = await db.table('beans').get(beanId);
+    if (!cur || !alive(cur)) throw new Error('豆が見つかりません');
+    next = updateRecord(cur, changes, now);
+    await db.table('beans').put(next);
+    await syncInboundTx(db, next, now);
+  });
+  return next;
+}
+
+/** 豆の状態だけを変える（未開封・開封済み・飲み切り） */
+export async function setBeanStatus(db, beanId, status, now = new Date()) {
+  const cur = await db.table('beans').get(beanId);
+  if (!cur || !alive(cur)) throw new Error('豆が見つかりません');
+  const next = updateRecord(cur, { status }, now);
+  await db.table('beans').put(next);
+  return next;
+}
+
+/** 豆を削除する（豆と在庫履歴に削除の印を付ける） */
+export async function deleteBean(db, beanId, now = new Date()) {
+  await db.transaction('rw', db.table('beans'), db.table('inventoryTx'), async () => {
+    const cur = await db.table('beans').get(beanId);
+    if (cur && alive(cur)) await db.table('beans').put(markDeleted(cur, now));
+    const txs = (await db.table('inventoryTx').where('beanId').equals(beanId).toArray()).filter(alive);
+    if (txs.length) await db.table('inventoryTx').bulkPut(txs.map((t) => markDeleted(t, now)));
+  });
+}
+
+/**
+ * 在庫の増減を1件記録する。
+ * @param {{beanId:string, deltaG:number, kind:string, memo?:string, brewId?:string|null, at?:string}} fields
+ */
+export async function addInventoryTx(db, fields, now = new Date()) {
+  const tx = createRecord({ at: nowIso(now), brewId: null, memo: '', ...fields }, now);
+  await db.table('inventoryTx').put(tx);
+  return tx;
+}
+
+/**
+ * 1杯淹れた分を在庫から減らす（抽出の記録画面ができるまでの簡易版。1-4で抽出記録とつなぐ）。
+ * 未開封の豆なら開封済みにする。
+ */
+export async function recordCupUsage(db, beanId, doseG, now = new Date()) {
+  let tx;
+  await db.transaction('rw', db.table('beans'), db.table('inventoryTx'), async () => {
+    tx = await addInventoryTx(db, { beanId, deltaG: -doseG, kind: 'brew' }, now);
+    const bean = await db.table('beans').get(beanId);
+    if (bean && bean.status === 'unopened') await db.table('beans').put(updateRecord(bean, { status: 'open' }, now));
+  });
+  return tx;
+}
+
+/**
+ * 量り直した重さに合わせて、差の分だけ調整の履歴を足す。差が0なら何もしない。
+ * @returns {Promise<object|null>} 足した履歴
+ */
+export async function measureBean(db, beanId, measuredG, now = new Date()) {
+  let tx = null;
+  await db.transaction('rw', db.table('inventoryTx'), async () => {
+    const txs = (await db.table('inventoryTx').where('beanId').equals(beanId).toArray()).filter(alive);
+    const delta = adjustDelta(remainingG(txs), measuredG);
+    if (delta !== 0) tx = await addInventoryTx(db, { beanId, deltaG: delta, kind: 'adjust', memo: `量り直し：${measuredG}g` }, now);
+  });
+  return tx;
+}
+
+/** 在庫履歴1件を取り消す（削除の印を付ける） */
+export async function deleteInventoryTx(db, txId, now = new Date()) {
+  const cur = await db.table('inventoryTx').get(txId);
+  if (cur && alive(cur)) await db.table('inventoryTx').put(markDeleted(cur, now));
 }
