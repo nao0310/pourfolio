@@ -161,6 +161,7 @@ function brewButtonLabel(action) {
 function renderSuggestion(s) {
   $('suggestCard').hidden = !s;
   $('noSuggest').hidden = Boolean(s);
+  $('doneTop').classList.toggle('secondary', Boolean(s)); // 目立つボタンは「この提案で淹れる」の1つだけにする
   if (!s) return;
   $('sCell').textContent = s.cellName;
   $('sAction').textContent = s.action.text;

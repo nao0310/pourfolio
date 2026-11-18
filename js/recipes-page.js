@@ -72,6 +72,8 @@ async function renderLast() {
 async function render() {
   const [recipes, brews] = await Promise.all([listRecipes(db), listBrews(db)]);
   const ordered = orderRecipesForList(recipes, brews);
+  // レシピがまだないときは「＋ レシピを作る」がこの画面でいちばん大事なボタン
+  $('newRecipe').classList.toggle('secondary', ordered.length > 0);
   if (!ordered.length) {
     $('list').replaceChildren(
       el(
