@@ -9,7 +9,7 @@
 // <manifest> npm run sw が書き込む（手で直さない）
 const MANIFEST = {
   "label": "3.1.1",
-  "version": "000a9eb65796",
+  "version": "2f5dacac4359",
   "files": {
     "ai.html": "34607ec38ddc5690",
     "analysis.html": "97fad6697d25fa7e",
@@ -21,7 +21,7 @@ const MANIFEST = {
     "calendar.html": "add01bf22879b657",
     "compare.html": "ac48d24b98df158d",
     "cost.html": "2c834b6cf3df809b",
-    "css/base.css": "c102f954351f2fe1",
+    "css/base.css": "e7198fe0500a2b4e",
     "css/print.css": "8c007c2e176a70f2",
     "data.html": "db703c97881020e1",
     "dialin-history.html": "9ad393d39526e93b",
@@ -104,7 +104,7 @@ const MANIFEST = {
     "js/core/today.js": "1814a6c90e899543",
     "js/core/tonya.js": "faac59308d2b0ca5",
     "js/core/usual.js": "306c68f4420764a8",
-    "js/core/version.js": "c9cfc91f0fcc1829",
+    "js/core/version.js": "cd49290860b7cf96",
     "js/core/water.js": "26dace0c46b908b4",
     "js/cost-page.js": "96c52ecdbc7245ae",
     "js/cue.js": "4ec66c174d81b2d6",
