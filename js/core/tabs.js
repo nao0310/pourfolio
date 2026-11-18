@@ -29,6 +29,7 @@ const PAGE_TAB = Object.freeze({
   'calendar.html': 'analysis',
   'cost.html': 'analysis',
   'report.html': 'analysis',
+  'life.html': 'analysis',
   'more.html': 'more',
   'equipment.html': 'more',
   'compare.html': 'more',
@@ -36,6 +37,7 @@ const PAGE_TAB = Object.freeze({
   'data.html': 'more',
   'ai.html': 'more',
   'scan.html': 'more',
+  'weather.html': 'more',
 });
 
 /** タブを出さない画面（入力の途中・開発用） */

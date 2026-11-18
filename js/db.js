@@ -15,6 +15,7 @@ import { localYmd } from './core/format.js';
 import { buildPhoto, photosOfBrew } from './core/photos.js';
 import { attachBrew, tastingsToSave } from './core/compare.js';
 import { withTds } from './core/extraction.js';
+import { withWeather } from './core/weather.js';
 
 /** 本番のデータベース名（保存テストの pourfolio-storage-test とは別） */
 export const DB_NAME = 'pourfolio';
@@ -599,6 +600,25 @@ export async function setBrewTds(db, brewId, tdsPct, now = new Date()) {
   const next = updateRecord(b, { actual: withTds(b, tdsPct) }, now);
   await db.table('brews').put(next);
   return next;
+}
+
+/**
+ * あとから天気（X16）を入れる。context.weather だけを足し、すでに天気のある杯・削除した杯は変えない
+ * @param {{id:string, weather:object}[]} targets js/core/weather.js の fillTargets
+ * @returns {Promise<number>} 入れた杯の数
+ */
+export async function setBrewWeather(db, targets = [], now = new Date()) {
+  if (!targets.length) return 0;
+  let n = 0;
+  await db.transaction('rw', db.table('brews'), async () => {
+    for (const t of targets) {
+      const b = await db.table('brews').get(t.id);
+      if (!b || !alive(b) || b.context?.weather) continue;
+      await db.table('brews').put(updateRecord(b, { context: withWeather(b, t.weather) }, now));
+      n++;
+    }
+  });
+  return n;
 }
 
 /** いちばん新しい抽出。なければ null */

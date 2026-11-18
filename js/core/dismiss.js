@@ -21,6 +21,8 @@ export const DISMISS_RULES = Object.freeze({
   install: { days: 7, label: '7日後にまた出します' },
   autosave: { days: 1, label: '明日また出します' },
   init: { days: null, label: 'この豆ではもう出しません' },
+  hot: { days: null, label: '今日はもう出しません' },
+  season: { days: null, label: 'この季節はもう出しません' },
 });
 
 /**

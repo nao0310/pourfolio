@@ -7,6 +7,24 @@ import { createRecord } from './records.js';
 import { ratioOf } from './recipes.js';
 import { localYmd } from './format.js';
 import { daysBetween } from './freshness.js';
+import { moodForHour } from './plan-adjust.js';
+
+/**
+ * デモの杯の気分と天気（X16・E6）。乱数の並びを変えないよう、日時と杯の番号だけから決める。
+ * 気温は季節の山（1月下旬が底）と時刻、湿度と天気は番号で回す
+ */
+function demoContext(when, idx) {
+  const d = new Date(when);
+  const start = new Date(d.getFullYear(), 0, 1);
+  const doy = Math.floor((d - start) / 86400000);
+  const tempC = Math.round((16 - 10 * Math.cos((2 * Math.PI * (doy - 20)) / 365) + (d.getHours() - 8) * 0.4 + (((idx * 7) % 5) - 2)) * 10) / 10;
+  const humidity = 40 + ((idx * 13) % 45);
+  const code = [0, 1, 2, 3, 61, 0, 1, 3, 63, 2][idx % 10];
+  const out = { weather: { tempC, humidity, code } };
+  const mood = idx % 3 === 0 ? null : moodForHour(d.getHours());
+  if (mood) out.mood = mood;
+  return out;
+}
 
 /** 種を固定した乱数（mulberry32） */
 export function seededRandom(seed = 20261118) {
@@ -225,7 +243,7 @@ export function makeDemoData(now = new Date()) {
           timerUsed: true,
           precheck: null,
           beanState: null,
-          context: {},
+          context: demoContext(when, k * 10 + i),
           derived: { ratio: ratioOf(doseG, waterG), daysOffRoast: days, diff: {} },
           memo: '',
         },
