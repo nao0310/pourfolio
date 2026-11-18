@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>店の台帳 - Pourfolio</title>
+  <meta name="theme-color" content="#5a371f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Pourfolio">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/base.css">
+</head>
+<body>
+  <main>
+    <p class="crumb"><a href="beans.html">豆と在庫</a></p>
+    <h1>店の台帳</h1>
+    <p class="muted">豆の「購入先」ごとにまとめています。☆を押すとお気に入りになり、上に並びます。店名は豆の編集で直せます。</p>
+
+    <div id="shops" aria-live="polite"><p class="muted">読み込み中…</p></div>
+    <p id="msg" role="status"></p>
+
+    <div class="row">
+      <a class="btn secondary" href="cost.html">コスト</a>
+      <a class="btn secondary" href="beans.html">豆と在庫に戻る</a>
+    </div>
+  </main>
+  <script type="module" src="js/shops-page.js"></script>
+</body>
+</html>

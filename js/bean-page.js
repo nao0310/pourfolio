@@ -18,6 +18,7 @@ import { normalizeFreezeInput, portionsOf, stockParts, stockPartsText, portionTe
 import { arrivalChanges } from './core/orders.js';
 import { initialStockG } from './core/roast.js';
 import { originText, BEAN_STATUS, WEIGHT_BASIS, parseNumber } from './core/beans.js';
+import { gramPrice, yen, yenPerGText } from './core/cost.js';
 import { remainingG, cupsLeft, consumptionPace, emptyForecast, doseFromSettings, sortTxNewestFirst, TX_KINDS } from './core/inventory.js';
 import { freshness, FRESHNESS_WINDOWS, FALLBACK_GROUP, STAGES } from './core/freshness.js';
 import { roastGroup, ROAST_GROUPS } from './core/roast.js';
@@ -138,13 +139,17 @@ function renderTxList(txs) {
   );
 }
 
-function renderInfo(bean) {
+function renderInfo(bean, allBeans) {
+  // コスト（C6）：1gあたりの値段と1杯の原価
+  const gp = gramPrice(bean, allBeans);
   const rows = [
     ['焙煎度', bean.roastLevel],
     ['焙煎日', formatYmdJa(bean.roastDate, { withYear: true })],
     ['表記重量', bean.labelWeightG ? `${formatG(bean.labelWeightG)}（${WEIGHT_BASIS[bean.labelWeightBasis] ?? ''}）` : ''],
     ['実重量', bean.actualWeightG ? formatG(bean.actualWeightG) : ''],
     ['価格', bean.priceJpy != null ? `${bean.priceJpy.toLocaleString('ja-JP')}円` : ''],
+    ['1gあたり', yenPerGText(gp)],
+    ['1杯の原価', gp ? `約${yen(gp.yenPerG * doseG)}（1杯${formatG(doseG)}）` : ''],
     ['購入先', bean.shop],
     ['産地', originText(bean)],
     ['品種', bean.variety],
@@ -192,7 +197,7 @@ async function render() {
     renderFrozen(inFreezer, parts);
     renderTxList(txs);
   }
-  renderInfo(bean);
+  renderInfo(bean, await listBeans(db));
   $('content').hidden = false;
 }
 

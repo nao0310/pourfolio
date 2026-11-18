@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>コスト - Pourfolio</title>
+  <meta name="theme-color" content="#5a371f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Pourfolio">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/base.css">
+</head>
+<body>
+  <main>
+    <p class="crumb"><a href="beans.html">豆と在庫</a></p>
+    <h1>コスト</h1>
+
+    <!-- まとめ -->
+    <section class="card">
+      <h2>この1か月</h2>
+      <dl class="plan-numbers" id="summary"><dt>読み込み中…</dt><dd></dd></dl>
+      <p class="muted small">1杯の原価＝粉量×豆の1gあたりの値段（届いた豆を量った重さで計算。量っていなければ表記から見積もった重さ）。送料は1杯の原価に入れず、月の支出に入れます。</p>
+    </section>
+
+    <!-- 月の支出（買った月・飲んだ月） -->
+    <section class="card">
+      <h2>月の支出</h2>
+      <p class="muted">棒は<strong>買った額</strong>（豆の価格＋送料。注文日の月）、右の数字は<strong>飲んだ額</strong>（その月に淹れた杯の原価の合計）です。</p>
+      <div class="month-bars" id="months"></div>
+      <p class="muted small" id="monthsNote"></p>
+    </section>
+
+    <!-- 切り口ごと -->
+    <section class="card">
+      <h2>1杯の単価と満足度</h2>
+      <p class="muted">「★1つあたり」は1杯の平均単価÷平均★です。小さいほど、値段のわりに満足できた豆です。</p>
+      <div class="chips three" role="radiogroup" aria-label="まとめ方">
+        <label class="chip"><input type="radio" name="groupBy" value="name" checked><span>銘柄</span></label>
+        <label class="chip"><input type="radio" name="groupBy" value="roastLevel"><span>焙煎度</span></label>
+        <label class="chip"><input type="radio" name="groupBy" value="shop"><span>購入先</span></label>
+      </div>
+      <div class="table-wrap">
+        <table class="cost-table">
+          <thead>
+            <tr><th scope="col" id="groupHead">銘柄</th><th scope="col">杯</th><th scope="col">1杯</th><th scope="col">平均★</th><th scope="col">★1つあたり</th></tr>
+          </thead>
+          <tbody id="groups"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="row">
+      <a class="btn secondary" href="shops.html">店の台帳</a>
+      <a class="btn secondary" href="beans.html">豆と在庫に戻る</a>
+    </div>
+  </main>
+  <script type="module" src="js/cost-page.js"></script>
+</body>
+</html>
