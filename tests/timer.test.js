@@ -164,3 +164,9 @@ test('落ち切った：最後の「注ぎ終えた」から1.5秒以内の2度�
   assert.equal(canFinish([9, 50, null, null, null], 200), true); // 押さずに進んだ投は数えない
   assert.equal(canFinish([], 0), true);
 });
+
+test('スタートのダブルタップ：スタートから1.5秒以内の最初のタップは記録しない（2-8 の17番）', () => {
+  const pours = [{ atSec: 0, toG: 40 }, { atSec: 40, toG: 120 }];
+  assert.deepEqual(addLap(pours, [], 0.3), []);
+  assert.deepEqual(addLap(pours, [], LAP_GUARD_SEC), [LAP_GUARD_SEC]);
+});

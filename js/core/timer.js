@@ -65,6 +65,8 @@ export function addLap(pours, laps, elapsedSec) {
   if (elapsedSec < pours[cur.length].atSec) return cur;
   const lastTap = [...cur].reverse().find((x) => x != null);
   if (lastTap != null && elapsedSec - lastTap < LAP_GUARD_SEC) return cur;
+  // スタートの2度押し：スタートから LAP_GUARD_SEC 以内の最初のタップは押し間違いとして無視する（2-8 の17番）
+  if (lastTap == null && elapsedSec < LAP_GUARD_SEC) return cur;
   return [...cur, round1(elapsedSec)];
 }
 
