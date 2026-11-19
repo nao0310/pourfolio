@@ -5,7 +5,9 @@
 // - 入力中（キーボードが出ている間）はページ全体のずれを戻さない（Safari が欄を見せるために動かした分を打ち消さないため）。
 //   代わりに、中身の箱の下にキーボードの高さ分の余白を足し、欄が見える所まで中身の箱を動かす（3.6.3、D-185。計算は js/core/keyboard.js）
 // registerServiceWorker（js/pwa.js → js/page-life.js）から全画面で呼ばれる。
-import { isTypingTarget, keyboardInset, revealDelta, visibleArea } from './core/keyboard.js';
+//   ホーム画面のアプリでは、iPhone がキーボードの高さ（見える範囲の変化）をページに伝えないことがあるので、指で操作する端末で
+//   文字盤の出る欄に入って少したっても高さが0のままなら、画面の下半分（横向きは65%）が隠れていると見込んで動かす（3.6.4、D-186）
+import { isTypingTarget, keyboardInset, revealDelta, visibleArea, opensKeyboard, guessKeyboardInset } from './core/keyboard.js';
 
 const KEY = 'pourfolio.scroll';
 
@@ -27,8 +29,20 @@ export function resetDocumentOffset() {
 /** キーボード（や選ぶ欄の部品）が出る欄にカーソルがあるか */
 export function isTyping(el = document.activeElement) {
   if (!el || el === document.body || el === document.documentElement) return false;
-  return isTypingTarget({ tag: el.tagName, type: el.getAttribute?.('type') ?? '', editable: !!el.isContentEditable });
+  return isTypingTarget({ tag: el.tagName, type: el.getAttribute?.('type') ?? '', editable: !!el.isContentEditable, readOnly: !!el.readOnly });
 }
+
+/** 指で操作する端末か（PC のマウスでは見込みを使わない） */
+function touchOnly() {
+  try {
+    return window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+  } catch {
+    return false;
+  }
+}
+
+/** 今のキーボードの高さと、それが見込みかどうか（データの画面の「キーボードの点検」が出す） */
+export const keyboardState = { inset: 0, guessed: false };
 
 /** 画面の下の、キーボードに隠れている高さ（px） */
 function currentInset() {
@@ -46,12 +60,23 @@ function setKeyboardRoom(px) {
   else box.style.removeProperty('--kb');
 }
 
-/** 入力中の欄（見出しを含む）が、キーボードと下に付けるボタンに隠れないように中身の箱を動かす */
-export function revealFocused() {
+/**
+ * 入力中の欄（見出しを含む）が、キーボードと下に付けるボタンに隠れないように中身の箱を動かす。
+ * guess：キーボードの高さが0のままなら見込みを使う（文字盤の出る欄・指で操作する端末だけ）
+ */
+export function revealFocused({ guess = false } = {}) {
   const el = document.activeElement;
   const box = document.querySelector('main');
   if (!box || !isTyping(el) || !box.contains(el)) return;
-  setKeyboardRoom(currentInset());
+  let inset = currentInset();
+  let guessed = false;
+  if (inset === 0 && guess && touchOnly() && opensKeyboard({ tag: el.tagName, type: el.getAttribute?.('type') ?? '', editable: !!el.isContentEditable, readOnly: !!el.readOnly })) {
+    inset = guessKeyboardInset({ innerHeight: window.innerHeight, innerWidth: window.innerWidth });
+    guessed = inset > 0;
+  }
+  keyboardState.inset = inset;
+  keyboardState.guessed = guessed;
+  setKeyboardRoom(inset);
   const vv = window.visualViewport;
   // 動かすと下に付けるボタンの位置も変わるので、何度か測り直す
   for (let i = 0; i < 3; i++) {
@@ -59,7 +84,8 @@ export function revealFocused() {
     if (!r.height) return;
     const b = box.getBoundingClientRect();
     const vvTop = vv ? vv.offsetTop : 0;
-    const vvBottom = vv ? vv.offsetTop + vv.height : window.innerHeight;
+    // 見込みのときは、見える範囲（変わっていない）から見込みの高さを引く
+    const vvBottom = (vv ? vv.offsetTop + vv.height : window.innerHeight) - (guessed ? inset : 0);
     let barTop = null;
     for (const bar of box.querySelectorAll('.bottom-bar')) {
       if (bar.contains(el)) continue;
@@ -97,6 +123,8 @@ export function watchLayout() {
   // 入力をやめたとき：次の欄に移ったのでなければ、キーボードの分の余白を外し、ページ全体のずれを戻す
   const settle = () => {
     if (isTyping()) return;
+    keyboardState.inset = 0;
+    keyboardState.guessed = false;
     setKeyboardRoom(0);
     resetDocumentOffset();
   };
@@ -106,15 +134,17 @@ export function watchLayout() {
     clearTimeout(timer);
     timer = setTimeout(() => {
       if (!isTyping()) return settle();
-      if (currentInset() === 0) resetDocumentOffset();
-      revealFocused();
+      if (currentInset() === 0 && !keyboardState.guessed) resetDocumentOffset();
+      revealFocused({ guess: true });
     }, 60);
   };
   document.addEventListener('focusin', (e) => {
     if (!isTyping(e.target)) return;
-    requestAnimationFrame(revealFocused);
-    // キーボードが出きるのを待って、もう一度（見える範囲の resize が来ない場合のため）
-    setTimeout(revealFocused, 400);
+    // 見込みで動かしている間に次の欄へ移ったとき（キーボードの上の「^ v」）は、見込みのまま続ける（余白を一度外すと中身が跳ねる）
+    requestAnimationFrame(() => revealFocused({ guess: keyboardState.guessed }));
+    // キーボードが出きるのを待って、もう一度（見える範囲の resize が来ない場合のため）。
+    // それでも高さが0なら、ホーム画面のアプリで高さが伝わっていないと見て見込みを使う
+    setTimeout(() => revealFocused({ guess: true }), 450);
   });
   document.addEventListener('focusout', () => setTimeout(settle, 50));
   window.addEventListener('resize', onResize);

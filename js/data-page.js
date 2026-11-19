@@ -15,6 +15,7 @@ import { autosaveSupported, getAutosaveState, chooseFolder, resumeAutosave, stop
 import { askConfirm } from './confirm-box.js';
 import { isQuotaError } from './core/errors.js';
 import { singleFlight } from './core/once.js';
+import { setupKeyboardCheck } from './keyboard-check.js';
 
 const LABELS = TABLE_LABELS;
 
@@ -281,6 +282,7 @@ if (autosaveSupported()) {
 
 $('appVersionLabel').textContent = versionLabel(APP_VERSION);
 renderChangelog();
+setupKeyboardCheck({ input: $('kbCheckInput'), output: $('kbCheckOut') }); // キーボードの点検（3.6.4）
 // 準備がいつまでも終わらないときも「確かめています…」のままにせず、5秒で今の状況を出す（2-8の49番）
 const swReady = registerServiceWorker().then(() => navigator.serviceWorker?.ready);
 Promise.race([swReady, new Promise((resolve) => setTimeout(resolve, 5000))]).then(renderOffline, renderOffline);

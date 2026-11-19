@@ -2,7 +2,7 @@
 // ユーザーの報告「ページの下側の入力をしようとすると、キーボードで入力したい欄が隠れて見えなくなる」の再発を防ぐ。
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { isTypingTarget, keyboardInset, revealDelta, visibleArea } from '../js/core/keyboard.js';
+import { isTypingTarget, keyboardInset, revealDelta, visibleArea, opensKeyboard, guessKeyboardInset } from '../js/core/keyboard.js';
 
 test('キーボードが出る欄だけを入力中として扱う', () => {
   for (const type of ['', 'text', 'number', 'url', 'date', 'time', 'search', 'TEXT']) assert.equal(isTypingTarget({ tag: 'INPUT', type }), true, type);
@@ -54,4 +54,38 @@ test('見える範囲：キーボード・中身の箱・下に付けるボタ�
   assert.deepEqual(visibleArea({ vvTop: 0, vvBottom: 328, boxTop: 0, boxBottom: 606, barTop: 530 }), { top: 0, bottom: 328 });
   // Safari がページをずらしているとき
   assert.deepEqual(visibleArea({ vvTop: 120, vvBottom: 448, boxTop: 0, boxBottom: 606 }), { top: 120, bottom: 448 });
+});
+
+test('読むだけの欄（AI相談の文など）は入力中として扱わない', () => {
+  assert.equal(isTypingTarget({ tag: 'TEXTAREA', readOnly: true }), false);
+  assert.equal(isTypingTarget({ tag: 'INPUT', type: 'text', readOnly: true }), false);
+});
+
+// 3.6.4（D-186）：ホーム画面のアプリでは、iPhone がキーボードの高さを伝えないことがある（ユーザーの画面写真）
+test('文字盤が出る欄だけを、見込みで動かす対象にする', () => {
+  for (const type of ['', 'text', 'number', 'url', 'search', 'email', 'tel']) assert.equal(opensKeyboard({ tag: 'INPUT', type }), true, type);
+  assert.equal(opensKeyboard({ tag: 'TEXTAREA' }), true);
+  assert.equal(opensKeyboard({ tag: 'DIV', editable: true }), true);
+  // 欄の近くに部品が出るだけの欄は動かさない
+  assert.equal(opensKeyboard({ tag: 'SELECT' }), false);
+  for (const type of ['date', 'time', 'datetime-local', 'month', 'week', 'DATE']) assert.equal(opensKeyboard({ tag: 'INPUT', type }), false, type);
+  assert.equal(opensKeyboard({ tag: 'INPUT', type: 'checkbox' }), false);
+  assert.equal(opensKeyboard({ tag: 'TEXTAREA', readOnly: true }), false);
+  assert.equal(opensKeyboard({ tag: 'BUTTON' }), false);
+});
+
+test('キーボードの高さの見込み：縦は画面の半分、横は65%', () => {
+  assert.equal(guessKeyboardInset({ innerHeight: 800, innerWidth: 390 }), 400);
+  assert.equal(guessKeyboardInset({ innerHeight: 390, innerWidth: 844 }), 254);
+  assert.equal(guessKeyboardInset({ innerHeight: 0, innerWidth: 390 }), 0);
+  // ユーザーの画面写真（キーボードと上の帯で画面の45%）より大きく見込む
+  assert.ok(guessKeyboardInset({ innerHeight: 874, innerWidth: 402 }) >= 874 * 0.45);
+});
+
+test('見込みのときも、画面の下の端の欄は上半分まで動く', () => {
+  const H = 800;
+  const inset = guessKeyboardInset({ innerHeight: H, innerWidth: 390 });
+  const vis = visibleArea({ vvTop: 0, vvBottom: H - inset, boxTop: 0, boxBottom: H });
+  const d = revealDelta({ top: 700, bottom: 752 }, vis);
+  assert.ok(752 - d <= H * 0.55 - 12, String(d));
 });
