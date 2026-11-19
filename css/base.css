@@ -156,7 +156,7 @@ main.with-bottom-bar { padding-bottom: 0; } /* 下に付けるボタンは中身
 .field-error { display: block; color: var(--danger); font-size: 0.9rem; font-weight: 600; }
 .field-error:empty { display: none; }
 .req { font-size: 0.75rem; color: var(--danger); border: 1px solid var(--danger); border-radius: 6px; padding: 0 4px; margin-left: 4px; vertical-align: middle; }
-input[type="url"], input[type="date"], input[type="time"], select, textarea {
+input[type="url"], input[type="date"], input[type="time"], input[type="datetime-local"], input[type="search"], select, textarea {
   width: 100%;
   min-height: 52px;
   padding: 10px 14px;
@@ -167,7 +167,7 @@ input[type="url"], input[type="date"], input[type="time"], select, textarea {
   background: var(--bg);
   color: var(--fg);
 }
-input[type="date"], input[type="time"] { appearance: none; -webkit-appearance: none; display: block; }
+input[type="date"], input[type="time"], input[type="datetime-local"] { appearance: none; -webkit-appearance: none; display: block; }
 textarea { min-height: 0; }
 select + input[type="text"] { margin-top: 8px; }
 .with-unit { display: flex; align-items: center; gap: 8px; }

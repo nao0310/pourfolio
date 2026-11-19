@@ -61,6 +61,7 @@ export const TABLE_LABELS = Object.freeze({
   photos: '写真',
   experiments: '実験',
   wishlist: '気になる豆',
+  cafeVisits: 'お店の1杯',
   settings: '設定',
 });
 

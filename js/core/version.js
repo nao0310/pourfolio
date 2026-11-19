@@ -3,10 +3,18 @@
 // ステップを仕上げるときに APP_VERSION と CHANGELOG の先頭を足す。上げ忘れは tests/version.test.js が見つける。
 // sw.js の一覧（npm run sw）にも番号が入り、更新の知らせに新しい番号を出す。
 
-export const APP_VERSION = '3.6.5';
+export const APP_VERSION = '4.2';
 
 /** 更新履歴（新しい順）。items は利用者向けの短い文で、2〜3個まで */
 export const CHANGELOG = Object.freeze([
+  {
+    version: '4.2',
+    date: '2026-11-19',
+    items: [
+      '「その他」に「お店で飲んだ1杯」を足しました。喫茶店やカフェで飲んだコーヒーを記録できます',
+      'お店の1杯は手で淹れた記録とは分けてあり、分析・提案・カフェインには入りません',
+    ],
+  },
   {
     version: '3.6.5',
     date: '2026-11-19',

@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="color-scheme" content="light dark">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>お店で飲んだ1杯 - Pourfolio</title>
+  <meta name="theme-color" content="#5a371f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Pourfolio">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/base.css">
+</head>
+<body>
+  <main>
+    <p class="crumb"><a href="more.html">その他</a></p>
+    <h1>お店で飲んだ1杯</h1>
+    <p class="muted">喫茶店やカフェで飲んだコーヒーを残しておく場所です。手で淹れた記録とは分けてあり、分析・提案・カフェインの数には入りません。</p>
+
+    <form class="card" id="form" novalidate>
+      <h2 id="formTitle">お店の1杯を記録する</h2>
+      <label class="field">
+        <span class="label">店の名前（必須）</span>
+        <input type="text" name="shopName" autocomplete="off" list="shopList">
+        <datalist id="shopList"></datalist>
+        <span class="field-error" data-for="shopName"></span>
+      </label>
+      <label class="field">
+        <span class="label">飲んだ日時（必須）</span>
+        <input type="datetime-local" name="at">
+        <span class="field-error" data-for="at"></span>
+      </label>
+      <label class="field">
+        <span class="label">飲み物の名前</span>
+        <input type="text" name="drinkName" autocomplete="off" placeholder="ケニア ハンドドリップ">
+      </label>
+      <fieldset class="field">
+        <legend class="label">淹れ方</legend>
+        <div class="chips two" id="methodChips"></div>
+        <span class="field-error" data-for="method"></span>
+      </fieldset>
+      <fieldset class="field">
+        <legend class="label">ホット・アイス</legend>
+        <div class="chips two" id="tempChips"></div>
+        <span class="field-error" data-for="temp"></span>
+      </fieldset>
+      <label class="field">
+        <span class="label">豆（産地・銘柄）</span>
+        <input type="text" name="beanName" autocomplete="off" placeholder="エチオピア イルガチェフェ">
+      </label>
+      <label class="field">
+        <span class="label">焙煎度</span>
+        <select name="roastLevel" id="roastLevel"></select>
+        <span class="field-error" data-for="roastLevel"></span>
+      </label>
+      <label class="field">
+        <span class="label">値段</span>
+        <span class="with-unit"><input type="text" inputmode="numeric" name="priceJpy" autocomplete="off"><span>円</span></span>
+        <span class="field-error" data-for="priceJpy"></span>
+      </label>
+      <div class="field">
+        <span class="label">★</span>
+        <div class="stars" id="stars"></div>
+        <span class="field-error" data-for="stars"></span>
+      </div>
+      <label class="field">
+        <span class="label">メモ</span>
+        <textarea name="memo" rows="3"></textarea>
+      </label>
+      <div class="row">
+        <button class="btn" type="submit" id="save">記録する</button>
+        <button class="btn secondary" type="button" id="cancelEdit" hidden>やめる</button>
+      </div>
+      <p id="msg" role="status"></p>
+    </form>
+
+    <section class="card">
+      <h2 id="listTitle">これまでの記録</h2>
+      <label class="field">
+        <span class="label">さがす（店・飲み物・豆・メモ）</span>
+        <input type="search" id="search" autocomplete="off">
+      </label>
+      <div id="list"><p class="muted">読み込み中…</p></div>
+    </section>
+  </main>
+  <!-- tabbar：npm run sw が書き込む（手で直さない） -->
+  <nav class="tabbar" aria-label="メニュー">
+    <a class="tab" href="./"><svg viewBox="0 0 24 24" class="tab-icon" aria-hidden="true"><path d="M4 11 12 4l8 7v9h-5v-6H9v6H4z"></path></svg><span class="tab-label">ホーム</span></a>
+    <a class="tab" href="recipes.html"><svg viewBox="0 0 24 24" class="tab-icon" aria-hidden="true"><path d="M5 6h14l-2 7a5 5 0 0 1-10 0zM9 20h6M12 18v2"></path></svg><span class="tab-label">淹れる</span></a>
+    <a class="tab" href="beans.html"><svg viewBox="0 0 24 24" class="tab-icon" aria-hidden="true"><path d="M12 3c4 0 6 4 6 9s-2 9-6 9-6-4-6-9 2-9 6-9zM12 4c-2 4 2 8 0 16"></path></svg><span class="tab-label">豆と在庫</span></a>
+    <a class="tab" href="analysis.html"><svg viewBox="0 0 24 24" class="tab-icon" aria-hidden="true"><path d="M4 20V4M4 20h16M8 16v-4M12 16V8M16 16v-6"></path></svg><span class="tab-label">分析</span></a>
+    <a class="tab current" href="more.html" aria-current="page"><svg viewBox="0 0 24 24" class="tab-icon" aria-hidden="true"><path d="M5 12h.01M12 12h.01M19 12h.01"></path></svg><span class="tab-label">その他</span></a>
+  </nav>
+  <!-- /tabbar -->
+  <script type="module" src="js/cafe-page.js"></script>
+  <script type="module" src="js/tabbar.js"></script>
+</body>
+</html>

@@ -137,7 +137,7 @@ test('移行：版4のデータベースを開き直すと、記録はそのま�
 
   const db = openDb('pourfolio-test', { indexedDB, IDBKeyRange });
   await db.open();
-  assert.equal(db.verno, 6);
+  assert.equal(db.verno, 7);
   const all = await readAll(db);
   assert.deepEqual(all.brews, [brew]);
   assert.deepEqual(all.tastings, [tasting]); // 2-3までの評価は書き換えない
