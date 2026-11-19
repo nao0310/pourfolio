@@ -186,7 +186,7 @@ test('移行：版3のデータベースを開き直すと、記録はそのま�
 
   const db = openDb('pourfolio-test', { indexedDB, IDBKeyRange });
   await db.open();
-  assert.equal(db.verno, 6);
+  assert.equal(db.verno, 7);
   const all = await readAll(db);
   assert.deepEqual(all.beans, [bean]);
   assert.deepEqual(all.inventoryTx, [tx]);

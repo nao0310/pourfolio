@@ -43,6 +43,7 @@ const PAGE_TAB = Object.freeze({
   'scan.html': 'more',
   'weather.html': 'more',
   'glossary.html': 'more',
+  'cafe.html': 'more',
 });
 
 /** タブを出さない画面（入力の途中・開発用） */

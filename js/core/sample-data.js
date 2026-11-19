@@ -207,6 +207,23 @@ export function makeSampleData(now = new Date()) {
     daysAgo(2),
   );
 
+  // お店で飲んだ1杯（X37、分析には入れない）
+  const cafeVisit = createRecord(
+    {
+      at: daysAgo(3).toISOString(),
+      shopName: 'サンプル珈琲店',
+      drinkName: 'ケニア ハンドドリップ',
+      method: 'drip',
+      temp: 'hot',
+      beanName: 'ケニア',
+      roastLevel: 'シティ',
+      priceJpy: 650,
+      stars: 4,
+      memo: '',
+    },
+    daysAgo(3),
+  );
+
   const settings = createRecord({ id: SETTINGS_ID, lastBackupAt: null }, daysAgo(9));
 
   return {
@@ -222,6 +239,7 @@ export function makeSampleData(now = new Date()) {
     photos: [photo],
     experiments: [experiment],
     wishlist: [wish],
+    cafeVisits: [cafeVisit],
     settings: [settings],
   };
 }

@@ -59,6 +59,10 @@ export function openDb(name = DB_NAME, options) {
   db.version(6).stores({
     wishlist: 'id, updatedAt',
   });
+  // 版7：お店で飲んだ1杯（X37、D-188）の表を足す。既存の表と記録はそのまま（移行で書き換える記録はない）
+  db.version(7).stores({
+    cafeVisits: 'id, at, updatedAt',
+  });
   return db;
 }
 
@@ -789,6 +793,41 @@ export async function updateWish(db, id, changes, now = new Date()) {
 export async function deleteWish(db, id, now = new Date()) {
   const cur = await getWish(db, id);
   if (cur) await db.table('wishlist').put(markDeleted(cur, now));
+}
+
+// ---- お店で飲んだ1杯（X37、D-188。分析には入れない） ----
+
+/** お店の1杯の一覧（削除の印が付いたものは除く） */
+export async function listCafeVisits(db) {
+  return (await db.table('cafeVisits').toArray()).filter(alive);
+}
+
+/** お店の1杯を1件。ない・削除済みなら null */
+export async function getCafeVisit(db, id) {
+  const v = await db.table('cafeVisits').get(id);
+  return v && alive(v) ? v : null;
+}
+
+/** お店の1杯を足す（fields は core/cafe.js の normalizeCafeInput の value） */
+export async function addCafeVisit(db, fields, now = new Date()) {
+  const rec = createRecord(fields, now);
+  await db.table('cafeVisits').put(rec);
+  return rec;
+}
+
+/** お店の1杯を直す */
+export async function updateCafeVisit(db, id, changes, now = new Date()) {
+  const cur = await getCafeVisit(db, id);
+  if (!cur) throw new Error('お店の1杯が見つかりません');
+  const next = updateRecord(cur, changes, now);
+  await db.table('cafeVisits').put(next);
+  return next;
+}
+
+/** お店の1杯を消す（削除の印） */
+export async function deleteCafeVisit(db, id, now = new Date()) {
+  const cur = await getCafeVisit(db, id);
+  if (cur) await db.table('cafeVisits').put(markDeleted(cur, now));
 }
 
 // ---- 飲み比べ・実験（X27・F7・B6） ----

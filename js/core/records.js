@@ -17,6 +17,7 @@ export const TABLES = Object.freeze([
   'photos', // Photo 抽出の写真1枚（DBの版5で追加、A7）
   'experiments', // Experiment 焙煎度比較などの飲み比べ1回（DBの版5で追加、X27）
   'wishlist', // Wishlist 気になる豆（買う候補）1つ（DBの版6で追加、F6）
+  'cafeVisits', // CafeVisit お店で飲んだ1杯（DBの版7で追加、X37。分析には入れない）
   'settings', // Settings アプリ全体の設定（1件）
 ]);
 

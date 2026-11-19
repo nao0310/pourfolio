@@ -41,5 +41,5 @@ test('削除は印を付けるだけ', () => {
 });
 
 test('表の一覧（版2で提案、版3で注文、版4で冷凍、版5で写真と飲み比べ、版6で気になる豆を足した）', () => {
-  assert.deepEqual(TABLES, ['beans', 'inventoryTx', 'equipment', 'recipes', 'brews', 'tastings', 'suggestions', 'orders', 'frozenPortions', 'photos', 'experiments', 'wishlist', 'settings']);
+  assert.deepEqual(TABLES, ['beans', 'inventoryTx', 'equipment', 'recipes', 'brews', 'tastings', 'suggestions', 'orders', 'frozenPortions', 'photos', 'experiments', 'wishlist', 'cafeVisits', 'settings']);
 });
