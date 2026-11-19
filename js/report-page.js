@@ -27,7 +27,7 @@ function render(month) {
       stat('飲んだ額', `${yen(r.spend.drankJpy)}`, r.spend.uncostedCups ? `原価のない${r.spend.uncostedCups}杯を除く` : '飲んだ豆の原価'),
       stat('買った額', `${yen(r.spend.boughtJpy)}`, `${r.spend.bags}袋${r.spend.unpricedBags ? `（価格なし${r.spend.unpricedBags}袋）` : ''}・送料込み`),
     ),
-    el('section', {}, el('h3', {}, 'ベスト3'), r.best.length ? el('ol', { class: 'rp-best' }, ...r.best.map((b) => el('li', {}, el('span', { class: 'num' }, `★${b.stars}`), `　${b.beanName}${b.roastLevel ? `（${b.roastLevel}）` : ''}`, el('span', { class: 'muted num' }, `　${formatYmdJa(b.ymd)}${b.ratio ? `・1:${b.ratio}` : ''}`)))) : el('p', { class: 'muted' }, '★を付けた杯がありません')),
+    el('section', {}, el('h3', {}, 'ベスト3'), r.best.length ? el('ol', { class: 'rp-best' }, ...r.best.map((b) => el('li', {}, el('span', { class: 'num' }, `★${b.stars}`), `　${b.beanName}${b.roastLevel ? `（${b.roastLevel}）` : ''}`, el('span', { class: 'muted num' }, `　${formatYmdJa(b.ymd)}${b.ratio ? `・1:${b.ratio}` : ''}`)))) : el('p', { class: 'muted' }, 'まだ★を付けた杯はありません。淹れて評価すると表示します')),
     el(
       'section',
       {},

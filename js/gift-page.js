@@ -44,7 +44,7 @@ function feedbackForm(row) {
       await setGiftFeedback(db, row.tx.id, value);
     } catch (err) {
       console.error(err);
-      return showToast(err?.message ? `保存できませんでした：${err.message}` : '保存できませんでした', 'error');
+      return showToast(`保存できませんでした。もう一度押してください${err?.message ? `（${err.message}）` : ''}`, 'error');
     }
     showToast(value ? '感想を保存しました' : '感想を消しました');
     await render();
@@ -58,7 +58,7 @@ function feedbackForm(row) {
       },
     },
     el('label', { class: 'field' }, area),
-    el('button', { class: 'btn secondary', type: 'submit' }, '感想を保存'),
+    el('button', { class: 'btn secondary', type: 'submit' }, '感想を保存する'),
   );
 }
 
@@ -92,7 +92,7 @@ async function render() {
       el(
         'section',
         { class: 'card' },
-        el('p', {}, 'まだおすそ分けの記録がありません。'),
+        el('p', {}, 'まだおすそ分けの記録はありません。'),
         el('p', { class: 'muted' }, '豆の画面の「おすそ分け・廃棄」で、渡した相手と量を入れると、ここに並びます。'),
         el('p', {}, el('a', { class: 'btn block', href: 'beans.html' }, '豆の一覧へ')),
       ),

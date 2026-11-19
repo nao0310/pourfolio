@@ -19,7 +19,8 @@
     <p class="crumb"><a href="beans.html">豆と在庫</a></p>
     <div id="notFound" hidden>
       <h1>豆が見つかりません</h1>
-      <p class="muted">削除したのかもしれません（別の端末で登録した豆は、この端末にはありません）。<a href="beans.html">豆の一覧</a>から選び直してください。</p>
+      <p class="muted">削除したのかもしれません（別の端末で登録した豆は、この端末にはありません）。豆の一覧から選び直してください。</p>
+      <p><a class="btn block" href="beans.html">豆の一覧へ</a></p>
     </div>
 
     <div id="content" hidden>
@@ -201,7 +202,7 @@
             <span class="label visually-hidden">一言</span>
             <textarea id="handoverNote" rows="2" maxlength="200" placeholder="例：焙煎10日目からが良い。挽き目は粗めが合う"></textarea>
           </label>
-          <button class="btn secondary" type="submit">一言を保存</button>
+          <button class="btn secondary" type="submit">一言を保存する</button>
         </form>
       </div>
 
@@ -216,7 +217,7 @@
       <!-- キャニスターのQR（X14） -->
       <div class="card" id="canisterCard">
         <h2>キャニスター用QR</h2>
-        <p class="muted">キャニスターに貼っておき、アプリの「QRを読む」で読むと、この豆で★がいちばん高かった淹れ方で抽出の画面が開きます。</p>
+        <p class="muted">キャニスターに貼っておき、アプリの「QRを読む」で読むと、この豆で★がいちばん高かった淹れ方で淹れる画面が開きます。</p>
         <details class="sub-action" id="canisterDetails">
           <summary>QRを表示する</summary>
           <div class="qr-box qr-small" id="canisterQr"></div>
@@ -239,7 +240,7 @@
       </div>
 
       <div class="row">
-        <a class="btn secondary" id="editLink">編集</a>
+        <a class="btn secondary" id="editLink">編集する</a>
         <button class="btn secondary" type="button" id="toggleFinished"></button>
         <button class="btn danger" type="button" id="delete">削除する</button>
       </div>

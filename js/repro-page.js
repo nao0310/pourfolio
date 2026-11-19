@@ -112,7 +112,7 @@ async function render() {
 
   $('content').replaceChildren(
     head,
-    ...(ready.length ? ready.map(groupCard) : [el('section', { class: 'card' }, el('p', { class: 'muted' }, groups.length ? 'まだブレを出せる組はありません。' : 'まだ記録はありません。レシピを選んで淹れて、★を付けると表示します。'))]),
+    ...(ready.length ? ready.map(groupCard) : [el('section', { class: 'card' }, el('p', { class: 'muted' }, groups.length ? 'まだブレを出せる組はありません。同じ豆とレシピで3杯淹れると表示します' : 'まだ記録はありません。レシピを選んで淹れて、★を付けると表示します。'))]),
     waitCard ?? '',
   );
 }

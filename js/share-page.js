@@ -112,7 +112,7 @@ async function initReceive(code) {
     $('importBtn').disabled = true;
     try {
       const rec = await addRecipe(db, value);
-      showMessage(`「${rec.name}」をレシピ帳に入れました`);
+      showMessage(`「${rec.name}」をレシピ帳に取り込みました`);
       $('rCard').hidden = true;
       $('after').hidden = false;
       $('brewLink').href = `brew.html?recipe=${encodeURIComponent(rec.id)}`;
@@ -122,7 +122,7 @@ async function initReceive(code) {
     } catch (err) {
       console.error(err);
       $('importBtn').disabled = false;
-      showMessage('保存できませんでした', 'error');
+      showMessage('取り込めませんでした。もう一度押してください', 'error');
     }
   });
 }

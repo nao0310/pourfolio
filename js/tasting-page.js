@@ -104,7 +104,7 @@ function renderStageTabs() {
 
 async function switchStage(next) {
   if (next === stage) return;
-  if (dirty && !(await askConfirm('保存していない入力は消えます。温度帯を切り替えますか？', { ok: '切り替える', danger: true }))) return;
+  if (dirty && !(await askConfirm('温度帯を切り替えますか？入れた内容は消えます', { ok: '切り替える', danger: true }))) return;
   stage = next;
   const url = new URL(location.href);
   url.searchParams.set('stage', stage);
@@ -243,7 +243,7 @@ function renderCoolCard() {
   const ready = coolReadyMs(brew);
   $('coolText').textContent =
     ready != null && Date.now() < ready
-      ? `${hhmm(ready)}ごろ（落ち切って15分後）に、冷めた味も評価できます。そのころトップにお知らせが出ます`
+      ? `${hhmm(ready)}ごろ（落ち切って15分後）に、冷めた味も評価できます。そのころホームにお知らせが出ます`
       : '冷めてきたら、冷めた味も評価できます。味の変わり方がわかります';
   $('coolLink').href = `tasting.html?brew=${encodeURIComponent(brew.id)}&stage=cool`;
 }
@@ -282,9 +282,10 @@ async function renderPhotos() {
               onclick: (e) => e.target.classList.toggle('zoom'), // 押すと大きく
             })
           : el('span', { class: 'photo-empty muted small' }, slot.hint),
-        el('label', { class: 'btn secondary small', for: inputId }, p ? '撮り直す' : '撮る・選ぶ'),
+        // 狭い画面で「撮る・選｜ぶ」と折れないよう、言葉の切れ目（・のあと）だけで折る（総仕上げの92番）
+        el('label', { class: 'btn secondary small', for: inputId }, ...(p ? ['撮り直す'] : ['撮る・', el('wbr'), '選ぶ'])),
         input,
-        p ? el('button', { type: 'button', class: 'link-btn small', onclick: () => onDeletePhoto(slot, p) }, '消す') : '',
+        p ? el('button', { type: 'button', class: 'link-btn small', onclick: () => onDeletePhoto(slot, p) }, '削除する') : '',
       );
     }),
   );
@@ -300,7 +301,7 @@ async function onPickPhoto(slot, file) {
     showMessage(`${slot.label}の写真を保存しました`, 'ok', 'photoMsg');
   } catch (err) {
     console.error(err);
-    showMessage(err.message?.includes('写真') || err.message?.includes('画像') ? err.message : '写真を保存できませんでした', 'error', 'photoMsg');
+    showMessage(err.message?.includes('写真') || err.message?.includes('画像') ? err.message : '写真を保存できませんでした。もう一度撮るか選んでください', 'error', 'photoMsg');
   }
   await renderPhotos();
 }

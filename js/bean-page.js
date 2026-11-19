@@ -64,7 +64,7 @@ function guarded(handler, msgId) {
       await handler(event);
     } catch (err) {
       console.error(err);
-      showMessage(err?.message ? `できませんでした：${err.message}` : 'できませんでした。もう一度押してください', 'error', msgId);
+      showMessage(err?.message ? `保存できませんでした：${err.message}` : '保存できませんでした。もう一度押してください', 'error', msgId);
     } finally {
       buttons.forEach((b) => (b.disabled = false));
     }
@@ -177,7 +177,7 @@ const txNote = (t) => (t.kind === 'gift' ? giftTxNote(t) : t.memo);
 function renderTxList(txs) {
   const sorted = sortTxNewestFirst(txs);
   if (!sorted.length) {
-    $('txList').replaceChildren(el('li', { class: 'muted' }, 'まだ履歴がありません'));
+    $('txList').replaceChildren(el('li', { class: 'muted' }, 'まだ在庫の履歴はありません。届いた豆を入れると表示します'));
     return;
   }
   $('txList').replaceChildren(
@@ -202,7 +202,7 @@ function renderTxList(txs) {
               type: 'button',
               onclick: async () => {
                 const extra = { freeze: '（作った袋も消えます）', thaw: '（袋は冷凍庫に戻ります）' }[t.kind] ?? '';
-                if (!(await askConfirm(`「${TX_KINDS[t.kind] ?? t.kind} ${formatG(t.deltaG)}」を取り消しますか？${extra}`, { ok: '取り消す' }))) return;
+                if (!(await askConfirm(`「${TX_KINDS[t.kind] ?? t.kind} ${formatG(t.deltaG)}」を取り消しますか？${extra}元に戻せません`, { ok: '取り消す', danger: true }))) return;
                 try {
                   await deleteInventoryTx(db, t.id);
                 } catch (err) {

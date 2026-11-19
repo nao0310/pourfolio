@@ -92,7 +92,7 @@ async function render() {
   const asked = queryParam('bean');
   const askedName = asked && !journeys.some((j) => j.bean.id === asked) ? (data.beans ?? []).find((b) => b.id === asked && b.deletedAt == null)?.name : null;
   const notice = asked && !journeys.some((j) => j.bean.id === asked)
-    ? `${askedName ? `「${askedName}」` : '指定された豆'}は、まだ道のりがありません（淹れて評価すると、ここに並びます）。いまは「${journeys[0].bean.name}」を出しています`
+    ? `${askedName ? `「${askedName}」` : '指定された豆'}は、まだ道のりはありません（淹れて評価すると、ここに並びます）。いまは「${journeys[0].bean.name}」を出しています`
     : null;
   select(asked, notice);
 }

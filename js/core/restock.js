@@ -98,7 +98,7 @@ function leadText(plan) {
 }
 
 /**
- * トップと買い物リストに出す文
+ * ホームと買い物リストに出す文
  * @returns {{title:string, text:string}}
  */
 export function restockText(plan) {

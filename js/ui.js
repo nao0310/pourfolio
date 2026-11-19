@@ -100,8 +100,8 @@ export function showPageLoadError() {
       'div',
       { class: 'card load-error', role: 'alert' },
       el('p', {}, el('strong', {}, '画面を読み込めませんでした')),
-      el('p', { class: 'muted' }, '開き直してください。何度も出るときは、トップに戻ってからもう一度開いてください。'),
-      el('div', { class: 'row' }, el('a', { class: 'btn secondary', href: './' }, 'トップへ'), el('button', { class: 'btn secondary', type: 'button', onclick: () => location.reload() }, '開き直す')),
+      el('p', { class: 'muted' }, '開き直してください。何度も出るときは、ホームに戻ってからもう一度開いてください。'),
+      el('div', { class: 'row' }, el('a', { class: 'btn secondary', href: './' }, 'ホームへ'), el('button', { class: 'btn secondary', type: 'button', onclick: () => location.reload() }, '開き直す')),
     ),
   );
 }

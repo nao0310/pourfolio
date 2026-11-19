@@ -66,7 +66,7 @@ export function agingOf(bean, rows) {
 /** 山の一文 */
 export function agingLine({ ready, rated, peak, standard }) {
   if (!ready) return `焙煎後日数と★のある杯があと${AGING_MIN - rated}杯で、飲み頃の山を出します`;
-  if (!peak) return `同じ日数の区切りで${AGING_BIN_MIN}杯ある所がまだありません（★のある杯 ${rated}杯）`;
+  if (!peak) return `同じ日数の区切りで${AGING_BIN_MIN}杯ある所はまだありません（★のある杯 ${rated}杯）`;
   const inStd = peak.from <= standard.to && peak.to >= standard.from;
   return `飲み頃の山は ${peak.label}（平均★${peak.mean}・${peak.n}杯）。焙煎度の目安（${standard.text}）${inStd ? 'と重なっています' : 'とずれています'}`;
 }

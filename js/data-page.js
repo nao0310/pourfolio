@@ -182,8 +182,8 @@ $('file').addEventListener('change', async (event) => {
 });
 
 $('clear').addEventListener('click', async () => {
-  if (!(await askConfirm('この端末の記録をすべて消しますか？', { ok: '消す', danger: true }))) return;
-  if (!(await askConfirm('本当に消しますか？元に戻せません', { ok: 'すべて消す', danger: true }))) return;
+  if (!(await askConfirm('この端末の記録をすべて削除しますか？', { ok: '削除する', danger: true }))) return;
+  if (!(await askConfirm('本当に削除しますか？元に戻せません', { ok: 'すべて削除する', danger: true }))) return;
   // 設定もここでは作り直さない（作り直すと、復元したときにファイルの設定より新しいと判定されてしまう）
   await clearAll(db);
   // 自動ファイル保存も止める。続けると、復元する前の保存でフォルダのファイルが空の中身に替わるため（2-8 の18番）
@@ -192,7 +192,7 @@ $('clear').addEventListener('click', async () => {
     await stopAutosave().catch((err) => console.error(err));
     stopped = true;
   }
-  showMessage(stopped ? '全部消しました。自動ファイル保存も止めました（フォルダのファイルはそのまま残っています）' : '全部消しました');
+  showMessage(stopped ? 'すべて削除しました。自動ファイル保存も止めました（フォルダのファイルはそのまま残っています）' : 'すべて削除しました');
   await render();
 });
 

@@ -44,7 +44,7 @@ function resetForm() {
   priceTable = [];
   showErrors({});
   $('formTitle').textContent = '気になる豆を足す';
-  $('save').textContent = '足す';
+  $('save').textContent = '登録する';
   $('cancelEdit').hidden = true;
 }
 
@@ -130,21 +130,21 @@ function openRow(w, cand) {
       'div',
       { class: 'row' },
       el('a', { class: 'btn small', href: buyHref(w, cand) }, '買った'),
-      el('button', { class: 'btn secondary small', type: 'button', onclick: () => startEdit(w) }, '直す'),
+      el('button', { class: 'btn secondary small', type: 'button', onclick: () => startEdit(w) }, '編集する'),
       el(
         'button',
         {
           class: 'btn secondary small',
           type: 'button',
           onclick: async () => {
-            if (!(await askConfirm(`「${w.name}」を気になる豆から消しますか？`, { ok: '消す', cancel: 'やめる', danger: true }))) return;
+            if (!(await askConfirm(`「${w.name}」を気になる豆から削除しますか？元に戻せません`, { ok: '削除する', danger: true }))) return;
             await deleteWish(db, w.id);
             if (editId === w.id) resetForm();
-            showToast(`「${w.name}」を消しました`);
+            showToast(`「${w.name}」を削除しました`);
             await render();
           },
         },
-        '消す',
+        '削除する',
       ),
       w.productUrl && el('a', { class: 'link-more', href: w.productUrl, target: '_blank', rel: 'noopener noreferrer' }, '店のページ'),
     ),
@@ -161,7 +161,7 @@ async function render() {
   $('openList').replaceChildren(
     ...(open.length
       ? open.map((w) => openRow(w, candOf.get(w.id)))
-      : [el('p', { class: 'muted' }, 'まだありません。上の欄から足してください。')]),
+      : [el('p', { class: 'muted' }, 'まだ気になる豆はありません。上の欄から登録すると表示します')]),
   );
   $('boughtTitle').textContent = `購入済み（${bought.length}）`;
   $('boughtBox').hidden = bought.length === 0;

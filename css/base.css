@@ -665,8 +665,8 @@ p > a:not(.btn):only-child { display: inline-block; padding: 11px 0; }
 /* 写真（A7） */
 .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .photo-slot { display: flex; flex-direction: column; align-items: stretch; gap: 6px; min-width: 0; text-align: center; }
-.photo-slot .btn { min-height: 44px; padding: 6px 4px; font-size: 0.85rem; }
-.photo-slot .link-btn { padding: 0; min-height: 44px; } /* 写真の「消す」も44px（2-8の21番の続き） */
+.photo-slot .btn { min-height: 44px; padding: 6px 4px; font-size: 0.85rem; word-break: keep-all; }
+.photo-slot .link-btn { padding: 0; min-height: 44px; } /* 写真の「削除する」も44px（2-8の21番の続き） */
 .photo-thumb { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; border: 1px solid var(--line); cursor: zoom-in; }
 .photo-thumb.zoom { position: fixed; inset: 0; z-index: 50; width: 100%; height: 100%; aspect-ratio: auto; object-fit: contain; background: rgba(0, 0, 0, 0.9); border: 0; border-radius: 0; cursor: zoom-out; }
 .photo-empty { display: flex; align-items: center; justify-content: center; aspect-ratio: 1; padding: 4px; border: 2px dashed var(--line); border-radius: 10px; line-height: 1.3; }

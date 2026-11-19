@@ -592,7 +592,7 @@ function onTap() {
 }
 
 async function cancelBrew() {
-  if (!(await askConfirm('この抽出をやめますか？記録は残りません', { ok: 'やめる', danger: true }))) return;
+  if (!(await askConfirm('淹れるのをやめますか？計った時間は消えます', { ok: 'やめる', danger: true }))) return;
   stopTimer();
   const back = draft?.returnSearch ?? '';
   clearDraft();
@@ -848,15 +848,16 @@ async function init() {
     if (!['recipe', 'initial', 'brew', 'best', 'suggestion', 'from'].some((k) => queryParam(k))) {
       // レシピを選ばずに開いた（豆だけ・下書きを消したあとの「続きに戻る」など、2-8の29番）
       n.querySelector('h1').textContent = '淹れるレシピを選んでください';
-      n.querySelector('p').textContent = 'レシピの一覧から、淹れるレシピを選んでください。';
+      n.querySelector('p').textContent = 'レシピ帳から、淹れるレシピを選んでください。';
     } else if (queryParam('initial') || queryParam('brew') || queryParam('best')) {
-      n.querySelector('h1').textContent = '豆か記録が見つかりません';
-      n.querySelector('p').textContent = '削除したのかもしれません。トップに戻って選び直してください。';
-      $('notFoundBtn').textContent = 'トップへ';
+      // どちらが見つからないかを書く（総仕上げの85番）
+      n.querySelector('h1').textContent = queryParam('brew') ? '抽出の記録が見つかりません' : '豆が見つかりません';
+      n.querySelector('p').textContent = '削除したのかもしれません。ホームに戻って選び直してください。';
+      $('notFoundBtn').textContent = 'ホームへ';
       $('notFoundBtn').href = './';
     } else if (queryParam('suggestion')) {
       n.querySelector('h1').textContent = '提案が見つかりません';
-      n.querySelector('p').textContent = '提案を出した抽出を削除したのかもしれません。レシピの一覧から選び直してください。';
+      n.querySelector('p').textContent = '提案を出した抽出の記録を削除したのかもしれません。レシピ帳から選び直してください。';
     }
     n.hidden = false;
     return;
@@ -912,7 +913,7 @@ $('crumb').addEventListener('click', async (e) => {
   // 確かめてから移る（確認の箱は待つので、いったん移るのを止める）
   e.preventDefault();
   const href = e.currentTarget.href;
-  if (!(await askConfirm('記録せずに戻りますか？途中の内容は消えます', { ok: '戻る', danger: true }))) return;
+  if (!(await askConfirm('記録せずに戻りますか？入れた内容は消えます', { ok: '戻る', danger: true }))) return;
   clearDraft();
   location.href = href;
 });
