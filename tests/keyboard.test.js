@@ -2,7 +2,7 @@
 // ユーザーの報告「ページの下側の入力をしようとすると、キーボードで入力したい欄が隠れて見えなくなる」の再発を防ぐ。
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { isTypingTarget, keyboardInset, revealDelta, visibleArea, opensKeyboard, guessKeyboardInset } from '../js/core/keyboard.js';
+import { isTypingTarget, keyboardInset, revealDelta, visibleArea, opensKeyboard, guessKeyboardInset, keyboardHeight, viewportBand } from '../js/core/keyboard.js';
 
 test('キーボードが出る欄だけを入力中として扱う', () => {
   for (const type of ['', 'text', 'number', 'url', 'date', 'time', 'search', 'TEXT']) assert.equal(isTypingTarget({ tag: 'INPUT', type }), true, type);
@@ -88,4 +88,37 @@ test('見込みのときも、画面の下の端の欄は上半分まで動く',
   const vis = visibleArea({ vvTop: 0, vvBottom: H - inset, boxTop: 0, boxBottom: H });
   const d = revealDelta({ top: 700, bottom: 752 }, vis);
   assert.ok(752 - d <= H * 0.55 - 12, String(d));
+});
+
+// 3.6.5（D-187）：ユーザーの「キーボードの点検」の数字（iPhone のホーム画面のアプリ）
+// キーボードを出す前は 画面 812・見える範囲 812。出すと 画面 674・見える範囲 408（上 138）・ページのずれ 138
+test('ホーム画面のアプリ：画面の高さが縮んでも、キーボードの高さは出る前の画面の高さから数える', () => {
+  // 3.6.4 までの数え方では 128 になっていた（欄が見えていると思って動かさなかった）
+  assert.equal(keyboardInset({ innerHeight: 674, vvHeight: 408, vvOffsetTop: 138 }), 128);
+  assert.equal(keyboardHeight({ baseHeight: 812, innerHeight: 674, vvHeight: 408, vvOffsetTop: 138 }), 404);
+  // Safari（画面の高さが変わらない）は今までどおり
+  assert.equal(keyboardHeight({ baseHeight: 664, innerHeight: 664, vvHeight: 328 }), 336);
+  // キーボードがないとき・アドレスの欄の出入りくらいの差は0
+  assert.equal(keyboardHeight({ baseHeight: 812, innerHeight: 812, vvHeight: 812 }), 0);
+  assert.equal(keyboardHeight({ baseHeight: 745, innerHeight: 664, vvHeight: 664 }), 0);
+  // 拡大中は数えない
+  assert.equal(keyboardHeight({ baseHeight: 812, innerHeight: 812, vvHeight: 300, scale: 2 }), 0);
+});
+
+test('見える範囲：ページのずれを含む数え方と含まない数え方の重なる所', () => {
+  // どちらの数え方でも見える所（138〜408）
+  assert.deepEqual(viewportBand({ vvTop: 138, vvHeight: 408, scrollY: 138 }), { top: 138, bottom: 408 });
+  // ページがずれていないとき（Safari）は今までどおり
+  assert.deepEqual(viewportBand({ vvTop: 0, vvHeight: 328, scrollY: 0 }), { top: 0, bottom: 328 });
+  assert.deepEqual(viewportBand({ vvTop: 120, vvHeight: 328, scrollY: 0 }), { top: 120, bottom: 448 });
+  // 重なりが狭すぎるときは、ページのずれを引いた所
+  assert.deepEqual(viewportBand({ vvTop: 300, vvHeight: 320, scrollY: 300 }), { top: 0, bottom: 320 });
+});
+
+test('ホーム画面のアプリの数字で、画面の下の端の欄が見える所まで動く', () => {
+  const vis = visibleArea({ ...(() => { const b = viewportBand({ vvTop: 138, vvHeight: 408, scrollY: 138 }); return { vvTop: b.top, vvBottom: b.bottom }; })(), boxTop: 0, boxBottom: 674 });
+  // 前回の画面写真の「目標の抽出時間」の欄（およそ 440〜487）
+  const d = revealDelta({ top: 440, bottom: 487 }, vis);
+  assert.ok(d > 0);
+  assert.ok(440 - d >= 138 && 487 - d <= 408, String(d));
 });

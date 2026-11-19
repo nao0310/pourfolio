@@ -4,6 +4,9 @@
 // - safari：iPhone の Safari。画面（レイアウト）の高さはそのままで、見える範囲だけが KB_PX 狭くなる
 // - app：ホーム画面のアプリ。見える範囲は変わらない（iPhone がキーボードの高さを伝えない）が、画面の下 APP_HIDDEN がキーボードで隠れる
 //   （ユーザーの画面写真では、かなのキーボードと上の「^ v ✓」の帯で45%）
+// - app26：ホーム画面のアプリ（ユーザーの「キーボードの点検」の数字、iPhone 812px）。キーボードが出ると画面の高さが 812 → 674 に縮み、
+//   ページのずれと見える範囲の上のずれが 138 になり、見える範囲は 408。どの数え方が正しいか分からないので、
+//   「見える範囲が138下にずれた」と「ページが138上にずれた」の両方で欄が見えるかを数える（3.6.5、D-187）
 // - pc：PC（マウス）。キーボードは出ない。下に付けるボタンに隠れないかと、勝手に動かないかだけを見る
 // 1つの欄ごとに：中身（main）をスクロールしてその欄を画面の下の端に置く → カーソルを入れる（ブラウザ自身のスクロールは止める）
 // → キーボードを出す → 欄が隠れずに見えるか（下に付けるボタンにも隠れないか）を見る。
@@ -22,29 +25,47 @@ const KB_PX = 336; // safari：iPhone 13 の日本語キーボード（予測変
 const APP_HIDDEN = 0.47; // app：キーボードで隠れる画面の割合（画面写真の45%より少し厳しく）
 const args = process.argv.slice(2);
 const modeArg = args.find((a) => a.startsWith('--mode='))?.slice(7);
-const MODES = modeArg ? modeArg.split(',') : ['safari', 'app', 'pc'];
+const MODES = modeArg ? modeArg.split(',') : ['safari', 'app', 'app26', 'pc'];
+// app26 の数字（ユーザーの画面写真）
+const A26 = { H0: 812, VVH: 408, SHIFT: 138 };
 const only = args.filter((a) => !a.startsWith('--'));
 
 // visualViewport の作り物。mode が app のときは、キーボードを出しても見える範囲を変えない（iPhone が伝えない）
-const FAKE_VV = (mode) => {
+const FAKE_VV = ({ mode, A26 }) => {
   let kb = 0;
   const vv = new EventTarget();
   const num = (f) => ({ get: f, configurable: true });
   const shrink = () => (mode === 'safari' ? kb : 0);
+  // app26：ページのずれ（scrollY）を作り物にする。window.scrollTo(0, 0) で0に戻る
+  let fakeScroll = 0;
+  if (mode === 'app26') {
+    const realScrollY = Object.getOwnPropertyDescriptor(window, 'scrollY') ?? null;
+    Object.defineProperty(window, 'scrollY', { get: () => fakeScroll, configurable: true });
+    const realScrollTo = window.scrollTo.bind(window);
+    window.scrollTo = (...a) => { fakeScroll = 0; realScrollTo(...a); };
+    void realScrollY;
+  }
   Object.defineProperties(vv, {
     width: num(() => innerWidth),
-    height: num(() => innerHeight - shrink()),
-    offsetTop: num(() => 0),
+    height: num(() => (mode === 'app26' && kb ? A26.VVH : innerHeight - shrink())),
+    offsetTop: num(() => (mode === 'app26' && kb ? A26.SHIFT : 0)),
     offsetLeft: num(() => 0),
     pageTop: num(() => scrollY),
     pageLeft: num(() => scrollX),
     scale: num(() => 1),
   });
   Object.defineProperty(window, 'visualViewport', { get: () => vv, configurable: true });
-  window.__kbHidden = () => kb; // 本当にキーボードで隠れている高さ
+  // 本当に見えている範囲（欄の位置と同じ数え方）。app26 は2通り（どちらでも見えていること）
+  window.__bands = () => {
+    if (mode === 'app26' && kb) return [[A26.SHIFT, A26.SHIFT + A26.VVH], [0, A26.VVH]];
+    if (mode === 'safari') return [[0, innerHeight - kb]];
+    if (mode === 'app') return [[0, innerHeight - kb]];
+    return [[0, innerHeight]];
+  };
   window.__kb = (h) => {
     kb = h;
-    if (mode === 'safari') vv.dispatchEvent(new Event('resize'));
+    if (mode === 'app26') fakeScroll = h ? A26.SHIFT : fakeScroll;
+    if (mode === 'safari' || mode === 'app26') vv.dispatchEvent(new Event('resize'));
   };
 };
 
@@ -52,9 +73,10 @@ const CONTEXTS = {
   safari: () => ({ ...devices['iPhone 13'] }),
   // ホーム画面のアプリはアドレスの欄がないので、画面の高さが大きい
   app: () => ({ ...devices['iPhone 13'], viewport: { width: 390, height: 800 } }),
+  app26: () => ({ ...devices['iPhone 13 Mini'], viewport: { width: 375, height: 812 } }),
   pc: () => ({ viewport: { width: 1280, height: 800 } }),
 };
-const kbFor = (mode, h) => (mode === 'safari' ? KB_PX : mode === 'app' ? Math.round(h * APP_HIDDEN) : 0);
+const kbFor = (mode, h) => (mode === 'safari' ? KB_PX : mode === 'app' ? Math.round(h * APP_HIDDEN) : mode === 'app26' ? A26.H0 - A26.VVH : 0);
 
 const srv = await startServer(PORT);
 const browser = await launch({ ports: [PORT] });
@@ -67,7 +89,7 @@ for (const mode of MODES) {
   const ctxOpts = CONTEXTS[mode]();
   delete ctxOpts.defaultBrowserType;
   const context = await browser.newContext({ ...ctxOpts, locale: 'ja-JP', timezoneId: 'Asia/Tokyo' });
-  await context.addInitScript(FAKE_VV, mode);
+  await context.addInitScript(FAKE_VV, { mode, A26 });
   const page = await context.newPage();
   errors.push(...collectErrors(page));
   const pageErrors = collectErrors(page);
@@ -128,14 +150,17 @@ for (const mode of MODES) {
       return { scrollTop: main.scrollTop, top: r.top, bottom: r.bottom };
     }, { n, place });
     await page.waitForTimeout(30);
+    // app26：キーボードが出ると画面の高さが縮む
+    if (mode === 'app26') await page.setViewportSize({ width: 375, height: A26.H0 - A26.SHIFT });
     await page.evaluate((h) => window.__kb(h), KB);
     await page.waitForTimeout(600);
     const res = await page.evaluate(async (n) => {
       const el = document.querySelector(`[data-kb-check="${n}"]`);
       const r = el.getBoundingClientRect();
       const vv = window.visualViewport;
-      const top = vv.offsetTop;
-      const bottom = Math.min(vv.offsetTop + vv.height, innerHeight - window.__kbHidden());
+      const bands = window.__bands();
+      const top = Math.max(...bands.map((b) => b[0]));
+      const bottom = Math.min(...bands.map((b) => b[1]));
       let bar = null;
       for (const b of document.querySelectorAll('.bottom-bar')) {
         const br = b.getBoundingClientRect();
@@ -156,7 +181,8 @@ for (const mode of MODES) {
     // キーボードを閉じる
     await page.evaluate(() => document.activeElement?.blur());
     await page.evaluate(() => window.__kb(0));
-    await page.waitForTimeout(150);
+    if (mode === 'app26') await page.setViewportSize({ width: 375, height: A26.H0 });
+    await page.waitForTimeout(mode === 'app26' ? 700 : 150);
     return res;
   };
 
@@ -206,8 +232,9 @@ for (const mode of MODES) {
       // 2. 上のほうに見えている欄は動かない（置けたときだけ）
       const t = await tryField(i, 'top');
       total++;
-      const roomBottom = (mode === 'safari' ? H - KB : mode === 'app' ? Math.round(H / 2) : H) - 40;
-      if (t.before.top >= 80 && t.before.bottom <= roomBottom && t.moved !== 0) found.push(`見えているのに動いた：${desc(t)}`);
+      const roomBottom = (mode === 'safari' ? H - KB : mode === 'app' ? Math.round(H / 2) : mode === 'app26' ? A26.VVH : H) - 40;
+      const roomTop = mode === 'app26' ? A26.SHIFT + 60 : 80;
+      if (t.before.top >= roomTop && t.before.bottom <= roomBottom && t.moved !== 0) found.push(`見えているのに動いた：${desc(t)}`);
     }
     if (n) {
       const r = await tryField(n - 1, 'end');
