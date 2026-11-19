@@ -20,7 +20,7 @@ import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
 const { devices } = require('playwright');
-const PORT = 8093;
+const PORT = 8099; // ほかの点検（flows-brew.js は 8093）と同時に回せるように別の番号
 const KB_PX = 336; // safari：iPhone 13 の日本語キーボード（予測変換の段を含む）のおおよその高さ
 const APP_HIDDEN = 0.47; // app：キーボードで隠れる画面の割合（画面写真の45%より少し厳しく）
 const args = process.argv.slice(2);
