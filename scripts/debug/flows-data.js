@@ -43,6 +43,7 @@ const counts = (all) => Object.fromEntries(Object.entries(all).map(([k, v]) => [
 async function confirmYes(page) {
   const box = page.locator('dialog.confirm-box');
   await box.waitFor({ timeout: 5000 });
+  await page.waitForTimeout(500); // 開いてすぐのタップは受け付けない（総仕上げの67番）
   await box.locator('button:not(.secondary)').click();
 }
 const msg = (page) => page.locator('#msg').textContent();
@@ -92,7 +93,7 @@ if (on('data')) {
   await page.click('#clear');
   await confirmYes(page);
   await confirmYes(page);
-  await page.waitForFunction(() => document.querySelector('#msg')?.textContent.includes('消しました'));
+  await page.waitForFunction(() => /削除しました|消しました/.test(document.querySelector('#msg')?.textContent ?? ''));
   log('data', `全部消す → ${JSON.stringify(counts(await dump(page)))}`);
 
   // ホームを開いてから戻る（新しい端末と同じく設定が自動で作られる）
@@ -126,7 +127,7 @@ if (on('data')) {
   const oldFile = path.join(tmp, 'old.json');
   await writeFile(oldFile, JSON.stringify(old));
   await page.click('#clear'); await confirmYes(page); await confirmYes(page);
-  await page.waitForFunction(() => document.querySelector('#msg')?.textContent.includes('消しました'));
+  await page.waitForFunction(() => /削除しました|消しました/.test(document.querySelector('#msg')?.textContent ?? ''));
   await page.setInputFiles('#file', oldFile);
   await confirmYes(page);
   await page.waitForFunction(() => /復元しました|でき/.test(document.querySelector('#msg')?.textContent ?? ''));
@@ -163,7 +164,7 @@ if (on('data')) {
 
   // 復元してすぐ、もう一度同じファイルで復元（復元中にもう一度選ぶ）
   await page.click('#clear'); await confirmYes(page); await confirmYes(page);
-  await page.waitForFunction(() => document.querySelector('#msg')?.textContent.includes('消しました'));
+  await page.waitForFunction(() => /削除しました|消しました/.test(document.querySelector('#msg')?.textContent ?? ''));
   await page.setInputFiles('#file', path.join(ROOT, 'tests/fixtures/debug/bulk.json'));
   await confirmYes(page);
   await page.setInputFiles('#file', path.join(ROOT, 'tests/fixtures/debug/bulk.json'));
@@ -423,7 +424,7 @@ if (on('autosave')) {
   log('autosave', `  設定の updatedAt：保存前 ${sBefore?.updatedAt} → 保存後 ${sAfter?.updatedAt}（lastBackupAt ${sAfter?.lastBackupAt}）`);
   await page.goto(`${srv.base}/data.html`);
   await page.click('#clear'); await confirmYes(page); await confirmYes(page);
-  await page.waitForFunction(() => document.querySelector('#msg')?.textContent.includes('消しました'));
+  await page.waitForFunction(() => /削除しました|消しました/.test(document.querySelector('#msg')?.textContent ?? ''));
   log('autosave', `全部消す → 「${await msg(page)}」 ファイル ${JSON.stringify(await readFileInOpfs())}`);
   // 消したあと、ファイルから復元する前に別の記録を入れて1杯保存する
   await loadFixture(page, 'minimal');

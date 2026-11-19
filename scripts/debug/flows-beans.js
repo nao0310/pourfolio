@@ -88,6 +88,8 @@ async function chooseDiscard(page) {
 async function confirmYes(page) {
   const box = page.locator('dialog.confirm-box');
   await box.waitFor({ timeout: 3000 });
+  // 確認の箱は開いてから0.4秒はタップを受け付けない（2度押しの2回目を無視する、総仕上げの67番）。人と同じく読んでから押す
+  await page.waitForTimeout(500);
   await box.locator('button').last().click();
 }
 
@@ -634,6 +636,7 @@ await flow('おすそ分け', 'empty', async (page, notes) => {
   await page.locator('#outForm button[type=submit]').click();
   const box = page.locator('dialog.confirm-box');
   await box.waitFor({ timeout: 3000 });
+  await page.waitForTimeout(500); // 開いてすぐのタップは受け付けない（67番）
   await box.locator('button').first().click(); // いいえ
   await page.waitForTimeout(500);
   const disabled = await page.locator('#outForm button[type=submit]').isDisabled();
@@ -658,10 +661,12 @@ await flow('おすそ分け', 'empty', async (page, notes) => {
 // 19. 飲み切りにする を、人の2度押しくらいの間（100〜250ms）で2回
 for (const gap of [100, 250]) await flow(`飲み切りの2度押し（${gap}ms）`, 'empty', async (page, notes) => {
   const id = await registerBean(page);
-  const b = page.locator('#toggleFinished');
-  await b.click();
-  await page.waitForTimeout(gap);
-  await b.click();
+  // 人の2度押しに近づける：page.click は押せるようになるまで待つので、画面の中で gap ms あけて2回押す
+  await page.evaluate((ms) => new Promise((ok) => {
+    const btn = document.getElementById('toggleFinished');
+    btn.click();
+    setTimeout(() => { btn.click(); ok(); }, ms);
+  }), gap);
   await page.waitForTimeout(1200);
   const st = await dbRead(page, `(all) => all.beans.find((b) => b.id === ${JSON.stringify(id)}).status`);
   if (st !== 'finished') notes.push(`「飲み切りにする」を${gap}msあけて2回押すと、状態は ${st}（2回目が「飲み切りを取り消す」として働く）`);

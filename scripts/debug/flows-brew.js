@@ -185,12 +185,11 @@ async function staleDraft() {
   log('メモ', '10時間後のホームの途中のカード', (await text(page, '#resumeCard')).replace(/\s+/g, ' '));
   await page.goto(`${base}/brew.html`);
   await page.waitForTimeout(500);
-  log('メモ', '10時間後に開くと', await text(page, '#tElapsed'), await text(page, '#tPhase'), await text(page, '#tCount'));
-  await page.click('#tap', { force: true });
-  await page.clock.runFor(2000);
-  await page.click('#tap', { force: true });
-  await page.waitForTimeout(300);
-  log('メモ', '押していくと 実績', await page.locator('#resultView:not([hidden])').count(), '総時間', await page.inputValue('#rTotal').catch(() => ''));
+  // 総仕上げの60番：1時間を過ぎた下書きはタイマーに戻さず、実績の確認で開く（総時間は空、「○時間前に始めた1杯です」）
+  const result = await page.locator('#resultView:not([hidden])').count();
+  const note = await text(page, '#rMsg');
+  const total = await page.inputValue('#rTotal').catch(() => '');
+  log(result && /時間前に始めた1杯です/.test(note) && total === '' ? 'OK' : 'NG', '10時間後に開くと実績の確認', `実績の確認 ${result}・知らせ「${note}」・総時間「${total}」`);
   log(errors.length ? 'NG' : 'OK', '放っておいた下書きのエラー', errors.join(' / '));
   await ctx.close();
 }
