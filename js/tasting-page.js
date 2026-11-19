@@ -43,6 +43,7 @@ import { remainingG, cupsLeft, doseFromSettings } from './core/inventory.js';
 import { formatG } from './core/format.js';
 import { portionsOf, stockParts, stockPartsText } from './core/frozen.js';
 import { $, el, queryParam, showMessage, showPageLoadError, termHelp } from './ui.js';
+import { scrollToTop } from './layout.js';
 import { registerServiceWorker } from './pwa.js';
 import { askConfirm } from './confirm-box.js';
 
@@ -218,7 +219,7 @@ function showDone(saved, suggestion) {
     $('doneBean').href = `bean.html?id=${encodeURIComponent(bean.id)}`;
     $('doneBean').hidden = false;
   }
-  window.scrollTo(0, 0);
+  scrollToTop(); // 中身の箱をいちばん上に（D-184）
 }
 
 /** 保存したあと：温度帯ごとの評価の一覧（2つ以上あるときだけ） */
@@ -252,7 +253,7 @@ function showForm() {
   $('doneView').hidden = true;
   $('formView').hidden = false;
   document.title = '味の評価 - Pourfolio';
-  window.scrollTo(0, 0);
+  scrollToTop(); // 中身の箱をいちばん上に（D-184）
 }
 
 // ---- 写真（A7） ----

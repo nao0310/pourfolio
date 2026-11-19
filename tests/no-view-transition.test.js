@@ -18,10 +18,10 @@ test('CSS・HTML・JS に画面の切り替え効果がない', () => {
   }
 });
 
-test('下のタブは画面の下に固定する', () => {
+test('下のタブは固定（position: fixed）にせず、画面の高さの箱の下に並べる（D-184。D-156 だけでは直らなかった）', () => {
   const css = stripComments(readFileSync(join(root, 'css/base.css'), 'utf8'));
   const rule = css.match(/\.tabbar\s*\{([^}]*)\}/);
   assert.ok(rule, '.tabbar の指定がありません');
-  assert.match(rule[1], /position:\s*fixed/);
-  assert.match(rule[1], /bottom:\s*0/);
+  assert.doesNotMatch(rule[1], /position:\s*fixed/);
+  assert.match(rule[1], /flex:\s*0 0 auto/);
 });

@@ -137,8 +137,16 @@ export function inspect(win, vp) {
   const body = doc.body;
   const out = {};
   if (!body) return { error: 'bodyがない' };
-  // 横のはみ出し
-  const sw = doc.documentElement.scrollWidth;
+  // 下のタブの位置（D-184）：画面のいちばん下にあること。ページ全体はスクロールしないこと
+  const tab = doc.querySelector('nav.tabbar');
+  if (tab && visible(tab, win)) {
+    const r = tab.getBoundingClientRect();
+    if (Math.abs(r.bottom - win.innerHeight) > 1) out.tabbarOff = { bottom: Math.round(r.bottom), innerHeight: win.innerHeight };
+  }
+  if (doc.documentElement.scrollHeight > win.innerHeight + 1 && win.getComputedStyle(doc.documentElement).overflowY === 'hidden' && win.scrollY !== 0) out.docScrolled = win.scrollY;
+  // 横のはみ出し（中身の箱 main の中のはみ出しも数える。D-184 でページ全体はスクロールしないため）
+  const mainEl = doc.querySelector('main');
+  const sw = Math.max(doc.documentElement.scrollWidth, mainEl ? mainEl.scrollWidth - mainEl.clientWidth + vp.w : 0);
   if (sw > vp.w + 1) {
     const culprits = [...body.querySelectorAll('*')]
       .filter((e) => visible(e, win) && e.getBoundingClientRect().right > vp.w + 1)
@@ -281,7 +289,7 @@ export function start({ label: runLabel = 'run', pages = null, viewports = null,
  * { 問題の種類: [{ page, vps, detail }] }
  */
 export function summary(rows = window.__audit?.rows ?? []) {
-  const KEYS = ['errors', 'error', 'overflowX', 'clipped', 'loading', 'badText', 'badValue', 'smallText', 'lowContrast', 'smallTap', 'movedTo'];
+  const KEYS = ['errors', 'error', 'overflowX', 'clipped', 'loading', 'badText', 'badValue', 'smallText', 'lowContrast', 'smallTap', 'tabbarOff', 'docScrolled', 'movedTo'];
   const out = {};
   for (const k of KEYS) {
     const map = new Map();

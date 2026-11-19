@@ -1,6 +1,7 @@
 // 画面に戻ってきたときの読み直し（総仕上げの54・59番、D-178）。決め方は js/core/page-life.js
 // registerServiceWorker（js/pwa.js）から全画面で呼ばれる。淹れている途中などは blockReturnReload で止める。
 import { shouldReload, dayKey } from './core/page-life.js';
+import { watchLayout } from './layout.js';
 
 let blocker = () => false;
 let started = false;
@@ -13,6 +14,7 @@ export function blockReturnReload(isBlocked) {
 export function watchPageLife() {
   if (started) return;
   started = true;
+  watchLayout(); // ページ全体のずれを戻す・「戻る」の位置（D-184）
   const loadedKey = dayKey(new Date());
   const reloadIf = (event, persisted) => {
     let blocked = false;

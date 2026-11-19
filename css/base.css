@@ -134,13 +134,13 @@ a { color: var(--accent); }
 .crumb a::before { content: "‹ "; }
 .btn.block { display: flex; width: 100%; text-align: center; }
 .btn:disabled { opacity: 0.5; }
-main.with-bottom-bar { padding-bottom: calc(110px + env(safe-area-inset-bottom)); }
+main.with-bottom-bar { padding-bottom: 0; } /* 下に付けるボタンは中身の流れの中にあるので、余白を足さない */
 .bottom-bar {
-  position: fixed;
-  left: 0;
-  right: 0;
+  /* 中身の箱（main）の下に付ける（sticky）。固定（fixed）は使わない（D-184） */
+  position: sticky;
   bottom: 0;
-  padding: 10px 16px max(12px, env(safe-area-inset-bottom));
+  margin: 12px 0 0;
+  padding: 10px 0 max(12px, env(safe-area-inset-bottom));
   background: var(--bg);
   border-top: 1px solid var(--line);
   z-index: 10;
@@ -802,10 +802,9 @@ p > a:not(.btn):only-child { display: inline-block; padding: 11px 0; }
 
 /* ---- 下の5つのタブ（D-063・D-118） ---- */
 .tabbar {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  /* 固定（position: fixed）はやめ、画面の高さの箱の下に並べる（D-184。iPhone のホーム画面のアプリで、固定した部品がスクロールと一緒に流れたため） */
+  position: relative;
+  flex: 0 0 auto;
   z-index: 11;
   display: flex;
   justify-content: center;
@@ -831,9 +830,11 @@ p > a:not(.btn):only-child { display: inline-block; padding: 11px 0; }
 .tab.current { color: var(--accent); }
 .tab-icon { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .tab.current .tab-icon { stroke-width: 2.4; }
-body.has-tabbar main, body:has(> nav.tabbar) main { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
-body.has-tabbar main.with-bottom-bar, body:has(> nav.tabbar) main.with-bottom-bar { padding-bottom: calc(176px + env(safe-area-inset-bottom)); }
-body.has-tabbar .bottom-bar, body:has(> nav.tabbar) .bottom-bar { bottom: calc(59px + env(safe-area-inset-bottom)); padding-bottom: 10px; }
+/* タブがあるときは、タブが下の安全な所（ホームバー）の分の余白を持つので、中身と下に付けるボタンは余白を足さない */
+body.has-tabbar main, body:has(> nav.tabbar) main { padding-bottom: 32px; }
+/* 下に付けるボタンのある画面は、箱の下の余白を0に（余白があると、ボタンとタブのあいだにすき間ができる） */
+body.has-tabbar main.with-bottom-bar, body:has(> nav.tabbar) main.with-bottom-bar, body main.with-bottom-bar { padding-bottom: 0; }
+body.has-tabbar .bottom-bar, body:has(> nav.tabbar) .bottom-bar { padding-bottom: 10px; }
 body.timer-on .tabbar { display: none; }
 
 /* 前回のベストのペース（ゴースト、D-041） */
@@ -1016,7 +1017,7 @@ h2 .term-help, h1 .term-help { margin-top: -10px; margin-bottom: -10px; }
 /* 背の低い横向きでは、カードを低くして「前へ」「次へ」を画面に入れる（総仕上げの73番） */
 @media (orientation: landscape) and (max-height: 500px) {
   .wr-slide { height: max(200px, calc(100svh - 170px)); padding: 14px 18px; }
-  .wr-nav { position: sticky; bottom: calc(59px + env(safe-area-inset-bottom)); z-index: 2; background: var(--bg); margin-top: 0; padding: 6px 0; }
+  .wr-nav { position: sticky; bottom: 0; z-index: 2; background: var(--bg); margin-top: 0; padding: 6px 0; }
 }
 .wr-s-cover { justify-content: center; background: var(--accent); color: var(--accent-fg); border-color: transparent; }
 .wr-s-cover .wr-sub, .wr-s-cover .wr-kicker { color: var(--accent-fg); opacity: 0.85; }
@@ -1062,3 +1063,36 @@ h2 .term-help, h1 .term-help { margin-top: -10px; margin-bottom: -10px; }
 .storage-bar { border: 2px solid var(--danger); }
 .storage-bar strong { color: var(--danger); }
 .chip:has(input:disabled) { opacity: 0.45; }
+
+/* ---- 画面の作り（D-184、総仕上げのあとの3.6.2） ----
+   ページ全体（document）はスクロールさせない。画面の高さの箱（body）を縦に並べ、
+   中身（main）だけがその中でスクロールし、下のタブはそのあとに普通に並ぶ。
+   固定（position: fixed）の部品は、iPhone のホーム画面のアプリでスクロールと一緒に流れることがあるので、
+   下のタブ・下に付けるボタンには使わない（tests/layout.test.js が見張る）。 */
+html { height: 100%; overflow: hidden; }
+body {
+  position: relative; /* 位置を決めた見えない部品（読み上げ用の文字など）も body の中に収め、ページ全体を高くしない */
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+main {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  /* 中身の幅は今までどおり560pxまで（両側の余白で真ん中に寄せる。スクロールは画面の幅いっぱいで効く） */
+  padding-left: max(16px, calc((100% - 528px) / 2));
+  padding-right: max(16px, calc((100% - 528px) / 2));
+}
+/* 印刷では、今までどおりページ全体を流す */
+@media print {
+  html, body { height: auto; overflow: visible; display: block; }
+  main { overflow: visible; min-height: 0; }
+}
