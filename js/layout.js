@@ -7,7 +7,9 @@
 // registerServiceWorker（js/pwa.js → js/page-life.js）から全画面で呼ばれる。
 //   ホーム画面のアプリでは、iPhone がキーボードの高さ（見える範囲の変化）をページに伝えないことがあるので、指で操作する端末で
 //   文字盤の出る欄に入って少したっても高さが0のままなら、画面の下半分（横向きは65%）が隠れていると見込んで動かす（3.6.4、D-186）
-import { isTypingTarget, keyboardInset, revealDelta, visibleArea, opensKeyboard, guessKeyboardInset } from './core/keyboard.js';
+//   ホーム画面のアプリでは、キーボードが出ると画面の高さ自体が縮み、ページのずれと見える範囲の上のずれが同じだけ増える。
+//   キーボードの高さは「キーボードが出る前の画面の高さ − 見える範囲の高さ」でも見て、見える範囲は2通りの数え方の重なる所にする（3.6.5、D-187）
+import { isTypingTarget, revealDelta, visibleArea, opensKeyboard, guessKeyboardInset, keyboardHeight, viewportBand } from './core/keyboard.js';
 
 const KEY = 'pourfolio.scroll';
 
@@ -44,11 +46,27 @@ function touchOnly() {
 /** 今のキーボードの高さと、それが見込みかどうか（データの画面の「キーボードの点検」が出す） */
 export const keyboardState = { inset: 0, guessed: false };
 
+/** キーボードが出る前の画面の高さ（入力中でないときに覚える。幅が変わったら＝向きが変わったら覚え直す） */
+const base = { w: 0, h: 0 };
+function rememberBase() {
+  if (isTyping()) return;
+  base.w = window.innerWidth;
+  base.h = window.innerHeight;
+}
+
+/** 見える所の計算（データの画面の「キーボードの点検」が出す） */
+export function keyboardBand() {
+  const vv = window.visualViewport;
+  const band = vv ? viewportBand({ vvTop: vv.offsetTop, vvHeight: vv.height, scrollY: window.scrollY }) : { top: 0, bottom: window.innerHeight };
+  return { top: Math.round(band.top), bottom: Math.round(band.bottom), base: base.h };
+}
+
 /** 画面の下の、キーボードに隠れている高さ（px） */
 function currentInset() {
   const vv = window.visualViewport;
   if (!vv) return 0;
-  return keyboardInset({ innerHeight: window.innerHeight, vvHeight: vv.height, vvOffsetTop: vv.offsetTop, scale: vv.scale });
+  const baseHeight = base.w === window.innerWidth && base.h > 0 ? base.h : window.innerHeight;
+  return keyboardHeight({ baseHeight, innerHeight: window.innerHeight, vvHeight: vv.height, vvOffsetTop: vv.offsetTop, scale: vv.scale });
 }
 
 /** 中身の箱の下に、キーボードの高さ分の余白を付ける・外す（css/base.css の main.kb-open::after） */
@@ -83,9 +101,10 @@ export function revealFocused({ guess = false } = {}) {
     const r = el.getBoundingClientRect();
     if (!r.height) return;
     const b = box.getBoundingClientRect();
-    const vvTop = vv ? vv.offsetTop : 0;
+    const band = vv ? viewportBand({ vvTop: vv.offsetTop, vvHeight: vv.height, scrollY: window.scrollY }) : { top: 0, bottom: window.innerHeight };
+    const vvTop = band.top;
     // 見込みのときは、見える範囲（変わっていない）から見込みの高さを引く
-    const vvBottom = (vv ? vv.offsetTop + vv.height : window.innerHeight) - (guessed ? inset : 0);
+    const vvBottom = band.bottom - (guessed ? inset : 0);
     let barTop = null;
     for (const bar of box.querySelectorAll('.bottom-bar')) {
       if (bar.contains(el)) continue;
@@ -127,7 +146,9 @@ export function watchLayout() {
     keyboardState.guessed = false;
     setKeyboardRoom(0);
     resetDocumentOffset();
+    rememberBase();
   };
+  rememberBase();
   let timer = 0;
   // 画面の大きさが変わったとき：入力中なら欄を見せ直す（キーボードが閉じていればずれも戻す）。入力中でなければずれを戻す
   const onResize = () => {
@@ -146,7 +167,11 @@ export function watchLayout() {
     // それでも高さが0なら、ホーム画面のアプリで高さが伝わっていないと見て見込みを使う
     setTimeout(() => revealFocused({ guess: true }), 450);
   });
-  document.addEventListener('focusout', () => setTimeout(settle, 50));
+  // キーボードが閉じきってから iPhone がもう一度ずらすことがあるので、少しあとにも見る
+  document.addEventListener('focusout', () => {
+    setTimeout(settle, 50);
+    setTimeout(settle, 600);
+  });
   window.addEventListener('resize', onResize);
   window.visualViewport?.addEventListener('resize', onResize);
   window.addEventListener('pageshow', () => setTimeout(settle, 50));

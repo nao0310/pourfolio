@@ -103,3 +103,13 @@ test('ホーム画面のアプリでキーボードの高さが伝わらない�
   // データの画面に「キーボードの点検」
   assert.match(readFileSync(join(root, 'data.html'), 'utf8'), /id="kbCheckInput"/);
 });
+
+test('ホーム画面のアプリで画面の高さが縮むときも、出る前の高さと見える範囲の重なりで動かす（3.6.5、D-187）', () => {
+  const layout = readFileSync(join(root, 'js/layout.js'), 'utf8');
+  assert.match(layout, /keyboardHeight\(\{ baseHeight/);
+  assert.match(layout, /viewportBand\(\{ vvTop: vv\.offsetTop, vvHeight: vv\.height, scrollY: window\.scrollY \}\)/);
+  // 入力中でないときに、出る前の画面の高さを覚える
+  assert.match(layout, /function rememberBase\(\) \{\s*if \(isTyping\(\)\) return;/);
+  // キーボードを閉じたあと、少しあとにもずれを戻す
+  assert.match(layout, /setTimeout\(settle, 600\)/);
+});

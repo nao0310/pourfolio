@@ -8,8 +8,8 @@
 
 // <manifest> npm run sw が書き込む（手で直さない）
 const MANIFEST = {
-  "label": "3.6.4",
-  "version": "2445f3504788",
+  "label": "3.6.5",
+  "version": "0bf003b29a5d",
   "files": {
     "aging.html": "e375c2c6820a60f3",
     "ai.html": "34607ec38ddc5690",
@@ -89,7 +89,7 @@ const MANIFEST = {
     "js/core/initial-recipe.js": "d9383e0e76c31245",
     "js/core/install.js": "1ce19201bb995ac2",
     "js/core/inventory.js": "ded15007fcb42145",
-    "js/core/keyboard.js": "2404d488e817e713",
+    "js/core/keyboard.js": "4c94ea9ca463eaaf",
     "js/core/life.js": "8fa371cefae9e783",
     "js/core/maintenance.js": "e347bf56fe8095f9",
     "js/core/monthly.js": "c2e3b77b1bbe7a37",
@@ -121,7 +121,7 @@ const MANIFEST = {
     "js/core/today.js": "1814a6c90e899543",
     "js/core/tonya.js": "faac59308d2b0ca5",
     "js/core/usual.js": "306c68f4420764a8",
-    "js/core/version.js": "583e64d3681db719",
+    "js/core/version.js": "854cb70787a32428",
     "js/core/water.js": "26dace0c46b908b4",
     "js/core/weather.js": "1e5ba95845db72dc",
     "js/core/wishlist.js": "6bf3695085913224",
@@ -138,8 +138,8 @@ const MANIFEST = {
     "js/gift-page.js": "c0109c10d861cd5d",
     "js/glossary-page.js": "01c87012f113801b",
     "js/index-page.js": "91ed8cefd37ef29d",
-    "js/keyboard-check.js": "938636e57502f307",
-    "js/layout.js": "58569782b0a6e3f3",
+    "js/keyboard-check.js": "b2ce9463178a86f6",
+    "js/layout.js": "4aa8084c6181f464",
     "js/life-page.js": "5ca3b60c5aebdf12",
     "js/more-page.js": "1b2f722ab0b9c696",
     "js/optimize-page.js": "41fc5e6f125f204f",

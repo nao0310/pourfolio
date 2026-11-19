@@ -77,3 +77,32 @@ export function visibleArea({ vvTop, vvBottom, boxTop, boxBottom, barTop = null 
   if (barTop != null && barTop > top && barTop < bottom) bottom = barTop;
   return { top, bottom };
 }
+
+/**
+ * キーボードの高さ（px）。keyboardInset に加えて、キーボードが出る前の画面の高さ（baseHeight）から見える範囲の高さを引いた分も見る。
+ * iPhone のホーム画面のアプリでは、キーボードが出ると画面の高さ自体が縮む（812 → 674）ので、keyboardInset だけでは小さく出る
+ * （ユーザーの「キーボードの点検」：画面 674・見える範囲 408・上 138 → 128。本当は 812 − 408 = 404。3.6.5、D-187）。
+ * アドレスの欄の出入りなどの小さな差（minPx 未満）はキーボードとして数えない
+ */
+export function keyboardHeight({ baseHeight, innerHeight, vvHeight, vvOffsetTop = 0, scale = 1, minPx = 150 }) {
+  const inset = keyboardInset({ innerHeight, vvHeight, vvOffsetTop, scale });
+  if (scale > 1.01 || !Number.isFinite(baseHeight) || !Number.isFinite(vvHeight)) return inset;
+  const fromBase = Math.round(baseHeight - vvHeight);
+  return Math.max(inset, fromBase >= minPx ? fromBase : 0);
+}
+
+/**
+ * 見える範囲の上下（欄の位置 getBoundingClientRect と同じ数え方）。
+ * ふつうは visualViewport の offsetTop から height 分。iPhone のホーム画面のアプリでは、ページ全体のずれ（scrollY）と
+ * offsetTop が同じだけ増え、offsetTop にページのずれが含まれている（どちらの意味か、この環境では確かめられない）。
+ * そこで「offsetTop だけ下にずれた」（A）と「ページのずれの分を引いた所」（B）の重なる所を返す（どちらが正しくても見える）。
+ * 重なりが minRoom より狭いときは B（3.6.5、D-187）
+ */
+export function viewportBand({ vvTop = 0, vvHeight, scrollY = 0, minRoom = 60 }) {
+  const a = { top: vvTop, bottom: vvTop + vvHeight };
+  const shift = Math.max(0, Math.min(scrollY, vvTop));
+  const b = { top: vvTop - shift, bottom: vvTop - shift + vvHeight };
+  const top = Math.max(a.top, b.top);
+  const bottom = Math.min(a.bottom, b.bottom);
+  return bottom - top >= minRoom ? { top, bottom } : b;
+}
