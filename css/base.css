@@ -1091,6 +1091,8 @@ main {
   padding-left: max(16px, calc((100% - 528px) / 2));
   padding-right: max(16px, calc((100% - 528px) / 2));
 }
+/* キーボードが出ている間だけ、中身の下にキーボードの高さ分の余白を足す（いちばん下の欄もキーボードの上まで動かせるように。js/layout.js、D-185） */
+main.kb-open::after { content: ""; display: block; height: var(--kb, 0px); }
 /* 印刷では、今までどおりページ全体を流す */
 @media print {
   html, body { height: auto; overflow: visible; display: block; }

@@ -78,3 +78,16 @@ test('JS は window.scrollTo を使わない（中身の箱を動かす scrollTo
   assert.match(layout, /addEventListener\('focusout'/); // キーボードを閉じたあとのずれを戻す
   assert.match(readFileSync(join(root, 'js/page-life.js'), 'utf8'), /watchLayout\(\);/);
 });
+
+test('入力中（キーボードが出ている間）は、ページ全体のずれを戻さず、欄を見える所へ動かす（3.6.3、D-185）', () => {
+  const layout = readFileSync(join(root, 'js/layout.js'), 'utf8');
+  // カーソルが入ったら欄を見せる
+  assert.match(layout, /addEventListener\('focusin'/);
+  assert.match(layout, /revealFocused/);
+  // 見える範囲が変わったときに、入力中かを見ずに window.scrollTo で戻さない（Safari が欄を見せる動きを打ち消すため）
+  assert.doesNotMatch(layout, /visualViewport\?\.addEventListener\('resize',\s*fix\)/);
+  assert.match(layout, /if \(!isTyping\(\)\) return settle\(\);/);
+  assert.match(layout, /const settle = \(\) => \{\s*if \(isTyping\(\)\) return;/);
+  // キーボードの高さ分の余白（いちばん下の欄も動かせるように）
+  assert.match(css, /main\.kb-open::after\s*\{[^}]*height:\s*var\(--kb/);
+});
