@@ -1093,6 +1093,8 @@ main {
 }
 /* キーボードが出ている間だけ、中身の下にキーボードの高さ分の余白を足す（いちばん下の欄もキーボードの上まで動かせるように。js/layout.js、D-185） */
 main.kb-open::after { content: ""; display: block; height: var(--kb, 0px); }
+/* データの画面の「キーボードの点検」（3.6.4） */
+.kb-check { font-family: inherit; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.85rem; line-height: 1.5; margin: 8px 0 0; color: var(--muted); }
 /* 印刷では、今までどおりページ全体を流す */
 @media print {
   html, body { height: auto; overflow: visible; display: block; }

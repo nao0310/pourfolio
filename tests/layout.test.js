@@ -91,3 +91,15 @@ test('入力中（キーボードが出ている間）は、ページ全体の�
   // キーボードの高さ分の余白（いちばん下の欄も動かせるように）
   assert.match(css, /main\.kb-open::after\s*\{[^}]*height:\s*var\(--kb/);
 });
+
+test('ホーム画面のアプリでキーボードの高さが伝わらないときは、見込みで動かす（3.6.4、D-186）', () => {
+  const layout = readFileSync(join(root, 'js/layout.js'), 'utf8');
+  // カーソルが入って少したっても高さが0なら見込みを使う（指で操作する端末・文字盤の出る欄だけ）
+  assert.match(layout, /setTimeout\(\(\) => revealFocused\(\{ guess: true \}\), \d+\)/);
+  assert.match(layout, /\(hover: none\) and \(pointer: coarse\)/);
+  assert.match(layout, /opensKeyboard\(/);
+  // 見込みで動かしている間は、ずれを戻さない
+  assert.match(layout, /currentInset\(\) === 0 && !keyboardState\.guessed/);
+  // データの画面に「キーボードの点検」
+  assert.match(readFileSync(join(root, 'data.html'), 'utf8'), /id="kbCheckInput"/);
+});

@@ -4,12 +4,37 @@
 
 const NOT_TYPING = new Set(['button', 'submit', 'reset', 'checkbox', 'radio', 'range', 'file', 'color', 'hidden', 'image']);
 
-/** キーボード（や選ぶ欄の回転式の部品）が出る欄か。{ tag, type, editable } */
-export function isTypingTarget({ tag, type = '', editable = false } = {}) {
+/** キーボード（や選ぶ欄の回転式の部品）が出る欄か。{ tag, type, editable, readOnly }。読むだけの欄は出ない */
+export function isTypingTarget({ tag, type = '', editable = false, readOnly = false } = {}) {
+  if (readOnly) return false;
   const t = String(tag ?? '').toLowerCase();
   if (t === 'textarea' || t === 'select') return true;
   if (t === 'input') return !NOT_TYPING.has(String(type || 'text').toLowerCase());
   return !!editable;
+}
+
+// iPhone で、画面の下からキーボード（文字盤）が出るのではなく、欄の近くに小さな部品が出る欄（3.6.4、D-186）
+const POPOVER_TYPES = new Set(['date', 'time', 'datetime-local', 'month', 'week']);
+
+/**
+ * 画面の下から文字盤（キーボード）が出る欄か。選ぶ欄（select）と日付・時刻は、iPhone では欄の近くに部品が出るので含めない。
+ * キーボードの高さが分からないときに見込みで動かす欄を決めるのに使う（3.6.4、D-186）
+ */
+export function opensKeyboard({ tag, type = '', editable = false, readOnly = false } = {}) {
+  if (!isTypingTarget({ tag, type, editable, readOnly })) return false;
+  const t = String(tag ?? '').toLowerCase();
+  if (t === 'select') return false;
+  if (t === 'input' && POPOVER_TYPES.has(String(type || 'text').toLowerCase())) return false;
+  return true;
+}
+
+/**
+ * キーボードの高さが分からないときの見込み（px）。ホーム画面のアプリでは、iPhone が見える範囲の変化をページに伝えないことがある
+ * （ユーザーの画面写真、3.6.4）。縦向きは画面の半分（iPhone のかなのキーボードと上の「^ v ✓」の帯で 45% ほど）、横向きは 65%
+ */
+export function guessKeyboardInset({ innerHeight, innerWidth }) {
+  if (!(innerHeight > 0)) return 0;
+  return Math.round(innerHeight * (innerWidth > innerHeight ? 0.65 : 0.5));
 }
 
 /**
