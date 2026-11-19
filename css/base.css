@@ -694,7 +694,7 @@ p > a:not(.btn):only-child { display: inline-block; padding: 11px 0; }
 .link-list li { padding: 6px 0; }
 /* 実験（F7・B6） */
 .range-row { display: flex; align-items: center; gap: 8px; }
-.range-row input { width: 6.5em; }
+.range-row input { flex: 1 1 0; min-width: 0; max-width: 6.5em; } /* 文字を大きくしても2つの欄が横にはみ出さない */
 .pref-list .row { margin-top: 6px; }
 .heat.next { outline: 3px solid var(--accent); outline-offset: -3px; }
 .pref-note { color: var(--accent); font-size: 0.9rem; font-weight: 700; }

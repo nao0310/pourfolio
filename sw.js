@@ -9,7 +9,7 @@
 // <manifest> npm run sw が書き込む（手で直さない）
 const MANIFEST = {
   "label": "3.6.2",
-  "version": "ae25d4a6c684",
+  "version": "9b1e72062878",
   "files": {
     "aging.html": "e375c2c6820a60f3",
     "ai.html": "34607ec38ddc5690",
@@ -22,7 +22,7 @@ const MANIFEST = {
     "calendar.html": "add01bf22879b657",
     "compare.html": "baf354ef14f2b2e1",
     "cost.html": "2c834b6cf3df809b",
-    "css/base.css": "815e7ac1835607a6",
+    "css/base.css": "bd6971b98d22f26b",
     "css/print.css": "c29fd9833cc30c3d",
     "data.html": "ea17769a2f37d871",
     "dialin-history.html": "0d8a41cb504c8b0d",
