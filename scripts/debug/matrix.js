@@ -118,6 +118,16 @@ async function checkPage(page, url, p, errors) {
   try {
     const r = await audit(page, `
       const out = m.inspect(window, { w: innerWidth });
+      // 中身をいちばん下までスクロールしても、下のタブが画面のいちばん下のままか（D-184）
+      const mainBox = document.querySelector('main');
+      const tabBar = document.querySelector('nav.tabbar');
+      if (mainBox && tabBar && getComputedStyle(tabBar).display !== 'none') {
+        mainBox.scrollTop = mainBox.scrollHeight;
+        await new Promise((r) => setTimeout(r, 50));
+        const b = tabBar.getBoundingClientRect().bottom;
+        if (Math.abs(b - innerHeight) > 1 || scrollY !== 0) out.tabbarAfterScroll = { bottom: Math.round(b), innerHeight, scrollY };
+        mainBox.scrollTop = 0;
+      }
       const main = document.querySelector('main');
       if (!main || main.innerText.trim().length < 8) out.blank = true;
       out.movedTo = location.pathname.split('/').pop() + location.search;
@@ -196,7 +206,7 @@ export async function runProfile(browser, p, srv, { quick = false } = {}) {
 const KINDS = {
   errors: '画面のエラー', navError: '開けない', inspectError: '点検できない', blank: '中身が空', overflowX: '横のはみ出し',
   clipped: '文字の切れ', loading: '読み込み中のまま', badText: 'undefined などの表示', badValue: '入力欄の変な値',
-  smallTap: '44px未満', smallText: '12px未満の文字', lowContrast: '色の差が足りない', chineseGlyph: '中国語の字形', movedTo: '別の画面へ移った',
+  smallTap: '44px未満', smallText: '12px未満の文字', lowContrast: '色の差が足りない', chineseGlyph: '中国語の字形', tabbarOff: '下のタブがずれている', tabbarAfterScroll: 'スクロールでタブがずれる', docScrolled: 'ページ全体がずれている', movedTo: '別の画面へ移った',
 };
 
 export function toMarkdown(results) {

@@ -56,6 +56,7 @@ import { autosaveAfterChange } from './autosave-file.js';
 import { $, el, queryParam, showMessage, stepperField, showPageLoadError, showToast } from './ui.js';
 import { isQuotaError, QUOTA_TEXT } from './core/errors.js';
 import { singleFlight } from './core/once.js';
+import { scrollToTop } from './layout.js';
 import { registerServiceWorker, blockUpdatePrompt, recheckUpdatePrompt } from './pwa.js';
 import { askConfirm } from './confirm-box.js';
 
@@ -708,7 +709,7 @@ function showResult() {
   $('resultView').hidden = false;
   document.title = '実績の確認 - Pourfolio';
   renderDiff();
-  window.scrollTo(0, 0);
+  scrollToTop(); // 中身の箱をいちばん上に（D-184）
 }
 
 /** 水（D3）を登録しているときだけ選べるようにする。初めは「いつも使う」水 */

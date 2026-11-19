@@ -673,6 +673,42 @@ for (const gap of [100, 250]) await flow(`飲み切りの2度押し（${gap}ms�
 });
 
 // 20. 確認の箱が出るボタンの2度押し（2回目が箱の外に当たって、すぐ閉じないか）
+// 21. 下のタブ（D-184）：中身を下までスクロールしても、iPhone がキーボードでページ全体をずらしても、タブが画面のいちばん下に戻るか
+await flow('下のタブの位置', 'demo', async (page, notes) => {
+  const tabAt = () => page.evaluate(() => {
+    const t = document.querySelector('nav.tabbar')?.getBoundingClientRect();
+    return t ? { off: Math.round(innerHeight - t.bottom), scrollY } : null;
+  });
+  for (const url of ['index.html', 'beans.html', 'analysis.html', 'more.html', 'recipes.html']) {
+    await page.goto(`${srv.base}/${url}`);
+    await settle(page);
+    await page.evaluate(() => { const m = document.querySelector('main'); m.scrollTop = m.scrollHeight; });
+    await page.waitForTimeout(100);
+    const a = await tabAt();
+    if (!a || a.off !== 0 || a.scrollY !== 0) notes.push(`${url}：下までスクロールしたあと タブ ${JSON.stringify(a)}`);
+  }
+  // キーボードを出したときの iPhone のずれをまねる：入力欄に入れて、ページ全体を300pxずらし、入力をやめる
+  await page.goto(`${srv.base}/bean-edit.html`);
+  await settle(page);
+  await page.focus('[name=name]');
+  // ページ全体を一時的に高くして300pxずらす（入力をやめるまでそのまま。iPhone ではページが高くなくてもずれる）
+  await page.evaluate(() => { document.documentElement.style.height = '200%'; window.scrollTo(0, 300); });
+  const shifted = await page.evaluate(() => scrollY);
+  await page.evaluate(() => document.activeElement.blur());
+  await page.waitForTimeout(300);
+  const after = await page.evaluate(() => scrollY);
+  await page.evaluate(() => { document.documentElement.style.height = ''; });
+  notes.push(`（参考）キーボードのずれをまねて ${shifted}px → 入力をやめたあと ${after}px`);
+  if (after !== 0) notes.push(`入力をやめたあとも、ページ全体が ${after}px ずれたまま`);
+  // 10画面移ってから
+  for (const url of ['index.html', 'beans.html', 'recipes.html', 'analysis.html', 'more.html', 'index.html', 'data.html', 'calendar.html', 'shopping.html', 'index.html']) {
+    await page.goto(`${srv.base}/${url}`);
+  }
+  await settle(page);
+  const z = await tabAt();
+  if (!z || z.off !== 0 || z.scrollY !== 0) notes.push(`10画面移ったあと タブ ${JSON.stringify(z)}`);
+});
+
 await flow('確認の箱と2度押し', 'empty', async (page, notes) => {
   const id = await registerBean(page);
   await page.locator('#delete').dblclick();
