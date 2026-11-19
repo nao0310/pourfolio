@@ -81,8 +81,8 @@ async function render() {
         : el(
             'p',
             { class: 'muted' },
-            'まだありません。',
-            el('a', { href: `equipment-edit.html?kind=${kind}` }, `${label}を登録`),
+            `まだ${label}はありません。`,
+            el('a', { href: `equipment-edit.html?kind=${kind}` }, `${label}を登録する`),
           ),
     );
   });

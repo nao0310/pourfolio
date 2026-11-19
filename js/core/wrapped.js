@@ -311,6 +311,17 @@ export function wrappedSlides(data, year, today = localYmd()) {
  * ホームの知らせ（12月1日〜1月31日）：12月はその年、1月は前の年のまとめ。その年に NOTICE_MIN_CUPS 杯以上あるときだけ
  * @returns {null|{year:string, key:string}}
  */
+/**
+ * 年を指定せずに開いたときの年。1月は前の年（ホームの知らせと同じ決め方。年が明けてすぐは振り返りたいのは前の年なので、総仕上げの72番）
+ * @param {string} todayYmd
+ * @param {string[]} years 選べる年（新しい順）
+ */
+export function defaultWrappedYear(todayYmd, years = []) {
+  const y = Number(todayYmd.slice(0, 4));
+  if (Number(todayYmd.slice(5, 7)) === 1 && years.includes(String(y - 1))) return String(y - 1);
+  return years[0] ?? String(y);
+}
+
 export function wrappedNotice({ brews = [], now = new Date() } = {}) {
   const ymd = localYmd(now);
   const m = Number(ymd.slice(5, 7));

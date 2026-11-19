@@ -1,7 +1,8 @@
 // 自動ファイル保存（X1）：PC の Chrome・Edge の「フォルダを選んで書き込む」機能（File System Access）を使う
 // 選んだフォルダの情報（ハンドル）は書き出しに入れられないので、本体とは別の小さな保存場所（pourfolio-local）に置く（D-140）。
 // 使えないブラウザ（iPhone・Android・Firefox など）では何もしない。
-import { exportAll, updateSettings } from './db.js';
+import { exportAll, setDeviceSettings } from './db.js';
+import { withBackupAt } from './core/backup.js';
 import { AUTOSAVE_FILE_NAME, AUTOSAVE_WAIT_MS, autosaveStatus, hasRecordsToSave } from './core/autosave.js';
 
 const LOCAL_DB = 'pourfolio-local';
@@ -53,7 +54,7 @@ export async function getAutosaveState() {
 
 async function writeNow(db, handle) {
   const now = new Date();
-  const backup = await exportAll(db, now);
+  const backup = withBackupAt(await exportAll(db, now), now);
   if (!hasRecordsToSave(backup.tables)) {
     // 記録が空のときは上書きしない（全部消したあとに、唯一のバックアップを空にしないように。2-8 の18番）
     await setLocal('lastError', '記録が空なので上書きしていません');
@@ -66,7 +67,7 @@ async function writeNow(db, handle) {
   await setLocal('lastAt', now.toISOString());
   await delLocal('lastError');
   // ファイルに残ったので、書き出しの促し（G2）を出さないようにする
-  await updateSettings(db, { lastBackupAt: now.toISOString() }, now);
+  await setDeviceSettings(db, { lastBackupAt: now.toISOString() }); // 設定の updatedAt は進めない（総仕上げの58番）
 }
 
 /** フォルダを選んで、すぐ1回保存する（ボタンを押したときに呼ぶ） */

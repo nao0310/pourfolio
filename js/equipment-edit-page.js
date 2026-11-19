@@ -236,7 +236,7 @@ form.addEventListener('submit', async (event) => {
 });
 
 $('delete').addEventListener('click', async () => {
-  if (!(await askConfirm('この器具（水）を削除しますか？元に戻せません（レシピに入っている器具の名前は表示されなくなります）', { ok: '削除する', danger: true }))) return;
+  if (!(await askConfirm(`この${EQUIPMENT_KINDS[current?.kind] ?? '器具'}「${current?.name ?? ''}」を削除しますか？元に戻せません（レシピに入っている器具の名前は表示されなくなります）`, { ok: '削除する', danger: true }))) return;
   await deleteEquipment(db, editId);
   location.replace('equipment.html');
 });

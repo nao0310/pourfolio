@@ -186,3 +186,23 @@ test('抽出前チェック（A5）：確かめた項目を抽出の記録に残
   assert.deepEqual(brew.precheck, { temp: true, rinse: false, preheat: false, tare: true });
   assert.equal(buildBrew({ draft: newDraft(plan, 'b1', T0), value, at: new Date(T0).toISOString() }).precheck, null);
 });
+
+test('放っておいた下書き（1時間を過ぎてタイマーのまま）は実績の確認にし、総時間は空（総仕上げの60番）', async () => {
+  const { settleStaleDraft, agoText, STALE_DRAFT_MS } = await import('../js/core/brews.js');
+  const plan = { doseG: 15, waterG: 240, pours: [{ atSec: 0, toG: 40 }, { atSec: 40, toG: 120 }] };
+  const start = Date.UTC(2026, 10, 18, 14, 58);
+  const d = { ...newDraft(plan, null, start), laps: [9] };
+  assert.equal(settleStaleDraft(d, start + STALE_DRAFT_MS - 1), d);
+  const s = settleStaleDraft(d, start + 10 * 3600_000);
+  assert.equal(s.stage, 'result');
+  assert.equal(s.finishedSec, null);
+  assert.equal(s.stale, true);
+  assert.deepEqual(s.laps, [9, null]);
+  assert.equal(initialActualInput(s).totalSec, '');
+  // 実績の確認の下書きはそのまま
+  const r = { ...d, stage: 'result' };
+  assert.equal(settleStaleDraft(r, start + 10 * 3600_000), r);
+  assert.equal(agoText(start, start + 40 * 60000), '40分前');
+  assert.equal(agoText(start, start + 10 * 3600_000), '10時間前');
+  assert.equal(agoText(start, start + 50 * 3600_000), '2日前');
+});

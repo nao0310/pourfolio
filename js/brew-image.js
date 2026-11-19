@@ -2,11 +2,17 @@
 // 色は画面のダーク表示に関係なく、いつも同じ明るい紙の色にする（SNS やアルバムで同じに見えるように）。
 import { IMAGE_W, IMAGE_H, pourChart } from './core/report-image.js';
 import { formatSec } from './core/recipes.js';
+import { FONT_STACK } from './core/fonts.js';
 
 export const C = { bg: '#faf6f0', card: '#ffffff', fg: '#2b1d12', muted: '#7a6656', line: '#e6dccf', accent: '#8b5a34', star: '#c7871f' };
-const FONT = '"Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", system-ui, sans-serif';
+// canvas は html の lang を引き継がないので、使えるときは ctx.lang = 'ja' にし、フォントも日本語のものを先にする（D-177）
+export const font = (px, weight = 400) => `${weight} ${px}px ${FONT_STACK}`;
 
-export const font = (px, weight = 400) => `${weight} ${px}px ${FONT}`;
+/** canvas の文字を日本語の字形で描く（ctx.lang が使えるブラウザだけ） */
+export function setJa(ctx) {
+  if ('lang' in ctx) ctx.lang = 'ja';
+  return ctx;
+}
 
 export function roundRect(ctx, x, y, w, h, r) {
   ctx.beginPath();
@@ -34,7 +40,7 @@ export function drawBrewImage(c) {
   const cv = document.createElement('canvas');
   cv.width = IMAGE_W;
   cv.height = IMAGE_H;
-  const ctx = cv.getContext('2d');
+  const ctx = setJa(cv.getContext('2d'));
   const M = 64;
   const W = IMAGE_W - M * 2;
 

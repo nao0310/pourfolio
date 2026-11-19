@@ -13,7 +13,7 @@ function dimCard(rows, dim, hasWeather) {
   const card = el('section', { class: 'card' }, el('h2', {}, res.label));
   if (res.needsWeather && !hasWeather) {
     card.append(
-      el('p', { class: 'muted' }, '天気の付いた杯がまだありません。'),
+      el('p', { class: 'muted' }, 'まだ天気の付いた杯はありません。天気の地点を決めて淹れると表示します'),
       isDemo() ? null : el('p', {}, el('a', { href: 'weather.html' }, '天気の地点を決める')),
     );
     return card;
@@ -48,7 +48,7 @@ function bandRoastCard(rows) {
   const list = roastByBand(rows).filter((b) => b.n > 0);
   const card = el('section', { class: 'card' }, el('h2', {}, '時間帯ごとによく選んだ焙煎度'), el('p', { class: 'muted small' }, '★を付けなかった杯も数えています。'));
   if (!list.length) {
-    card.append(el('p', { class: 'muted' }, 'まだ記録はありません。'));
+    card.append(el('p', { class: 'muted' }, 'まだ記録はありません。淹れると表示します'));
     return card;
   }
   card.append(

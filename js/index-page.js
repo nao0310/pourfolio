@@ -12,7 +12,8 @@ import { brewLine, tastingSummary } from './core/tastings.js';
 import { backupReminder, lastBackupText, beanRows, alertText, recentBrews, recordText, icedHref, hotText } from './core/home.js';
 import { pickPendingSuggestion } from './core/dialin.js';
 import { doseFromSettings } from './core/inventory.js';
-import { localYmd, formatG } from './core/format.js';
+import { localYmd, formatG, formatDateTimeJa } from './core/format.js';
+import { agoText } from './core/brews.js';
 import { STAGES } from './core/freshness.js';
 import { openExperiments, experimentStatus, STATUS_LABELS, KIND_LABELS, kindOf } from './core/compare.js';
 import { todayPicks, pickHref } from './core/today.js';
@@ -49,6 +50,8 @@ $('mode').textContent = {
 const draft = loadDraft();
 if (draft) {
   showCard($('resumeCard'), 'resume', `${draft.startedAtMs ?? ''}${draft.returnSearch ?? ''}`);
+  // いつ始めたかを出す（放っておいた下書きだと分かるように、総仕上げの60番）
+  if (draft.startedAtMs != null) $('resumeWhen').textContent = `${formatDateTimeJa(new Date(draft.startedAtMs))}に始めました（${agoText(draft.startedAtMs, Date.now())}）`;
   $('resumeLink').href = `brew.html${draft.returnSearch ?? ''}`;
 }
 
@@ -220,7 +223,7 @@ function bandNode(row) {
   );
 }
 
-function renderBeans(rows) {
+function renderBeans(rows, hasBeans = true) {
   const alerts = rows.filter((r) => r.alerts.length);
   // 知らせの種類（残り少ない・なくなった・早めに消費）か豆が変わったら、閉じていてもまた出す（1杯ごとの残量の変化では出し直さない）
   if (alerts.length) showCard($('alertCard'), 'alert', alerts.map((r) => `${r.bean.id}=${r.alerts.join('+')}`).join('|'));
@@ -232,8 +235,8 @@ function renderBeans(rows) {
 
   if (!rows.length) {
     $('beanBands').replaceChildren(
-      el('p', { class: 'muted' }, '飲みかけの豆はありません。'),
-      el('a', { class: 'btn secondary', href: 'bean-edit.html' }, '＋ 豆を登録'),
+      el('p', { class: 'muted' }, hasBeans ? '飲みかけの豆はありません。届いた豆を登録すると飲み頃を表示します' : 'まだ豆はありません。豆を登録すると飲み頃を表示します'),
+      el('a', { class: 'btn secondary', href: 'bean-edit.html' }, '＋ 豆を登録する'),
     );
     return;
   }
@@ -262,7 +265,7 @@ function renderBeans(rows) {
 function renderRecent(all, beanName) {
   const list = recentBrews(all.brews, all.tastings);
   if (!list.length) {
-    $('recent').replaceChildren(el('li', { class: 'muted' }, 'まだ抽出の記録はありません。'));
+    $('recent').replaceChildren(el('li', { class: 'muted' }, 'まだ抽出の記録はありません。淹れて保存すると表示します'));
     return;
   }
   $('recent').replaceChildren(
@@ -350,7 +353,7 @@ function mtItem(s) {
     el(
       'div',
       { class: 'row' },
-      el('button', { type: 'button', class: 'btn', onclick: act(() => markMaintenanceDone(db, eq.id)) }, '済んだ'),
+      el('button', { type: 'button', class: 'btn secondary', onclick: act(() => markMaintenanceDone(db, eq.id)) }, '済んだ'),
       el('button', { type: 'button', class: 'btn secondary', onclick: act(() => snoozeMaintenance(db, eq.id)) }, `${SNOOZE_DAYS}日後に`),
     ),
   );
@@ -400,7 +403,7 @@ async function init() {
   renderUsual(all, beanName, settings);
   renderToday(all, beanName, settings);
   renderCaffeine(all, settings);
-  renderBeans(beanRows({ beans: all.beans, txs: all.inventoryTx, portions: all.frozenPortions, doseG: doseFromSettings(settings), today: localYmd() }));
+  renderBeans(beanRows({ beans: all.beans, txs: all.inventoryTx, portions: all.frozenPortions, doseG: doseFromSettings(settings), today: localYmd() }), all.beans.some((b) => b.deletedAt == null));
   renderRecent(all, beanName);
   renderRestock(all, settings);
   renderMaintenance(all.equipment, all.brews);
@@ -417,4 +420,5 @@ async function init() {
 init().catch((err) => {
   console.error(err);
   $('todayText').textContent = '記録を読み込めませんでした。開き直してください';
+  $('todayText').className = 'error'; // 赤い文で（総仕上げの74番）
 });

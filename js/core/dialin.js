@@ -245,7 +245,7 @@ export function actionHistory(kind, beanId, suggestions = [], tastings = []) {
   const [did, got] = TARGET_WORDS[kind];
   const text = scope
     ? `${scope === 'bean' ? 'この豆で' : 'ほかの豆も含めて、'}${did}${list.length}回中${improved}回で、次の杯の${got}`
-    : 'まだ実績がありません（提案どおりに淹れて評価すると、ここに貯まります）';
+    : 'まだ実績はありません。提案どおりに淹れて評価すると表示します';
   return { scope, total: list.length, improved, text };
 }
 

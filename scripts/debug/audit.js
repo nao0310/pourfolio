@@ -1,4 +1,5 @@
 // 総点検（2-8）の一斉点検。アプリには含めない（scripts/ は sw.js の一覧に入らない）。
+// Playwright からは scripts/debug/matrix.js が inspect・pagesWithIds を使う（設定を組み合わせて回す）。
 // Browserペインで、点検用のポート（8082〜8086）のどれかの画面を開き、javascript_tool で次を実行する：
 //   const m = await import('/scripts/debug/audit.js?' + Date.now()); m.start({ label: 'demo-light' });
 //   （数十秒〜数分かかる。終わったかは window.__audit.status、結果は m.summary() か window.__audit.rows）
@@ -15,7 +16,7 @@ export const VIEWPORTS = [
   { name: '横812', w: 812, h: 375 },
 ];
 
-const PAGES = [
+export const PAGES = [
   'index.html', 'today.html', 'beans.html', 'bean-edit.html', 'recipes.html', 'recipe-edit.html', 'brew.html',
   'equipment.html', 'equipment-edit.html', 'analysis.html', 'analysis.html?demo=1', 'brew-chart.html', 'calendar.html',
   'factors.html', 'profile.html', 'dialin-history.html', 'cost.html', 'shopping.html', 'wishlist.html', 'shops.html', 'order-import.html',
@@ -26,7 +27,7 @@ const PAGES = [
 ];
 
 /** 記録があれば、IDの要る画面も足す（いちばん新しい豆・レシピ・抽出・器具・飲み比べ） */
-async function pagesWithIds({ every = false } = {}) {
+export async function pagesWithIds({ every = false } = {}) {
   const db = await import('/js/db.js');
   const d = db.openDb();
   const all = await db.readAll(d);
@@ -131,7 +132,7 @@ const visible = (el, win) => {
 };
 const uniq = (arr, n = 6) => [...new Set(arr)].slice(0, n);
 
-function inspect(win, vp) {
+export function inspect(win, vp) {
   const doc = win.document;
   const body = doc.body;
   const out = {};

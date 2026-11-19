@@ -56,7 +56,7 @@ test('完了の確認：9マスすべての組み合わせで正しい提案が�
     assert.ok(s.reasons.input.length > 0, cellKey);
     assert.match(s.reasons.theory, /マス/, cellKey);
     assert.ok(['high', 'mid', 'low'].includes(s.reasons.confidence.level), cellKey);
-    if (kind !== 'keep') assert.match(s.reasons.history, /まだ実績がありません/, cellKey);
+    if (kind !== 'keep') assert.match(s.reasons.history, /まだ実績はありません/, cellKey);
   }
 });
 

@@ -71,7 +71,7 @@ export function brewTable({ brews = [], tastings = [], beans = [], equipment = [
       .map(cell)
       .join(' | ')} |`;
   });
-  return rows.length ? [...head, ...rows] : ['（まだ抽出の記録がありません）'];
+  return rows.length ? [...head, ...rows] : ['（まだ抽出の記録はありません）'];
 }
 
 /** 嗜好スコアの上位と下位（区分ごとに1行） */

@@ -46,6 +46,6 @@ export function canisterLabelText(bean) {
     title: clip(bean.name, 18),
     sub: [bean.roastLevel, bean.origin?.country].filter(Boolean).join('・'),
     roast: bean.roastDate ? `焙煎 ${formatYmdJa(bean.roastDate)}` : '',
-    howTo: 'アプリの「QRを読む」で抽出へ',
+    howTo: 'アプリの「QRを読む」で淹れる',
   };
 }

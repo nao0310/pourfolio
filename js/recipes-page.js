@@ -44,7 +44,7 @@ function recipeCard(recipe) {
       'div',
       { class: 'card-actions' },
       el('a', { class: 'btn', href: brewUrl(recipe.id) }, '淹れる'),
-      el('a', { class: 'btn secondary', href: `recipe-edit.html?id=${encodeURIComponent(recipe.id)}` }, '編集'),
+      el('a', { class: 'btn secondary', href: `recipe-edit.html?id=${encodeURIComponent(recipe.id)}` }, '編集する'),
       el('a', { class: 'btn secondary', href: `share.html?recipe=${encodeURIComponent(recipe.id)}` }, '共有・印刷'),
     ),
   );
@@ -81,7 +81,7 @@ async function render() {
       el(
         'div',
         { class: 'card empty' },
-        el('p', {}, 'まだレシピがありません。'),
+        el('p', {}, 'まだレシピはありません。'),
         el('p', { class: 'muted' }, '下の「＋ レシピを作る」から、4:6メソッドや基本形の雛形で作れます。'),
       ),
     );

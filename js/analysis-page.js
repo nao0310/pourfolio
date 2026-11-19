@@ -17,7 +17,7 @@ function entry(href, title, status, ready) {
     'a',
     { class: 'list-row analysis-entry', href },
     el('span', { class: 'list-row-main' }, el('span', { class: 'list-row-title' }, title), el('span', { class: 'muted' }, status)),
-    el('span', { class: `pill ${ready ? 'ready' : 'waiting'}` }, ready ? '見られます' : '準備中'),
+    el('span', { class: `pill ${ready ? 'ready' : 'waiting'}` }, ready ? '見られます' : '記録待ち'),
   );
 }
 

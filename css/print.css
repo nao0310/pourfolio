@@ -57,6 +57,7 @@
   font-size: 0.95rem;
 }
 .report-sheet .muted { color: #555; }
+.report-sheet .error { color: #b00020; } /* 紙はダークでも白なので、赤も紙に合わせて濃くする（色の差6以上） */
 .report-sheet h2 { margin: 0 0 2px; font-size: 1.3rem; }
 .report-sheet h3 { margin: 16px 0 6px; font-size: 1.05rem; border-bottom: 1px solid #ddd; padding-bottom: 2px; }
 .rp-head { margin-bottom: 10px; }

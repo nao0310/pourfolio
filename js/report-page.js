@@ -1,6 +1,6 @@
 // 月次レポート（X4）：杯数・ベスト3・飲んだ産地・支出・好みの変化を A4 の1枚に（印刷・PDF 保存）
 // ?month=YYYY-MM。分析と同じく ?demo=1 ならデモデータで見る（端末のデータには書かない）。
-import { monthlyReport, reportMonths, monthLabel, isMonth } from './core/monthly.js';
+import { monthlyReport, reportMonths, monthLabel, isMonth, defaultReportMonth } from './core/monthly.js';
 import { yen } from './core/cost.js';
 import { formatYmdJa, localYmd } from './core/format.js';
 import { loadAnalysisData, isDemo, analysisHref, setupAnalysisPage } from './analysis-data.js';
@@ -27,7 +27,7 @@ function render(month) {
       stat('飲んだ額', `${yen(r.spend.drankJpy)}`, r.spend.uncostedCups ? `原価のない${r.spend.uncostedCups}杯を除く` : '飲んだ豆の原価'),
       stat('買った額', `${yen(r.spend.boughtJpy)}`, `${r.spend.bags}袋${r.spend.unpricedBags ? `（価格なし${r.spend.unpricedBags}袋）` : ''}・送料込み`),
     ),
-    el('section', {}, el('h3', {}, 'ベスト3'), r.best.length ? el('ol', { class: 'rp-best' }, ...r.best.map((b) => el('li', {}, el('span', { class: 'num' }, `★${b.stars}`), `　${b.beanName}${b.roastLevel ? `（${b.roastLevel}）` : ''}`, el('span', { class: 'muted num' }, `　${formatYmdJa(b.ymd)}${b.ratio ? `・1:${b.ratio}` : ''}`)))) : el('p', { class: 'muted' }, '★を付けた杯がありません')),
+    el('section', {}, el('h3', {}, 'ベスト3'), r.best.length ? el('ol', { class: 'rp-best' }, ...r.best.map((b) => el('li', {}, el('span', { class: 'num' }, `★${b.stars}`), `　${b.beanName}${b.roastLevel ? `（${b.roastLevel}）` : ''}`, el('span', { class: 'muted num' }, `　${formatYmdJa(b.ymd)}${b.ratio ? `・1:${b.ratio}` : ''}`)))) : el('p', { class: 'muted' }, 'まだ★を付けた杯はありません。淹れて評価すると表示します')),
     el(
       'section',
       {},
@@ -50,7 +50,7 @@ async function init() {
   data = await loadAnalysisData();
   const months = reportMonths(data.brews, localYmd());
   const want = queryParam('month');
-  const month = isMonth(want) ? want : months[0];
+  const month = isMonth(want) ? want : defaultReportMonth(localYmd(), months, data.brews);
   if (!months.includes(month)) months.unshift(month);
   $('month').replaceChildren(...months.map((m) => el('option', { value: m }, monthLabel(m))));
   $('month').value = month;

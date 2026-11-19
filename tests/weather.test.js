@@ -143,3 +143,15 @@ test('天気コードの種類と、天気の文', () => {
   assert.equal(weatherText({ tempC: 20, humidity: null, code: null }), '20℃');
   assert.equal(weatherText(null), '');
 });
+
+test('ありえない気温・湿度は記録しない（総仕上げの75番）', () => {
+  const j = sample();
+  j.hourly.temperature_2m[0] = 9999;
+  j.hourly.relative_humidity_2m[1] = -5;
+  j.daily.temperature_2m_max[0] = 9999;
+  const c = parseWeather(j, TOKYO, new Date('2026-11-19T03:00:00Z'));
+  assert.equal(c.temp[0], null);
+  assert.equal(c.hum[1], null);
+  assert.equal(c.days[0].maxC, null);
+  assert.notEqual(c.temp[1], null);
+});

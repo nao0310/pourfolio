@@ -24,7 +24,7 @@ function renderSummary() {
   const s = costSummary({ ...data, today: localYmd() });
   const m = s.thisMonth;
   const rows = [
-    ['1杯の平均', s.avgCost30 != null ? `${yen(s.avgCost30)}（直近30日の${s.costed30}杯）` : '価格のわかる杯がまだありません'],
+    ['1杯の平均', s.avgCost30 != null ? `${yen(s.avgCost30)}（直近30日の${s.costed30}杯）` : 'まだ価格のわかる杯はありません。豆に価格を入れて淹れると表示します'],
     ['淹れた杯', `${s.cups30}杯（直近30日）`],
     ['今月買った', `${yen(m.boughtJpy)}${m.shippingJpy ? `（送料${yen(m.shippingJpy)}を含む）` : ''}`],
     ['今月飲んだ', yen(m.drankJpy)],
@@ -66,7 +66,7 @@ function renderGroups() {
   $('groupHead').textContent = COST_GROUPS[by];
   const rows = costByGroup({ ...data, by });
   if (!rows.length) {
-    $('groups').replaceChildren(el('tr', {}, el('td', { colspan: 5, class: 'muted' }, '豆を選んで淹れた記録がまだありません')));
+    $('groups').replaceChildren(el('tr', {}, el('td', { colspan: 5, class: 'muted' }, 'まだ豆を選んで淹れた記録はありません。豆を選んで淹れると表示します')));
     return;
   }
   $('groups').replaceChildren(

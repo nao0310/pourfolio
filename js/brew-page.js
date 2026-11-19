@@ -43,6 +43,8 @@ import {
   diffLines,
   buildBrew,
   PRECHECK_ITEMS,
+  settleStaleDraft,
+  agoText,
 } from './core/brews.js';
 import { loadDraft, saveDraft, clearDraft } from './brew-draft.js';
 import { pickGhost, ghostLine } from './core/ghost.js';
@@ -52,6 +54,7 @@ import { bestBrewForBean } from './core/today.js';
 import { handoverFor, handoverBrewHref, conditionsText, bestHead } from './core/handover.js';
 import { autosaveAfterChange } from './autosave-file.js';
 import { $, el, queryParam, showMessage, stepperField, showPageLoadError, showToast } from './ui.js';
+import { isQuotaError, QUOTA_TEXT } from './core/errors.js';
 import { singleFlight } from './core/once.js';
 import { registerServiceWorker, blockUpdatePrompt, recheckUpdatePrompt } from './pwa.js';
 import { askConfirm } from './confirm-box.js';
@@ -451,10 +454,12 @@ function renderWake(state) {
   const text = {
     on: '',
     off: '',
-    unsupported: 'この端末では画面を消さない設定が使えません。iPhoneの「設定」→「画面表示と明るさ」→「自動ロック」を長くしてください',
-    failed: '画面を消さない設定を使えませんでした。画面のどこかを押すともう一度試します',
+    // 背の低い画面では1行に収めるので短く（総仕上げの62番）。詳しい手順は title に
+    unsupported: '設定の「自動ロック」を長くすると画面が消えません',
+    failed: '画面を消さない設定が使えません（押すと再び試します）',
   }[state];
   $('tWake').textContent = text ?? '';
+  $('tWake').title = state === 'unsupported' ? 'iPhoneの「設定」→「画面表示と明るさ」→「自動ロック」' : '';
 }
 
 function renderSpeechToggle() {
@@ -503,7 +508,7 @@ function tick() {
 
 function renderTimer(v, sec) {
   $('tElapsed').textContent = formatSec(Math.floor(sec));
-  $('tGhost').textContent = ghostLine(draft.ghost ?? null, draft.laps, v, pourName);
+  $('tGhost').textContent = ghostLine(draft.ghost ?? null, draft.laps, v, pourName, { compact: window.matchMedia('(max-height: 700px)').matches });
   const count = $('tCount');
   count.classList.remove('soon');
   const screen = $('timerView');
@@ -587,7 +592,7 @@ function onTap() {
 }
 
 async function cancelBrew() {
-  if (!(await askConfirm('この抽出をやめますか？記録は残りません', { ok: 'やめる', danger: true }))) return;
+  if (!(await askConfirm('淹れるのをやめますか？計った時間は消えます', { ok: 'やめる', danger: true }))) return;
   stopTimer();
   const back = draft?.returnSearch ?? '';
   clearDraft();
@@ -783,7 +788,7 @@ const onSave = singleFlight(async (e) => {
       return;
     }
     submit.disabled = false;
-    showMessage('保存できませんでした。もう一度押してください', 'error', 'rMsg');
+    showMessage(isQuotaError(err) ? QUOTA_TEXT : '保存できませんでした。もう一度押してください', 'error', 'rMsg');
   }
 });
 
@@ -806,10 +811,12 @@ async function init() {
   const sameAsSaved = saved && (location.search === '' || location.search === saved.returnSearch);
 
   if (saved && sameAsSaved) {
-    // 途中の抽出の続き
-    draft = saved;
+    // 途中の抽出の続き。放っておいた下書きはタイマーに戻さず、実績の確認で開く（総仕上げの60番）
+    draft = settleStaleDraft(saved, Date.now());
+    if (draft !== saved) saveDraft(draft);
     if (draft.stage === 'timer') startTimer();
     else showResult();
+    if (draft.stale) showMessage(`${agoText(draft.startedAtMs, Date.now())}に始めた1杯です。総時間を入れて保存するか、「記録せずにやめる」を押してください`, 'error', 'rMsg');
     return;
   }
 
@@ -841,15 +848,16 @@ async function init() {
     if (!['recipe', 'initial', 'brew', 'best', 'suggestion', 'from'].some((k) => queryParam(k))) {
       // レシピを選ばずに開いた（豆だけ・下書きを消したあとの「続きに戻る」など、2-8の29番）
       n.querySelector('h1').textContent = '淹れるレシピを選んでください';
-      n.querySelector('p').textContent = 'レシピの一覧から、淹れるレシピを選んでください。';
+      n.querySelector('p').textContent = 'レシピ帳から、淹れるレシピを選んでください。';
     } else if (queryParam('initial') || queryParam('brew') || queryParam('best')) {
-      n.querySelector('h1').textContent = '豆か記録が見つかりません';
-      n.querySelector('p').textContent = '削除したのかもしれません。トップに戻って選び直してください。';
-      $('notFoundBtn').textContent = 'トップへ';
+      // どちらが見つからないかを書く（総仕上げの85番）
+      n.querySelector('h1').textContent = queryParam('brew') ? '抽出の記録が見つかりません' : '豆が見つかりません';
+      n.querySelector('p').textContent = '削除したのかもしれません。ホームに戻って選び直してください。';
+      $('notFoundBtn').textContent = 'ホームへ';
       $('notFoundBtn').href = './';
     } else if (queryParam('suggestion')) {
       n.querySelector('h1').textContent = '提案が見つかりません';
-      n.querySelector('p').textContent = '提案を出した抽出を削除したのかもしれません。レシピの一覧から選び直してください。';
+      n.querySelector('p').textContent = '提案を出した抽出の記録を削除したのかもしれません。レシピ帳から選び直してください。';
     }
     n.hidden = false;
     return;
@@ -905,7 +913,7 @@ $('crumb').addEventListener('click', async (e) => {
   // 確かめてから移る（確認の箱は待つので、いったん移るのを止める）
   e.preventDefault();
   const href = e.currentTarget.href;
-  if (!(await askConfirm('記録せずに戻りますか？途中の内容は消えます', { ok: '戻る', danger: true }))) return;
+  if (!(await askConfirm('記録せずに戻りますか？入れた内容は消えます', { ok: '戻る', danger: true }))) return;
   clearDraft();
   location.href = href;
 });

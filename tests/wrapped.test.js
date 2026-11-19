@@ -231,3 +231,12 @@ test('ホームの知らせ：12月はその年、1月は前の年。その年�
   assert.equal(wrappedNotice({ brews: brews.slice(1), now: new Date(2026, 11, 1) }), null, '9杯では出さない');
   assert.equal(wrappedNotice({ brews: brews.map((b) => ({ ...b, deletedAt: 'x' })), now: new Date(2026, 11, 1) }), null);
 });
+
+test('年を指定せずに開いたら、1月は前の年（総仕上げの72番）', async () => {
+  const { defaultWrappedYear } = await import('../js/core/wrapped.js');
+  assert.equal(defaultWrappedYear('2027-01-01', ['2027', '2026']), '2026');
+  assert.equal(defaultWrappedYear('2027-02-01', ['2027', '2026']), '2027');
+  assert.equal(defaultWrappedYear('2026-12-31', ['2026', '2025']), '2026');
+  // 前の年に記録がなければ今の年
+  assert.equal(defaultWrappedYear('2027-01-05', ['2027']), '2027');
+});

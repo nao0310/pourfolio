@@ -436,7 +436,7 @@ async function init() {
     if (!recipe) {
       $('title').textContent = 'レシピが見つかりません';
       form.hidden = true;
-      form.after(el('p', { class: 'muted' }, '削除したのかもしれません。'), el('p', {}, el('a', { class: 'btn block', href: 'recipes.html' }, 'レシピの一覧へ')));
+      form.after(el('p', { class: 'muted' }, '削除したのかもしれません。'), el('p', {}, el('a', { class: 'btn block', href: 'recipes.html' }, 'レシピ帳へ')));
       return;
     }
     document.title = 'レシピの編集 - Pourfolio';

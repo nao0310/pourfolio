@@ -43,7 +43,7 @@ test('「次に何を買う」は提案レシピの形を求めない', () => {
 
 test('記録がないときも形が崩れない', () => {
   const text = buildConsultText({ question: 'next', now: NOW });
-  assert.ok(text.includes('（まだ抽出の記録がありません）'));
+  assert.ok(text.includes('（まだ抽出の記録はありません）'));
   assert.ok(text.includes('（手元に豆がありません）'));
   assert.ok(text.includes('（器具の登録なし）'));
   assert.deepEqual(preferenceLines({}), ['- （★のある記録がまだ少なく、好みは出せません）']);

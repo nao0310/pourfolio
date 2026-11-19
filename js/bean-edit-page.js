@@ -4,6 +4,7 @@ import { normalizeBeanInput, beanToFormValues, PROCESS_OPTIONS, VARIETY_OPTIONS,
 import { ROAST_LEVELS, initialStockG } from './core/roast.js';
 import { formatG } from './core/format.js';
 import { $, el, queryParam, showMessage } from './ui.js';
+import { askConfirm } from './confirm-box.js';
 import { parseProductText, productMemo } from './core/tonya.js';
 import { wishToBeanForm } from './core/wishlist.js';
 import { registerServiceWorker } from './pwa.js';
@@ -177,6 +178,10 @@ form.addEventListener('submit', async (event) => {
     showMessage('入力を直してください', 'error');
     return;
   }
+  // 購入済みの気になる豆から、もう一度登録しようとしたら確かめる（「戻る」で同じ豆が2件にならないように、総仕上げの55番）
+  if (!editId && boughtBean) {
+    if (!(await askConfirm(`この気になる豆は「${boughtBean.name}」として登録済みです。もう1袋登録しますか？`, { ok: '登録する' }))) return;
+  }
   $('save').disabled = true;
   try {
     const saved = editId ? await updateBean(db, editId, value) : await addBean(db, value);
@@ -189,6 +194,8 @@ form.addEventListener('submit', async (event) => {
     $('save').disabled = false;
   }
 });
+
+let boughtBean = null;
 
 async function init() {
   allBeans = await listBeans(db);
@@ -206,11 +213,26 @@ async function init() {
     $('back').textContent = found.bean.name;
     $('back').href = `bean.html?id=${encodeURIComponent(editId)}`;
     writeForm(beanToFormValues(found.bean));
+    // 入庫のほかに履歴がある豆は「入荷待ち」に戻せない。戻すと入庫が消えて残りがマイナスになるため（総仕上げの70番）
+    if (found.txs.some((t) => t.deletedAt == null && t.kind !== 'in') && found.bean.status !== 'ordered') {
+      const ordered = form.querySelector('input[name="status"][value="ordered"]');
+      ordered.disabled = true;
+      ordered.closest('label').title = '使った記録があるため選べません';
+      ordered.closest('fieldset').append(el('span', { class: 'hint' }, '使った記録があるので「入荷待ち」には戻せません'));
+    }
   } else {
     writeForm({ shop: DEFAULT_SHOP });
     const wishId = queryParam('wish');
     fromWish = wishId ? await getWish(db, wishId) : null;
     if (fromWish) fillFromWish(fromWish, queryParam('roast') ?? '');
+    boughtBean = fromWish?.boughtBeanId ? allBeans.find((b) => b.id === fromWish.boughtBeanId && b.deletedAt == null) ?? null : null;
+    if (boughtBean) {
+      $('wishMsg').replaceChildren(
+        `この気になる豆は「${boughtBean.name}」として登録済みです。`,
+        el('a', { href: `bean.html?id=${encodeURIComponent(boughtBean.id)}` }, '登録した豆を見る'),
+      );
+      $('wishMsg').className = 'error';
+    }
   }
   updatePreview();
 }

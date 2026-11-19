@@ -46,7 +46,7 @@ test('山が目安とずれているとき・2杯の区切りがないとき', (
   assert.match(late.line, /16〜21日.*ずれています/);
   const spread = agingOf(bean, [row(1, 3), row(5, 4), row(9, 5)]);
   assert.equal(spread.peak, null);
-  assert.match(spread.line, /2杯ある所がまだありません/);
+  assert.match(spread.line, /2杯ある所はまだありません/);
 });
 
 test('日誌の並び：日数順、日数のない杯は入れない。★のない杯・冷凍・アイス・評価の言葉', () => {

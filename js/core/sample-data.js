@@ -137,7 +137,7 @@ export function makeSampleData(now = new Date()) {
       reasons: {
         input: ['濃さ ちょうど', '酸味 やや強い', '苦味 ちょうど', '渋み ちょうど'],
         theory: '濃さ「ちょうど」×抽出「抽出が足りない」のマス（酸っぱい・余韻が短い）。1杯で変えるのは1つだけ',
-        history: 'まだ実績がありません（提案どおりに淹れて評価すると、ここに貯まります）',
+        history: 'まだ実績はありません。提案どおりに淹れて評価すると表示します',
         confidence: { level: 'mid', text: 'ちょうど良さで濃さと抽出の両方に答えている。実績はまだ少ない' },
       },
       confidence: 'mid',

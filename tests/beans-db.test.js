@@ -167,3 +167,19 @@ test('2-8の38番：目減り率を学び直したあとでも、メモだけ直
   assert.equal(remainingG(txs), 85);
   db.close();
 });
+
+test('取り消して入庫だけになったら、開封済みを未開封に戻す（総仕上げの94番）', async () => {
+  const db = freshDb();
+  const bean = await addBean(db, input(), NOW);
+  assert.equal(bean.status, 'unopened');
+  const tx = await recordCupUsage(db, bean.id, 15, later(1));
+  assert.equal((await getBeanWithTx(db, bean.id)).bean.status, 'open');
+  await deleteInventoryTx(db, tx.id, later(2));
+  assert.equal((await getBeanWithTx(db, bean.id)).bean.status, 'unopened');
+  // ほかにも履歴が残るなら開封済みのまま
+  const a = await recordCupUsage(db, bean.id, 15, later(3));
+  await recordCupUsage(db, bean.id, 15, later(4));
+  await deleteInventoryTx(db, a.id, later(5));
+  assert.equal((await getBeanWithTx(db, bean.id)).bean.status, 'open');
+  db.close();
+});

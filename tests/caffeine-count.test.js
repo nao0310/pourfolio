@@ -45,3 +45,9 @@ test('37番：夜中の杯は前の日（分析の「今日」もこの数え方
   assert.deepEqual(todayCaffeine(rows, at(18, 3)), { mg: 80, cups: 1, unknown: 0 });
   assert.deepEqual(todayCaffeine(rows, at(18, 8)), { mg: 100, cups: 1, unknown: 0 });
 });
+
+test('カレンダーの「今日」のカフェインは朝5時区切り（ホーム・分析と同じ、総仕上げの71番）', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const s = await readFile(new URL('../js/calendar-page.js', import.meta.url), 'utf8');
+  assert.match(s, /todayCaffeine\(rows, new Date\(\)\)\.mg/);
+});

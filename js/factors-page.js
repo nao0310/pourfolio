@@ -60,7 +60,7 @@ function curveCard(curves) {
           lines: [{ cls: 'series', points: pts.map((b) => [b.mid, b.mean]) }],
           points: pts.map((b) => ({ x: b.mid, y: b.mean, level: starLevel(b.mean), title: `${labels[b.mid] ?? b.label}日 ★${b.mean}（${b.n}杯）` })),
         }),
-        c.peak ? `いちばん★が高いのは ${c.peak.label}（平均★${c.peak.mean}・${c.peak.n}杯）` : '2杯以上の区切りがまだありません',
+        c.peak ? `いちばん★が高いのは ${c.peak.label}（平均★${c.peak.mean}・${c.peak.n}杯）` : '2杯以上の区切りはまだありません',
       ),
     );
   }

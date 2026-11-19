@@ -83,8 +83,8 @@ async function saveCutoff(value) {
   render();
 }
 
-$('cutoff').addEventListener('change', (e) => saveCutoff(e.target.value).catch(() => showMessage('保存できませんでした', 'error')));
-$('cutoffClear').addEventListener('click', () => saveCutoff(null).catch(() => showMessage('保存できませんでした', 'error')));
+$('cutoff').addEventListener('change', (e) => saveCutoff(e.target.value).catch(() => showMessage('保存できませんでした。もう一度選んでください', 'error')));
+$('cutoffClear').addEventListener('click', () => saveCutoff(null).catch(() => showMessage('保存できませんでした。もう一度押してください', 'error')));
 
 async function init() {
   [data, settings] = await Promise.all([readAll(db), getSettings(db)]);
@@ -94,5 +94,5 @@ async function init() {
 registerServiceWorker();
 init().catch((err) => {
   console.error(err);
-  $('picks').replaceChildren(el('p', { class: 'muted' }, '読み込めませんでした。開き直してください'));
+  $('picks').replaceChildren(el('p', { class: 'error' }, '読み込めませんでした。開き直してください'));
 });

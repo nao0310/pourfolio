@@ -49,3 +49,22 @@ test('通信で失敗したときは、ブラウザの言葉をかっこに入�
     },
   );
 });
+
+test('天気でない中身（ログインの画面など）は英語を出さずに「読めませんでした」。オフラインは「通信できません」（総仕上げの75番）', async () => {
+  await withFetch(
+    async () => ({ ok: true, status: 200, json: async () => JSON.parse('<html>') }),
+    async () => {
+      const r = await fetchWeather(TOKYO, { force: true });
+      assert.equal(r.error, '天気の中身を読めませんでした。少したってから開き直してください');
+    },
+  );
+  const orig = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+  Object.defineProperty(globalThis, 'navigator', { value: { onLine: false }, configurable: true });
+  try {
+    const r = await fetchWeather(TOKYO);
+    assert.match(r.error, /^通信できません/);
+  } finally {
+    if (orig) Object.defineProperty(globalThis, 'navigator', orig);
+    else delete globalThis.navigator;
+  }
+});

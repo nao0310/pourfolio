@@ -1,9 +1,9 @@
 // データの書き出しと復元の画面（G1）
-import { openDb, countAlive, exportAll, restoreBackup, clearAll, putAll, updateSettings, readAll, getSettings } from './db.js';
+import { openDb, countAlive, exportAll, restoreBackup, clearAll, putAll, setDeviceSettings, readAll, getSettings } from './db.js';
 import { toCsv, brewRows, beanRowsCsv, csvFileName } from './core/csv.js';
 import { doseFromSettings } from './core/inventory.js';
 import { localYmd } from './core/format.js';
-import { parseBackup, backupFileName, totalRecords, BackupError } from './core/backup.js';
+import { parseBackup, backupFileName, totalRecords, BackupError, withBackupAt, TABLE_LABELS } from './core/backup.js';
 import { makeSampleData } from './core/sample-data.js';
 import { makeDemoData } from './core/demo-data.js';
 import { TABLES, SETTINGS_ID } from './core/records.js';
@@ -13,22 +13,26 @@ import { APP_VERSION, CHANGELOG, versionLabel } from './core/version.js';
 import { photoUsage, formatBytes, withoutPhotos } from './core/photos.js';
 import { autosaveSupported, getAutosaveState, chooseFolder, resumeAutosave, stopAutosave } from './autosave-file.js';
 import { askConfirm } from './confirm-box.js';
+import { isQuotaError } from './core/errors.js';
+import { singleFlight } from './core/once.js';
 
-const LABELS = {
-  beans: '豆',
-  inventoryTx: '在庫の履歴',
-  equipment: '器具',
-  recipes: 'レシピ',
-  brews: '抽出',
-  tastings: '評価',
-  suggestions: '提案',
-  orders: '注文',
-  frozenPortions: '冷凍の袋',
-  photos: '写真',
-  experiments: '飲み比べ',
-  wishlist: '気になる豆',
-  settings: '設定',
-};
+const LABELS = TABLE_LABELS;
+
+/** 処理中はボタンを押せなくし、2回目を受け付けない（書き出しの2度押しでファイルが2つにならないように、総仕上げの77番） */
+function onceWhileRunning(id, fn) {
+  const run = singleFlight(fn);
+  return async () => {
+    const btn = document.getElementById(id);
+    if (btn?.disabled) return;
+    if (btn) btn.disabled = true;
+    try {
+      await run();
+    } finally {
+      // 書き出しはすぐ終わるので、終わってから1.5秒も押せないままにする（2度押しの2回目が新しい書き出しにならないように）
+      setTimeout(() => btn && (btn.disabled = false), 1500);
+    }
+  };
+}
 
 const db = openDb();
 const $ = (id) => document.getElementById(id);
@@ -80,10 +84,10 @@ function download(file) {
   setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
 
-$('export').addEventListener('click', async () => {
+$('export').addEventListener('click', onceWhileRunning('export', async () => {
   try {
     const now = new Date();
-    const all = await exportAll(db, now);
+    const all = withBackupAt(await exportAll(db, now), now);
     // 「写真を含めない」：ファイルを小さくしたいとき。写真は復元で戻らない（D-108）
     const backup = !$('noPhotosRow').hidden && $('noPhotos').checked ? withoutPhotos(all) : all;
     const file = new File([JSON.stringify(backup, null, 1)], backupFileName(now), { type: 'application/json' });
@@ -100,17 +104,17 @@ $('export').addEventListener('click', async () => {
     } else {
       download(file);
     }
-    await updateSettings(db, { lastBackupAt: now.toISOString() }, now);
+    await setDeviceSettings(db, { lastBackupAt: now.toISOString() }); // 設定の updatedAt は進めない（58番）
     showMessage(`書き出しました（${file.name}）`);
     await render();
   } catch (err) {
     console.error(err);
     showMessage('書き出せませんでした。もう一度押してください', 'error');
   }
-});
+}));
 
 // 表計算用のCSV（G1）。復元には使えないので、最後に書き出した日時は変えない
-$('exportCsv').addEventListener('click', async () => {
+$('exportCsv').addEventListener('click', onceWhileRunning('exportCsv', async () => {
   try {
     const now = new Date();
     const [all, settings] = await Promise.all([readAll(db), getSettings(db)]);
@@ -147,7 +151,7 @@ $('exportCsv').addEventListener('click', async () => {
     console.error(err);
     showMessage('CSVを書き出せませんでした。もう一度押してください', 'error');
   }
-});
+}));
 
 $('file').addEventListener('change', async (event) => {
   const input = event.target;
@@ -171,13 +175,15 @@ $('file').addEventListener('change', async (event) => {
     await render();
   } catch (err) {
     console.error(err);
-    showMessage(err instanceof BackupError ? err.message : '復元できませんでした。ファイルを確かめて、もう一度選んでください', 'error');
+    // 空きが足りないときは、ファイルのせいに読めないように分ける（総仕上げの61番。復元は1つのまとまりなので途中までは入らない）
+    const text = err instanceof BackupError ? err.message : isQuotaError(err) ? '端末の保存の空きが足りないため、復元できませんでした（記録は変わっていません）。空きを作ってから、もう一度選んでください' : '復元できませんでした。ファイルを確かめて、もう一度選んでください';
+    showMessage(text, 'error');
   }
 });
 
 $('clear').addEventListener('click', async () => {
-  if (!(await askConfirm('この端末の記録をすべて消しますか？', { ok: '消す', danger: true }))) return;
-  if (!(await askConfirm('本当に消しますか？元に戻せません', { ok: 'すべて消す', danger: true }))) return;
+  if (!(await askConfirm('この端末の記録をすべて削除しますか？', { ok: '削除する', danger: true }))) return;
+  if (!(await askConfirm('本当に削除しますか？元に戻せません', { ok: 'すべて削除する', danger: true }))) return;
   // 設定もここでは作り直さない（作り直すと、復元したときにファイルの設定より新しいと判定されてしまう）
   await clearAll(db);
   // 自動ファイル保存も止める。続けると、復元する前の保存でフォルダのファイルが空の中身に替わるため（2-8 の18番）
@@ -186,7 +192,7 @@ $('clear').addEventListener('click', async () => {
     await stopAutosave().catch((err) => console.error(err));
     stopped = true;
   }
-  showMessage(stopped ? '全部消しました。自動ファイル保存も止めました（フォルダのファイルはそのまま残っています）' : '全部消しました');
+  showMessage(stopped ? 'すべて削除しました。自動ファイル保存も止めました（フォルダのファイルはそのまま残っています）' : 'すべて削除しました');
   await render();
 });
 

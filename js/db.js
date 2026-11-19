@@ -114,11 +114,22 @@ function keepDeviceSettings(incoming, current) {
   if (!current) return incoming;
   const out = { ...incoming };
   for (const k of DEVICE_SETTINGS_KEYS) {
+    if (k === 'lastBackupAt') continue;
     if (k in current) out[k] = current[k];
     else delete out[k];
   }
+  // 最後に書き出した日時は、どちらか新しいほう（どちらの書き出しも、バックアップがある印なので）
+  out.lastBackupAt = laterIso(current.lastBackupAt, incoming.lastBackupAt);
   return out;
 }
+
+const laterIso = (a, b) => {
+  const ta = Date.parse(a ?? '');
+  const tb = Date.parse(b ?? '');
+  if (Number.isNaN(ta)) return Number.isNaN(tb) ? null : b;
+  if (Number.isNaN(tb)) return a;
+  return tb > ta ? b : a;
+};
 
 /** 全部の表を空にする */
 export async function clearAll(db) {
@@ -143,7 +154,9 @@ export async function putAll(db, tables) {
 export const BLANK_SETTINGS_AT = new Date(0);
 
 /** 設定のうち、その端末だけのもの（復元しても今の端末の値を残す。変えても updatedAt を進めない） */
-export const DEVICE_SETTINGS_KEYS = Object.freeze(['lastSeenVersion']);
+// 最後に書き出した日時（lastBackupAt）も、書き出すたびに設定の updatedAt を進めると、別の端末で変えた設定が
+// 復元で「古い」と判断されて捨てられるため、ここに入れる（総仕上げの58番。復元ではどちらか新しい日時を残す）
+export const DEVICE_SETTINGS_KEYS = Object.freeze(['lastSeenVersion', 'lastBackupAt']);
 
 /** 設定（1件）を読む。なければ作って返す（作った日時は BLANK_SETTINGS_AT） */
 export async function getSettings(db, now = new Date()) {
@@ -395,9 +408,11 @@ export async function measureBean(db, beanId, measuredG, now = new Date()) {
  * - 冷凍から取り出し：袋を冷凍庫に戻す
  */
 export async function deleteInventoryTx(db, txId, now = new Date()) {
-  await db.transaction('rw', db.table('inventoryTx'), db.table('frozenPortions'), async () => {
+  await db.transaction('rw', db.table('beans'), db.table('inventoryTx'), db.table('frozenPortions'), async () => {
     const cur = await db.table('inventoryTx').get(txId);
     if (!cur || !alive(cur)) return;
+    // 抽出の記録とつながった「抽出」は取り消せない。記録が残ったまま残りだけ増え、つじつまが合わなくなるため（総仕上げの57番）
+    if (cur.kind === 'brew' && cur.brewId) throw new Error('抽出の記録とつながっているため取り消せません。残りが違うときは「量り直す」で合わせてください');
     if (cur.kind === 'freeze') {
       const portions = (await db.table('frozenPortions').where('beanId').equals(cur.beanId).toArray()).filter(
         (p) => alive(p) && p.freezeTxId === cur.id,
@@ -412,6 +427,12 @@ export async function deleteInventoryTx(db, txId, now = new Date()) {
       if (p && alive(p)) await db.table('frozenPortions').put(updateRecord(p, { takenOutAt: null, takenOutBrewId: null }, now));
     }
     await db.table('inventoryTx').put(markDeleted(cur, now));
+    // 取り消して入庫だけになったら、開封済みを未開封に戻す（42番の飲み切りの取り消しと同じ決め方、総仕上げの94番）
+    const bean = await db.table('beans').get(cur.beanId);
+    if (bean && alive(bean) && bean.status === 'open') {
+      const rest = (await db.table('inventoryTx').where('beanId').equals(cur.beanId).toArray()).filter(alive);
+      if (statusAfterUnfinish(rest) === 'unopened') await db.table('beans').put(updateRecord(bean, { status: 'unopened' }, now));
+    }
   });
 }
 
@@ -520,8 +541,17 @@ export async function updateEquipment(db, id, changes, now = new Date()) {
 
 /** 器具を削除する（印を付けるだけ。レシピや抽出の記録に残ったIDはそのまま） */
 export async function deleteEquipment(db, id, now = new Date()) {
-  const cur = await db.table('equipment').get(id);
-  if (cur && alive(cur)) await db.table('equipment').put(markDeleted(cur, now));
+  await db.transaction('rw', db.table('equipment'), async () => {
+    const cur = await db.table('equipment').get(id);
+    if (!cur || !alive(cur)) return;
+    await db.table('equipment').put(markDeleted(cur, now));
+    // 「いつも使う」を削除したら、同じ種類でいちばん新しく直したものを「いつも使う」にする（総仕上げの69番）
+    if (!cur.isDefault) return;
+    const rest = (await db.table('equipment').toArray()).filter((e) => alive(e) && e.kind === cur.kind);
+    if (rest.some((e) => e.isDefault)) return;
+    const next = [...rest].sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)))[0];
+    if (next) await db.table('equipment').put(updateRecord(next, { isDefault: true }, now));
+  });
 }
 
 /** お手入れ（D4）の「済んだ」：前回を今にする */
