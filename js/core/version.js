@@ -3,10 +3,18 @@
 // ステップを仕上げるときに APP_VERSION と CHANGELOG の先頭を足す。上げ忘れは tests/version.test.js が見つける。
 // sw.js の一覧（npm run sw）にも番号が入り、更新の知らせに新しい番号を出す。
 
-export const APP_VERSION = '3.6.1';
+export const APP_VERSION = '3.6.2';
 
 /** 更新履歴（新しい順）。items は利用者向けの短い文で、2〜3個まで */
 export const CHANGELOG = Object.freeze([
+  {
+    version: '3.6.2',
+    date: '2026-11-19',
+    items: [
+      '下のタブがスクロールと一緒に上へ流れる不具合を、画面の作りから直しました',
+      '「戻る」で前の画面に戻ったときは、前に見ていた位置まで戻ります',
+    ],
+  },
   {
     version: '3.6.1',
     date: '2026-11-18',
