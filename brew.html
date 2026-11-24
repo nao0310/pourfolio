@@ -114,8 +114,12 @@
         <p class="hint">済んだものを押します。押さなくてもスタートできます</p>
       </div>
 
+      <div class="card">
+        <h2>タイマーを使わないとき</h2>
+        <p class="muted">淹れ終わってから、使った器具と実際の数字を入れて、味の評価に進めます。</p>
+        <button class="btn block secondary" type="button" id="noTimer">タイマーを使わずに記録する</button>
+      </div>
       <p><a id="editLink">このレシピを編集する</a></p>
-      <p><button class="link-btn" type="button" id="noTimer">タイマーを使わずに記録する</button></p>
       <p id="msg" role="status"></p>
 
       <div class="bottom-bar">
@@ -162,6 +166,12 @@
           <textarea id="rMemo" rows="2"></textarea>
           <span class="hint">iPhoneのキーボードのマイク（🎤）を押すと、話して入力できます。写真は保存したあとの評価の画面で足せます</span>
         </label>
+      </div>
+
+      <div class="card" id="rEquipCard" hidden>
+        <h2>使った器具</h2>
+        <div id="rEquip"></div>
+        <p class="hint">初めはレシピの器具です。替えたときは選び直します</p>
       </div>
 
       <div class="card">
