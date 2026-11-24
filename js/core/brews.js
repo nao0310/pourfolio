@@ -136,6 +136,35 @@ export function initialActualInput(draft) {
   };
 }
 
+/** 実績の確認で選ぶ器具（表示の順もこの順）。水は別の欄（waterId）で選ぶ */
+export const EQUIPMENT_PICKS = Object.freeze([
+  { key: 'grinderId', kind: 'grinder', label: 'グラインダー' },
+  { key: 'dripperId', kind: 'dripper', label: 'ドリッパー' },
+  { key: 'filterId', kind: 'filter', label: 'フィルター' },
+  { key: 'kettleId', kind: 'kettle', label: 'ケトル' },
+]);
+
+/** 使った器具の初期値：計画（レシピ）の器具。決めていない種類は ''（記録しない） */
+export function initialEquipmentPick(plan) {
+  const from = { ...(plan?.equipment ?? {}), grinderId: plan?.grind?.grinderId ?? null };
+  return Object.fromEntries(EQUIPMENT_PICKS.map(({ key }) => [key, from[key] ?? '']));
+}
+
+/**
+ * 選んだ器具を確かめる。登録してある（削除していない）同じ種類の器具だけを残し、ほかは null（記録しない）。
+ * @param {Record<string, string>} pick { grinderId, dripperId, filterId, kettleId }
+ * @param {object[]} equipmentList 登録した器具
+ */
+export function normalizeEquipmentPick(pick, equipmentList) {
+  return Object.fromEntries(
+    EQUIPMENT_PICKS.map(({ key, kind }) => {
+      const id = clean(pick?.[key]);
+      const ok = id && equipmentList.some((e) => e.id === id && e.kind === kind && e.deletedAt == null);
+      return [key, ok ? id : null];
+    }),
+  );
+}
+
 /**
  * 実績の入力を確かめる。数字は文字列でも数でもよい。
  * @returns {{value: object, errors: Record<string,string>}}
@@ -234,14 +263,17 @@ function plannedCopy(plan) {
  * @param {{draft:object, value:object, at:string, bean?:object|null}} p
  *   value は normalizeActualInput の value、at は抽出の日時（ISO）、bean は選んだ豆（焙煎後日数の計算用）
  * @param {object|null} [p.portion] 冷凍の袋を使ったとき、その袋（冷凍中の日数を焙煎後日数に数えない）
+ * @param {object|null} [p.equipment] 使った器具（normalizeEquipmentPick の値）。null なら計画の器具
  */
-export function buildBrew({ draft, value, at, bean = null, portion = null }) {
+export function buildBrew({ draft, value, at, bean = null, portion = null, equipment = null }) {
   const plan = draft.plan;
+  // 使った器具（実績の確認で選んだもの）。選ばなかった（古い下書きなど）ときは計画の器具
+  const grinderId = equipment ? equipment.grinderId ?? null : plan.grind?.grinderId ?? null;
   const actual = {
     doseG: value.doseG,
     waterG: value.waterG,
     tempC: value.tempC,
-    grind: { grinderId: plan.grind?.grinderId ?? null, setting: value.grindSetting },
+    grind: { grinderId, setting: value.grindSetting },
     pours: actualPours(plan, draft.laps),
     totalSec: value.totalSec,
     beverageG: value.beverageG,
@@ -262,7 +294,7 @@ export function buildBrew({ draft, value, at, bean = null, portion = null }) {
     suggestionId: plan.suggestionId ?? null, // ダイヤルイン提案（F1）を入れた計画で淹れたとき、その提案
     experimentId: draft.compareId ?? null, // 焙煎度比較（X27）で淹れたとき、その飲み比べ
     frozenPortionId: usePortion?.id ?? null, // 冷凍の袋（C4）を使ったとき、その袋（保存すると取り出したことになる）
-    equipment: { ...(plan.equipment ?? {}), grinderId: plan.grind?.grinderId ?? null, waterId: value.waterId ?? null },
+    equipment: { ...(plan.equipment ?? {}), ...(equipment ?? {}), grinderId, waterId: value.waterId ?? null },
     planned: plannedCopy(plan),
     actual,
     timerUsed: draft.startedAtMs != null,

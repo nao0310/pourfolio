@@ -11,6 +11,9 @@ import {
   brewDiff,
   diffLines,
   buildBrew,
+  EQUIPMENT_PICKS,
+  initialEquipmentPick,
+  normalizeEquipmentPick,
 } from '../js/core/brews.js';
 import { planFromRecipe, planFromBrew, normalizeRecipeInput, newRecipeState } from '../js/core/recipes.js';
 
@@ -205,4 +208,54 @@ test('放っておいた下書き（1時間を過ぎてタイマーのまま）�
   assert.equal(agoText(start, start + 40 * 60000), '40分前');
   assert.equal(agoText(start, start + 10 * 3600_000), '10時間前');
   assert.equal(agoText(start, start + 50 * 3600_000), '2日前');
+});
+
+// ---- 使った器具（タイマーを使わずに記録するときにも選べる） ----
+
+const eqPlan = { ...plan, equipment: { dripperId: 'd1', filterId: null, kettleId: 'k1' } };
+const eqList = [
+  { id: 'g1', kind: 'grinder', name: 'C40', deletedAt: null },
+  { id: 'g2', kind: 'grinder', name: '電動', deletedAt: null },
+  { id: 'd1', kind: 'dripper', name: 'V60', deletedAt: null },
+  { id: 'd2', kind: 'dripper', name: 'ウェーブ', deletedAt: null },
+  { id: 'f1', kind: 'filter', name: '紙', deletedAt: null },
+  { id: 'k1', kind: 'kettle', name: '細口', deletedAt: null },
+  { id: 'k9', kind: 'kettle', name: '捨てた', deletedAt: '2026-11-01T00:00:00Z' },
+];
+
+test('使った器具：選ぶのはグラインダー・ドリッパー・フィルター・ケトルの順', () => {
+  assert.deepEqual(EQUIPMENT_PICKS.map((p) => p.kind), ['grinder', 'dripper', 'filter', 'kettle']);
+});
+
+test('使った器具の初期値はレシピ（計画）の器具。決めていない種類は空', () => {
+  assert.deepEqual(initialEquipmentPick(eqPlan), { grinderId: 'g1', dripperId: 'd1', filterId: '', kettleId: 'k1' });
+  assert.deepEqual(initialEquipmentPick({}), { grinderId: '', dripperId: '', filterId: '', kettleId: '' });
+});
+
+test('使った器具：登録してある同じ種類の器具だけ残し、ほかは記録しない（null）', () => {
+  const v = normalizeEquipmentPick({ grinderId: 'g2', dripperId: 'g1', filterId: '', kettleId: 'k9' }, eqList);
+  assert.deepEqual(v, { grinderId: 'g2', dripperId: null, filterId: null, kettleId: null });
+  assert.deepEqual(normalizeEquipmentPick(undefined, eqList), { grinderId: null, dripperId: null, filterId: null, kettleId: null });
+});
+
+test('タイマーなしで、選んだ器具を抽出の記録に残す（グラインダーは挽き目にも）', () => {
+  const draft = newDraft(eqPlan, 'b1', null);
+  const { value } = normalizeActualInput({ ...initialActualInput(draft), totalSec: '3:10', waterId: 'w1' });
+  const equipment = normalizeEquipmentPick({ grinderId: 'g2', dripperId: 'd2', filterId: 'f1', kettleId: '' }, eqList);
+  const brew = buildBrew({ draft, value, at: '2026-11-24T08:00:00+09:00', equipment });
+  assert.equal(brew.timerUsed, false);
+  assert.equal(brew.recipeId, 'r1');
+  assert.deepEqual(brew.equipment, { grinderId: 'g2', dripperId: 'd2', filterId: 'f1', kettleId: null, waterId: 'w1' });
+  assert.equal(brew.actual.grind.grinderId, 'g2');
+  assert.deepEqual(brew.actual.pours.map((p) => p.doneSec), [null, null, null, null, null]);
+  // 計画の写しはレシピの器具のまま（何を変えたか後で分かる）
+  assert.equal(brew.planned.equipment.dripperId, 'd1');
+});
+
+test('器具を選ばなかった（前の版の下書き）ときは、今までどおり計画の器具を残す', () => {
+  const draft = newDraft(eqPlan, 'b1', null);
+  const { value } = normalizeActualInput({ ...initialActualInput(draft), totalSec: '3:10' });
+  const brew = buildBrew({ draft, value, at: '2026-11-24T08:00:00+09:00' });
+  assert.deepEqual(brew.equipment, { dripperId: 'd1', filterId: null, kettleId: 'k1', grinderId: 'g1', waterId: null });
+  assert.equal(brew.actual.grind.grinderId, 'g1');
 });

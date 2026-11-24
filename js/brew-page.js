@@ -45,6 +45,9 @@ import {
   PRECHECK_ITEMS,
   settleStaleDraft,
   agoText,
+  EQUIPMENT_PICKS,
+  initialEquipmentPick,
+  normalizeEquipmentPick,
 } from './core/brews.js';
 import { loadDraft, saveDraft, clearDraft } from './brew-draft.js';
 import { pickGhost, ghostLine } from './core/ghost.js';
@@ -619,7 +622,32 @@ function readForm() {
     waterId: $('rWaterRow').hidden ? '' : $('rWaterId').value,
     memo: $('rMemo').value,
     useFrozen: !$('rFrozenRow').hidden && $('rFrozen').checked,
+    equipment: readEquipPick(),
   };
+}
+
+/** 使った器具の選択（選ぶ欄のない種類は ''＝記録しない） */
+function readEquipPick() {
+  return Object.fromEntries(EQUIPMENT_PICKS.map(({ key }) => [key, document.getElementById(`rEq-${key}`)?.value ?? '']));
+}
+
+/** 使った器具の欄：登録してある種類だけ出す。初めはレシピの器具 */
+function fillEquipSelects(pick) {
+  const rows = EQUIPMENT_PICKS.map(({ key, kind, label }) => {
+    const items = equipmentList.filter((e) => e.kind === kind);
+    if (!items.length) return null;
+    const cur = items.some((e) => e.id === pick?.[key]) ? pick[key] : '';
+    const select = el(
+      'select',
+      { id: `rEq-${key}`, onchange: onFormInput },
+      el('option', { value: '' }, '記録しない'),
+      ...items.map((e) => el('option', { value: e.id }, e.name)),
+    );
+    select.value = cur;
+    return el('label', { class: 'field' }, el('span', { class: 'label' }, label), select);
+  }).filter(Boolean);
+  $('rEquip').replaceChildren(...rows);
+  $('rEquipCard').hidden = rows.length === 0;
 }
 
 function onFormInput() {
@@ -689,6 +717,7 @@ function showResult() {
   $('rTotal').value = input.totalSec ?? '';
   $('rMemo').value = input.memo ?? '';
   renderFrozenChoice(input.useFrozen);
+  fillEquipSelects(input.equipment ?? initialEquipmentPick(draft.plan)); // 前の版の下書きには器具の選択がない
 
   const plan = draft.plan;
   $('resultSub').textContent = [plan.name, draft.startedAtMs == null ? 'タイマーなし' : ''].filter(Boolean).join('・');
@@ -756,7 +785,8 @@ const onSave = singleFlight(async (e) => {
   submit.disabled = true;
   let saved = null;
   try {
-    const { brew } = await saveBrew(db, buildBrew({ draft, value, at, bean, portion }));
+    const equipment = normalizeEquipmentPick(readEquipPick(), equipmentList);
+    const { brew } = await saveBrew(db, buildBrew({ draft, value, at, bean, portion, equipment }));
     saved = brew;
     // 残りが0gになったら、飲み切りにするか聞く（2-8の32番）
     if (stock.empty && bean && bean.status !== 'finished' && (await askConfirm('この豆の残りがなくなりました。飲み切りにしますか？', { ok: '飲み切りにする', cancel: 'まだ残っている' }))) {
@@ -875,6 +905,15 @@ async function init() {
   if (saved) {
     $('resumeCard').hidden = false;
     $('resumeText').textContent = `${saved.plan.name || '前回と同じ'}（${saved.stage === 'timer' ? 'タイマーの途中' : '実績の確認の途中'}）`;
+  }
+  // レシピ帳の「タイマーなしで記録」（?notimer=1）：そのまま実績の確認を開く。
+  // URL からは外しておく（「記録せずにやめる」で戻ったときに、また実績の確認が開かないように）
+  if (queryParam('notimer') === '1') {
+    const q = new URLSearchParams(location.search);
+    q.delete('notimer');
+    history.replaceState(null, '', `${location.pathname}${q.toString() ? `?${q.toString()}` : ''}`);
+    // 途中の1杯があるときは、続きに戻るか選べるよう計画の画面のままにする
+    if (!saved) await beginNew(false);
   }
 }
 

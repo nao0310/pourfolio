@@ -45,6 +45,8 @@ function recipeCard(recipe) {
       { class: 'card-actions' },
       el('a', { class: 'btn', href: brewUrl(recipe.id) }, '淹れる'),
       el('a', { class: 'btn secondary', href: `recipe-edit.html?id=${encodeURIComponent(recipe.id)}` }, '編集する'),
+      // タイマーを使わずに、淹れ終わってから記録して評価する（実績の確認をすぐ開く）
+      el('a', { class: 'btn secondary', href: `${brewUrl(recipe.id)}&notimer=1` }, 'タイマーなしで記録'),
       el('a', { class: 'btn secondary', href: `share.html?recipe=${encodeURIComponent(recipe.id)}` }, '共有・印刷'),
     ),
   );
